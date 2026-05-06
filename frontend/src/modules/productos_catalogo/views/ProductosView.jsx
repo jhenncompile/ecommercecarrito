@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Search, RefreshCw, Tag, Package, ChevronRight,
-  X, Pencil, Trash2, ImageOff, FolderPlus, Layers
+  X, Pencil, Trash2, ImageOff, FolderPlus, Layers, Eye
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import AppView   from 'shared/widgets/AppView/AppView';
 import DataTable from 'shared/widgets/DataTable/DataTable';
 import { Button, Input, Badge, Alert, Spinner } from 'shared/components';
@@ -616,6 +617,8 @@ function buildColumns(onEdit, onDelete) {
 
 // ─── Vista principal ────────────────────────────────────────────
 export default function ProductosView() {
+  const navigate = useNavigate(); // ← hook dentro del componente
+
   const [productos,    setProductos]    = useState([]);
   const [categorias,   setCategorias]   = useState([]);
   const [loading,      setLoading]      = useState(true);
@@ -677,7 +680,6 @@ export default function ProductosView() {
       || p.sku?.toLowerCase().includes(search.toLowerCase());
 
     const matchCat = !selectedCat || (() => {
-      // El producto puede estar en la categoría seleccionada O en alguna de sus hijas
       if (p.categoria === selectedCat) return true;
       const sub = categorias.filter((c) => c.parent === selectedCat).map((c) => c.id);
       return sub.includes(p.categoria);
@@ -705,6 +707,15 @@ export default function ProductosView() {
       }
       actions={
         <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          {/* ── NUEVO: botón vista previa ── */}
+          <Button
+            variant="ghost"
+            leftIcon={<Eye size={15} />}
+            onClick={() => navigate('/productos/catalogo')}
+          >
+            Vista previa
+          </Button>
+
           <Button
             variant="secondary"
             leftIcon={<RefreshCw size={15} />}
