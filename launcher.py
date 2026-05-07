@@ -243,7 +243,7 @@ def show_data_menu():
         print_option(f"\n{Colors.RED}b{Colors.RESET} - Volver")
         print()
 
-        choice = input(f"{Colors.BOLD}  ? Selecciona: {Colors.RESET}").strip().lower()
+        choice = input(f"{Colors.BOLD}  ? Selyecciona: {Colors.RESET}").strip().lower()
 
         if choice == '1':
             run_script('db_config.py'); pause()

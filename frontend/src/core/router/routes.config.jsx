@@ -121,6 +121,16 @@ export const AUTH_ROUTES = [
     path: '/sso',
     component: lazy(() => import('modules/auth/views/SSOReceiverView')),
   },
+  {
+    id: 'catalogo-vista',
+    path: '/productos/catalogo',  // misma ruta que usa el navigate en CatalogoView
+    component: lazy(() => import('modules/productos_catalogo/views/CatalogoView')),
+    protected: true,
+    inSidebar: false,  // no aparece en el sidebar
+  }
+  
+
+
 ];
 
 // ─── Helper: agrupar módulos del sidebar por grupo ──────────

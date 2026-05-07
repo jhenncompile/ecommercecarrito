@@ -136,7 +136,7 @@ DATABASES = {
         'ENGINE': config('DATABASE_ENGINE', default='django_tenants.postgresql_backend'),
         'NAME': config('DATABASE_NAME', default='mi_saas_db'),
         'USER': config('DATABASE_USER', default='postgres'),
-        'PASSWORD': config('DATABASE_PASSWORD', default='adm123'),
+        'PASSWORD': config('DATABASE_PASSWORD', default='123456789'),
         'HOST': config('DATABASE_HOST', default='127.0.0.1'),
         'PORT': config('DATABASE_PORT', default='5432'),
     }
