@@ -3,7 +3,8 @@ import api from 'core/services/api';
 import DataTable from 'shared/widgets/DataTable/DataTable';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { FileText, Download, Mic, Square, Loader2 } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { Download, Mic, Square, Loader2, Table } from 'lucide-react';
 import { Button, Alert } from 'shared/components';
 import styles from './VoiceQueryWidget.module.css';
 
@@ -12,7 +13,6 @@ const VoiceQueryWidget = () => {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
-    const [showSql, setShowSql] = useState(false);
     const mediaRecorder = useRef(null);
     const audioChunks = useRef([]);
 
@@ -57,32 +57,56 @@ const VoiceQueryWidget = () => {
     const exportToPDF = () => {
         if (!result || !result.results || result.results.length === 0) return;
 
-        const doc = new jsPDF();
-        const tableColumn = Object.keys(result.results[0]).map(formatHeader);
-        const tableRows = result.results.map(row => Object.values(row));
+        try {
+            const doc = new jsPDF();
+            const tableColumn = Object.keys(result.results[0]).map(formatHeader);
+            const tableRows = result.results.map(row => Object.values(row));
 
-        doc.setFontSize(20);
-        doc.setTextColor(41, 128, 185);
-        doc.text("Reporte de Consulta Inteligente", 14, 22);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Consulta: ${result.prompt}`, 14, 32);
-        doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, 38);
-        doc.text(`Total registros: ${result.results.length}`, 14, 44);
+            doc.setFontSize(20);
+            doc.setTextColor(41, 128, 185);
+            doc.text("Reporte de Consulta Inteligente", 14, 22);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Consulta: ${result.prompt}`, 14, 32);
+            doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, 38);
+            doc.text(`Total registros: ${result.results.length}`, 14, 44);
 
-        doc.autoTable({
-            startY: 50,
-            head: [tableColumn],
-            body: tableRows,
-            theme: 'striped',
-            headStyles: { fillColor: [44, 62, 80], textColor: 255, fontSize: 10, halign: 'center' },
-            bodyStyles: { fontSize: 9 },
-            alternateRowStyles: { fillColor: [245, 247, 250] },
-            margin: { top: 50 }
-        });
+            doc.autoTable({
+                startY: 50,
+                head: [tableColumn],
+                body: tableRows,
+                theme: 'striped',
+                headStyles: { fillColor: [44, 62, 80], textColor: 255, fontSize: 10, halign: 'center' },
+                bodyStyles: { fontSize: 9 },
+                alternateRowStyles: { fillColor: [245, 247, 250] },
+                margin: { top: 50 }
+            });
 
-        doc.save(`reporte_ia_${Date.now()}.pdf`);
+            doc.save(`reporte_ia_${Date.now()}.pdf`);
+        } catch (err) {
+            console.error('Error generating PDF:', err);
+            setError('Error al generar el PDF. Inténtalo de nuevo.');
+        }
+    };
+
+    const exportToExcel = () => {
+        if (!result || !result.results || result.results.length === 0) return;
+
+        try {
+            const worksheet = XLSX.utils.json_to_sheet(result.results);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte IA");
+            
+            // Ajustar anchos de columna básicos
+            const wscols = Object.keys(result.results[0]).map(k => ({ wch: Math.max(k.length, 15) }));
+            worksheet['!cols'] = wscols;
+
+            XLSX.writeFile(workbook, `reporte_ia_${Date.now()}.xlsx`);
+        } catch (err) {
+            console.error('Error generating Excel:', err);
+            setError('Error al generar el archivo Excel.');
+        }
     };
 
     const sendAudio = async (blob) => {
@@ -167,33 +191,29 @@ const VoiceQueryWidget = () => {
                         </div>
                         
                         <div className={styles.actionButtons}>
-                            <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => setShowSql(!showSql)}
-                                leftIcon={<FileText size={16} />}
-                            >
-                                {showSql ? 'Ocultar SQL' : 'Ver SQL'}
-                            </Button>
-                            
                             {result.results && result.results.length > 0 && (
-                                <Button 
-                                    variant="success" 
-                                    size="sm"
-                                    onClick={exportToPDF}
-                                    leftIcon={<Download size={16} />}
-                                >
-                                    Exportar PDF
-                                </Button>
+                                <div className={styles.exportButtons}>
+                                    <Button 
+                                        variant="success" 
+                                        size="md"
+                                        onClick={exportToExcel}
+                                        leftIcon={<Table size={20} />}
+                                        className={styles.excelBtn}
+                                    >
+                                        Descargar Excel
+                                    </Button>
+                                    <Button 
+                                        variant="primary" 
+                                        size="md"
+                                        onClick={exportToPDF}
+                                        leftIcon={<Download size={20} />}
+                                    >
+                                        Descargar PDF
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     </div>
-
-                    {showSql && (
-                        <div className={styles.sqlCode}>
-                            <pre><code>{result.sql}</code></pre>
-                        </div>
-                    )}
 
                     {result.results && result.results.length > 0 ? (
                         <div className={styles.tableContainer}>

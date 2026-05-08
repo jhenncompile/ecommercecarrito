@@ -150,6 +150,23 @@
     gap: 12px;
 }
 
+.exportButtons {
+    display: flex;
+    gap: 12px;
+}
+
+.excelBtn {
+    background-color: #27ae60 !important;
+    border-color: #2ecc71 !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3) !important;
+}
+
+.excelBtn:hover {
+    background-color: #219150 !important;
+    transform: translateY(-2px);
+}
+
 .sqlCode {
     margin-bottom: 24px;
     background: #1e293b;

@@ -120,16 +120,26 @@ class VoiceQueryService:
         ### SCHEMA RULES:
         {schema}
         
-        ### CRITICAL INSTRUCTIONS:
-        1. PRIMARY KEYS: Look for [PRIMARY KEY] markers. NEVER assume a table has an 'id' column unless it is explicitly listed. For example, 'app_negocio_factura' uses 'nro' as PK.
-        2. JOINS: Use the exact column names for joins. If a column is listed as 'factura_id (FK -> app_negocio_factura.nro)', you must join using 'app_negocio_factura.nro = table.factura_id'.
-        3. OUTPUT: Return ONLY the raw SQL query. No markdown code blocks (```sql), no comments, no explanations.
-        4. DIALECT: Use PostgreSQL. Use ILIKE for case-insensitive text matching.
-        5. SCALAR COMPARISONS: Use LEAST(a, b) instead of MIN(a, b) and GREATEST(a, b) instead of MAX(a, b) for comparing two values. MIN/MAX are ONLY for aggregate functions.
-        6. MULTI-TENANCY: Do not use schema prefixes (e.g., 'public.'). Just use the table names.
-        7. MISSING DATA: If the user asks for data you can't calculate (e.g., profit without cost data), try to provide the most relevant alternative (e.g., total revenue) or a very brief explanation (max 15 words) if it is impossible.
-        8. SECURITY: Only SELECT queries are allowed.
-        9. DATES: For "this month", use: date_column >= DATE_TRUNC('month', CURRENT_DATE) AND date_column < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'.
+        ### CRITICAL INSTRUCTIONS (ENHANCED):
+
+1. PRIMARY KEYS: Look for [PRIMARY KEY] markers. NEVER assume a table has an 'id' column unless it is explicitly listed. For example, 'app_negocio_factura' uses 'nro' as PK.
+2. JOINS: Use the exact column names for joins. If a column is listed as factura_id (FK -> app_negocio_factura.nro), you must join using app_negocio_factura.nro = table.factura_id.
+3. OUTPUT: Return ONLY the raw SQL query. No markdown code blocks (```sql), no comments, no explanations, no preamble. Just the raw string executable by the database.
+4. DIALECT: Use PostgreSQL. Use ILIKE for case-insensitive text matching.
+5. NULL HANDLING (CRITICAL): ALWAYS use COALESCE() for columns involved in mathematical operations or string concatenations to prevent returning NULL. Example: COALESCE(p.costo, 0).
+6. SOFT DELETES & STATUS: NEVER include deleted, cancelled, or inactive records in reports unless explicitly requested. Always filter using available status columns (e.g., WHERE estado != 'anulado', WHERE is_active = true, or WHERE deleted_at IS NULL).
+7. DETAIL OVER AGGREGATION: Unless the user specifically asks for "just the total", ALWAYS favor returning a detailed list of records with context. Include dates, names, categories, and individual totals alongside window functions for running totals if appropriate.
+8. RELEVANT COLUMNS: Always include descriptive columns like names, categories, and dates to give context to the numbers. Join with customers_cliente, app_negocio_categoria, or similar tables to show human-readable names instead of raw IDs.
+9. SCALAR COMPARISONS: Use LEAST(a, b) instead of MIN(a, b) and GREATEST(a, b) instead of MAX(a, b) for comparing two values on the same row. MIN/MAX are ONLY for aggregate functions.
+10. BUSINESS LOGIC & METRICS
+    - 'Ganancia Potencial' = (COALESCE(p.precio, 0) - COALESCE(p.costo, 0)) * COALESCE(p.stock, 0).
+    - 'Ventas Totales' = Must list details of sales first, then the sum.
+    - 'Rentabilidad' = ((p.precio - p.costo) / NULLIF(p.precio, 0)) * 100. Round this to 2 decimal places using ROUND(..., 2).
+11. SORTING (ORDER BY): NEVER return an unordered result set. Every query MUST have an ORDER BY clause. For reports, default to ordering by date descending (fecha DESC), then by primary key descending.
+12. DATES & TIME: For "this month", strictly use: date_column >= DATE_TRUNC('month', CURRENT_DATE) AND date_column < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'. For formatting outputs, use TO_CHAR(date_column, 'YYYY-MM-DD HH24:MI') to ensure consistent reading.
+13. SMART ANALYTICS: When requested for top items, rankings, or performance over time, utilize Window Functions (RANK(), SUM() OVER()) to provide deep insights without losing row-level context.
+14. MULTI-TENANCY: Do not use schema prefixes. Just use the table names.
+15. SECURITY: Only SELECT queries are allowed. Never generate INSERT, UPDATE, DELETE, DROP, or ALTER.
         """
         
         logger.info(f"--- VOICE QUERY PROMPT ---\n{prompt}\n--------------------------")
@@ -204,6 +214,7 @@ class VoiceQueryService:
         """
         Executes the SQL query and returns the result as a list of dictionaries.
         """
+        from django.db import connection
         if not sql:
             return []
 
