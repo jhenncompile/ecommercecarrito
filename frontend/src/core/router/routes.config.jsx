@@ -1,25 +1,6 @@
 // ============================================================
 // LEGO REGISTRY — core/router/routes.config.jsx
 // ============================================================
-// Para añadir UN NUEVO MÓDULO a toda la app:
-//
-//   1. Crea tu vista en:
-//      modules/mi_modulo/views/MiModuloView.jsx
-//
-//   2. Agrega su entrada abajo en APP_MODULES:
-//      {
-//        id: 'mi_modulo',
-//        path: '/mi-modulo',
-//        label: 'Mi Módulo',
-//        icon: IconoDeLucide,
-//        component: lazy(() => import('modules/mi_modulo/views/MiModuloView')),
-//        protected: true,
-//        inSidebar: true,
-//        group: 'negocio',  // 'principal' | 'negocio' | 'analisis' | 'config'
-//      }
-//
-//   ¡Listo! El sidebar, las rutas y el menú se actualizan solos.
-// ============================================================
 
 import { lazy } from 'react';
 import {
@@ -29,9 +10,9 @@ import {
   Users,
   BarChart3,
   User,
+  ClipboardList,
+  ShoppingBag,
 } from 'lucide-react';
-
-
 
 // ─── MÓDULOS AUTENTICADOS (con sidebar) ─────────────────────
 export const APP_MODULES = [
@@ -44,6 +25,7 @@ export const APP_MODULES = [
     protected: true,
     inSidebar: true,
     group: 'principal',
+    roles: ['vendedor'],
   },
   {
     id: 'productos',
@@ -54,6 +36,7 @@ export const APP_MODULES = [
     protected: true,
     inSidebar: true,
     group: 'negocio',
+    roles: ['vendedor'],
   },
   {
     id: 'ventas',
@@ -64,6 +47,7 @@ export const APP_MODULES = [
     protected: true,
     inSidebar: true,
     group: 'negocio',
+    roles: ['vendedor'],
   },
   {
     id: 'clientes',
@@ -74,6 +58,18 @@ export const APP_MODULES = [
     protected: true,
     inSidebar: true,
     group: 'negocio',
+    roles: ['vendedor'],
+  },
+  {
+    id: 'inventario',
+    path: '/inventario',
+    label: 'Inventario',
+    icon: ClipboardList,
+    component: lazy(() => import('modules/inventario/views/InventarioView')),
+    protected: true,
+    inSidebar: true,
+    group: 'negocio',
+    roles: ['vendedor'],
   },
   {
     id: 'reportes',
@@ -84,27 +80,49 @@ export const APP_MODULES = [
     protected: true,
     inSidebar: true,
     group: 'analisis',
+    roles: ['vendedor'],
   },
-
   {
-  id: 'perfil',
-  path: '/perfil',
-  label: 'Mi Perfil',
-  icon: User,
-  component: lazy(() => import('modules/perfil/Views/PerfilView')),
-  protected: true,
-  inSidebar: true,
-  group: 'config',  // Aparecerá en sección de configuración
+    id: 'perfil',
+    path: '/perfil',
+    label: 'Mi Perfil',
+    icon: User,
+    component: lazy(() => import('modules/perfil/Views/PerfilView')),
+    protected: true,
+    inSidebar: true,
+    group: 'config',
+    roles: ['vendedor', 'cliente'],
   },
-
+  {
+    id: 'cliente_dashboard',
+    path: '/mi-portal',
+    label: 'Mi Portal',
+    icon: User,
+    component: lazy(() => import('modules/cliente/views/ClienteDashboard')),
+    protected: true,
+    inSidebar: true,
+    group: 'cliente',
+    roles: ['cliente'],
+  },
   {
     id: 'marketplace',
     path: '/marketplace',
     component: lazy(() => import('modules/marketplace/views/MarketplaceView')),
     protected: true,
-    inSidebar: false,  // no aparece en el sidebar
+    inSidebar: false,
+    roles: ['vendedor', 'cliente'],
+  },
+  {
+    id: 'mis_pedidos',
+    path: '/pedidos',
+    label: 'Mis Pedidos',
+    icon: ShoppingBag,
+    component: lazy(() => import('modules/cliente/views/MisPedidosView')),
+    protected: true,
+    inSidebar: true,
+    group: 'cliente',
+    roles: ['cliente'],
   }
-
 ];
 
 // ─── RUTAS PÚBLICAS (sin autenticación) ─────────────────────
@@ -113,6 +131,11 @@ export const AUTH_ROUTES = [
     id: 'home',
     path: '/',
     component: lazy(() => import('modules/auth/views/HomeView')),
+  },
+  {
+    id: 'tienda-catalogo',
+    path: '/catalogo',
+    component: lazy(() => import('modules/tienda/views/PublicStorefront')),
   },
   {
     id: 'login',
@@ -150,20 +173,24 @@ export const AUTH_ROUTES = [
     component: lazy(() => import('modules/auth/views/SSOReceiverView')),
   },
   {
+    id: 'tienda-publica',
+    path: '/tienda',
+    component: lazy(() => import('modules/tienda/views/PublicStorefront')),
+  },
+  {
     id: 'catalogo-vista',
-    path: '/productos/catalogo',  // misma ruta que usa el navigate en CatalogoView
+    path: '/productos/catalogo',
     component: lazy(() => import('modules/productos_catalogo/views/CatalogoView')),
     protected: true,
-    inSidebar: false,  // no aparece en el sidebar
+    inSidebar: false,
   }
-  
-
-
 ];
 
 // ─── Helper: agrupar módulos del sidebar por grupo ──────────
-export const getSidebarGroups = () => {
-  const sidebarItems = APP_MODULES.filter((m) => m.inSidebar);
+export const getSidebarGroups = (userRole) => {
+  const sidebarItems = APP_MODULES.filter(
+    (m) => m.inSidebar && m.roles?.includes(userRole)
+  );
   const groups = {};
   sidebarItems.forEach((item) => {
     const g = item.group || 'general';

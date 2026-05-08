@@ -11,6 +11,7 @@ const GROUP_LABELS = {
   negocio:   'Negocio',
   analisis:  'Análisis',
   config:    'Configuración',
+  cliente:   'Mi Espacio',
   general:   'General',
 };
 
@@ -23,7 +24,7 @@ const AppShell = () => {
   const tenant = useTenant();
   const navigate = useNavigate();
 
-  const sidebarGroups = getSidebarGroups();
+  const sidebarGroups = getSidebarGroups(user?.role);
 
   const fullName = user?.fullName || 'Usuario';
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=18aea4&color=fff&bold=true`;

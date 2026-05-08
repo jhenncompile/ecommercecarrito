@@ -9,6 +9,7 @@ class Producto(models.Model):
     precio = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     costo = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name='Costo de Compra')
     stock = models.IntegerField(default=0)
+    atributos = models.JSONField(default=dict, blank=True, null=True, verbose_name='Atributos (Color, Talla, etc.)')
     
     # Cambiar de CharField a ForeignKey
     categoria = models.ForeignKey(

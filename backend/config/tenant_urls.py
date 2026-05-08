@@ -5,6 +5,10 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from app_negocio.views.carrito_views import CarritoViewSet
 from app_negocio.views.producto_views import ProductoViewSet
+from app_negocio.views.categoria_views import CategoriaViewSet
+from app_negocio.views.pedido_views import PedidoViewSet
+from app_negocio.views.factura_views import FacturaViewSet, TipoPagoViewSet
+from app_negocio.views.pago_views import PagoViewSet
 from voice_query.views.query_view import VoiceQueryView
 from customers.views.usuario_views import (
     MyTokenObtainPairView, LogoutView,
@@ -39,6 +43,20 @@ urlpatterns = [
     # Password Reset (también en tenants para facilitar acceso)
     path('api/password-reset/', PasswordResetRequestView.as_view(), name='password_reset'),
     path('api/password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+
+    # Pedidos
+    path('api/pedidos/', PedidoViewSet.as_view({'get': 'list', 'post': 'create'}), name='pedido-list'),
+    path('api/pedidos/<int:pk>/', PedidoViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='pedido-detail'),
+    path('api/pedidos/crear-desde-carrito/', PedidoViewSet.as_view({'post': 'crear_desde_carrito'}), name='pedido-desde-carrito'),
+    path('api/pedidos/<int:pk>/cambiar-estado/', PedidoViewSet.as_view({'post': 'cambiar_estado'}), name='pedido-cambiar-estado'),
+
+    # Pagos y Facturas
+    path('api/facturas/', FacturaViewSet.as_view({'get': 'list', 'post': 'create'}), name='factura-list'),
+    path('api/pagos/', PagoViewSet.as_view({'get': 'list', 'post': 'create'}), name='pago-list'),
+    path('api/pagos/create-checkout-session/', PagoViewSet.as_view({'post': 'create_checkout_session'}), name='pago-stripe-session'),
+
+    # Categorías
+    path('api/categorias/', CategoriaViewSet.as_view({'get': 'list', 'post': 'create'}), name='categoria-list'),
 
     # Perfil del usuario autenticado
     path('api/usuarios/perfil/', MiPerfilView.as_view(), name='mi_perfil'),

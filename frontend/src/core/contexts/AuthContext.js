@@ -10,14 +10,16 @@ export const AuthProvider = ({ children }) => {
     // Rehidratar desde localStorage al cargar
     const fullName = localStorage.getItem('user_full_name');
     const token    = localStorage.getItem('access_token');
-    return token ? { fullName: fullName || 'Usuario', token } : null;
+    const role     = localStorage.getItem('user_role');
+    return token ? { fullName: fullName || 'Usuario', token, role } : null;
   });
 
-  const login = useCallback((accessToken, refreshToken, fullName) => {
+  const login = useCallback((accessToken, refreshToken, fullName, role = 'vendedor') => {
     localStorage.setItem('access_token',  accessToken);
     localStorage.setItem('refresh_token', refreshToken);
     localStorage.setItem('user_full_name', fullName || '');
-    setUser({ fullName: fullName || 'Usuario', token: accessToken });
+    localStorage.setItem('user_role', role);
+    setUser({ fullName: fullName || 'Usuario', token: accessToken, role });
   }, []);
 
   const logout = useCallback(async () => {
@@ -34,6 +36,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user_full_name');
+      localStorage.removeItem('user_role');
       setUser(null);
       const baseDomain = getBaseDomain(window.location.hostname);
       const port = window.location.port ? `:${window.location.port}` : '';

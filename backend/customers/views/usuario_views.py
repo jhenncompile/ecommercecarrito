@@ -124,19 +124,23 @@ class MiPerfilView(APIView):
     
     def get(self, request):
         """Obtener datos del perfil del usuario autenticado"""
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning(f"MiPerfilView GET - User: {request.user}, Authenticated: {request.user.is_authenticated}")
-        # Print explícito para consola
-        try:
-            from django.db import connection
-            print(f"[MiPerfilView] host={request.META.get('HTTP_HOST')} schema={connection.schema_name} user={request.user} authenticated={request.user.is_authenticated}")
-        except Exception as e:
-            print(f"[MiPerfilView] error printing debug info: {e}")
-        
         usuario = request.user
+        
+        # Si es un cliente (usuario liviano del token)
+        if hasattr(usuario, 'role') and usuario.role == "CLIENTE":
+            return Response({
+                'id': usuario.id,
+                'nombre': usuario.nombre,
+                'email': usuario.correo,
+                'role': usuario.role,
+                'is_cliente': True
+            }, status=status.HTTP_200_OK)
+
+        # Si es un vendedor (Usuario real del modelo)
         serializer = UsuarioCrudSerializer(usuario)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        data = dict(serializer.data)
+        data['role'] = 'vendedor'
+        return Response(data, status=status.HTTP_200_OK)
     
     def patch(self, request):
         """Actualizar datos del perfil"""

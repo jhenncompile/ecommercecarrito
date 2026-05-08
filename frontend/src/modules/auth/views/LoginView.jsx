@@ -47,13 +47,13 @@ export default function LoginView() {
             ? `:${currentPort}` : '';
           window.location.href = `${protocol}//${subdomain}${portPart}/sso?token=${access}&refresh=${refresh}&full_name=${encodeURIComponent(full_name || '')}`;
         } else {
-          login(access, refresh, res.data.full_name);
+          login(access, refresh, res.data.full_name, 'vendedor');
           navigate('/dashboard', { replace: true });
         }
       } else {
-        // Cliente: Guardar tokens y redirigir al marketplace
-        login(access, refresh, res.data.cliente?.nombre);
-        navigate('/marketplace', { replace: true });
+        // Cliente: Guardar tokens y redirigir a su portal
+        login(access, refresh, res.data.cliente?.nombre, 'cliente');
+        navigate('/mi-portal', { replace: true });
       }
     } catch {
       setError(loginType === 'vendedor' 

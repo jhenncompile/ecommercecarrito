@@ -49,7 +49,8 @@ class TiendaPublicSerializer(serializers.ModelSerializer):
             'descripcion', 
             'categoria_tienda', 
             'logo_url', 
-            'subdominio'
+            'subdominio',
+            'schema_name'
         ]
         read_only_fields = fields
 

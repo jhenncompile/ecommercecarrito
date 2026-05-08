@@ -7,6 +7,7 @@ from app_negocio.views.categoria_views import CategoriaViewSet
 from app_negocio.views.carrito_views import CarritoViewSet
 from app_negocio.views.pedido_views import PedidoViewSet
 from app_negocio.views.factura_views import FacturaViewSet, TipoPagoViewSet
+from app_negocio.views.pago_views import PagoViewSet
 from rest_framework_simplejwt.views import TokenRefreshView
 from customers.views.usuario_views import (
     MyTokenObtainPairView, LogoutView, UsuarioCrudViewSet,
@@ -29,6 +30,7 @@ router.register(r'carritos', CarritoViewSet, basename='carritos')
 router.register(r'pedidos', PedidoViewSet, basename='pedidos')
 router.register(r'facturas', FacturaViewSet, basename='facturas')
 router.register(r'tipos-pago', TipoPagoViewSet, basename='tipos-pago')
+router.register(r'pagos', PagoViewSet, basename='pagos')
 
 # Customers
 router.register(r'usuarios', UsuarioCrudViewSet, basename='usuarios')

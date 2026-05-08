@@ -24,6 +24,16 @@ class PedidoViewSet(BaseViewSet):
     queryset = Pedido.objects.all()
     serializer_class = PedidoSerializer
     modulo_auditoria = "Pedido"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        
+        # Si el usuario es un Cliente (Lightweight user de ClienteJWTAuthentication)
+        if hasattr(user, 'role') and user.role == "CLIENTE":
+            return qs.filter(carrito__cliente_id=user.id)
+            
+        return qs
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
