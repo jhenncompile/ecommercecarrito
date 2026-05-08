@@ -97,6 +97,14 @@ export const APP_MODULES = [
   group: 'config',  // Aparecerá en sección de configuración
   },
 
+  {
+    id: 'marketplace',
+    path: '/marketplace',
+    component: lazy(() => import('modules/marketplace/views/MarketplaceView')),
+    protected: true,
+    inSidebar: false,  // no aparece en el sidebar
+  }
+
 ];
 
 // ─── RUTAS PÚBLICAS (sin autenticación) ─────────────────────
@@ -110,6 +118,11 @@ export const AUTH_ROUTES = [
     id: 'login',
     path: '/login',
     component: lazy(() => import('modules/auth/views/LoginView')),
+  },
+  {
+    id: 'registro',
+    path: '/registro-cliente',
+    component: lazy(() => import('modules/auth/views/RegistroView')),
   },
   {
     id: 'forgot-password',
