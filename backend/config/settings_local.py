@@ -92,6 +92,8 @@ if ENVIRONMENT == 'development':
     CSRF_TRUSTED_ORIGINS = [
         "http://localhost",
         "http://127.0.0.1",
+        f"http://{DOMAIN_MAIN}",
+        f"http://{DOMAIN_MAIN}:8001",
         f"http://*{TENANT_DOMAIN_SUFFIX}"
     ]
     

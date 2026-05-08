@@ -11,8 +11,9 @@ class PublicOnlyAdmin(admin.ModelAdmin):
         return request.user.tenant is None or request.user.tenant.schema_name == 'public'
 
     def has_module_permission(self, request):
-        # 1. ¿Estamos en la URL correcta?
-        if request.tenant.schema_name != 'public':
+        # 1. ¿Estamos en la URL correcta? (Usamos getattr por seguridad)
+        tenant = getattr(request, 'tenant', None)
+        if not tenant or tenant.schema_name != 'public':
             return False
         # 2. ¿El usuario tiene permiso de ver esto?
         if not self._is_global_admin(request):
@@ -21,7 +22,8 @@ class PublicOnlyAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        if request.tenant.schema_name == 'public' and self._is_global_admin(request):
+        tenant = getattr(request, 'tenant', None)
+        if tenant and tenant.schema_name == 'public' and self._is_global_admin(request):
             return qs
         return qs.none()
 

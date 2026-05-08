@@ -151,6 +151,7 @@ def show_main_menu():
         print_option(f"{Colors.GREEN}1{Colors.RESET} - Iniciar Backend (Django)")
         print_option(f"{Colors.GREEN}2{Colors.RESET} - Iniciar Frontend (React)")
         print_option(f"{Colors.BOLD}{Colors.GREEN}3{Colors.RESET} - {Colors.BOLD}INICIAR TODO (Backend + Frontend){Colors.RESET}")
+        print_option(f"{Colors.BOLD}{Colors.YELLOW}M{Colors.RESET} - {Colors.BOLD}SINCRONIZAR BASE DE DATOS (Migrations){Colors.RESET}")
 
         print_section("DATOS Y USUARIOS")
         print_option(f"{Colors.CYAN}4{Colors.RESET} - Gestión de Base de Datos y Usuarios")
@@ -182,6 +183,9 @@ def show_main_menu():
             run_script('run_services.py', 'frontend', use_venv=False)
         elif choice in ('3', 'a'):
             run_script('run_services.py', 'all', use_venv=False)
+        elif choice == 'm':
+            run_script('migrations.py', 'sync')
+            pause()
         elif choice == '4':
             show_data_menu()
         elif choice == '5':
