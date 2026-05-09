@@ -1,19 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { getBaseDomain } from 'core/utils/domain';
 import { 
     Search, 
-    Filter, 
     ShoppingBag, 
-    ChevronDown, 
-    X, 
-    SlidersHorizontal,
-    Star,
     ArrowUpDown,
     LayoutGrid,
     List as ListIcon,
+    Filter,
+    X,
     ImageOff
 } from 'lucide-react';
 import { productosApi, categoriasApi } from '../../productos_catalogo/services/productosApi';
-import { Button, Input, Badge, Spinner, Alert } from 'shared/components';
+import { Button, Badge, Spinner } from 'shared/components';
 import { useCart } from '../hooks/useCart';
 import api from 'core/services/api';
 import styles from './PublicStorefront.module.css';
@@ -36,7 +34,8 @@ const PublicStorefront = () => {
     const [isCheckingOut, setIsCheckingOut] = useState(false);
 
     // --- Carrito ---
-    const { cart, addToCart, total, clearCart } = useCart();
+    const { cart, addToCart, removeFromCart, updateQuantity, total, clearCart } = useCart();
+    const [isCartOpen, setIsCartOpen] = useState(false);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -86,6 +85,29 @@ const PublicStorefront = () => {
         }));
     };
 
+    const [paymentSuccess, setPaymentSuccess] = useState(false);
+    const [lastPedidoId, setLastPedidoId] = useState(null);
+
+    useEffect(() => {
+        const query = new URLSearchParams(window.location.search);
+        if (query.get('status') === 'success') {
+            setPaymentSuccess(true);
+            const pid = query.get('pedido_id');
+            setLastPedidoId(pid);
+            clearCart();
+            // Confirmar en el backend por si el webhook se retrasa
+            if (pid) {
+                const tenant = query.get('tenant') || window.location.hostname.split('.')[0];
+                api.post('/pagos/confirm-success/', { 
+                    pedido_id: pid,
+                    tenant: tenant
+                }).catch(e => console.error("Error confirmando éxito", e));
+            }
+            // Limpiar URL
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, [clearCart]);
+
     const handleCheckout = async () => {
         if (cart.length === 0) return;
         setIsCheckingOut(true);
@@ -102,11 +124,18 @@ const PublicStorefront = () => {
 
             const pedidoId = pedidoRes.data.id;
 
-            // 2. Crear sesión de Stripe
+            // 2. Crear sesión de Stripe dinámica
+            const baseDomain = getBaseDomain(window.location.hostname);
+            // Si hay un puerto en la URL actual, lo mantenemos (ej. 3000 en dev)
+            const currentPort = window.location.port ? `:${window.location.port}` : '';
+            const tenantSub = window.location.hostname.split('.')[0];
+            
+            const successUrl = `${window.location.protocol}//${baseDomain}${currentPort}/mi-portal?status=success&pedido_id=${pedidoId}&tenant=${tenantSub}`;
+
             const stripeRes = await api.post('/pagos/create-checkout-session/', {
                 pedido_id: pedidoId,
-                success_url: window.location.origin + '/mi-portal?status=success',
-                cancel_url: window.location.origin + '/tienda?status=cancel'
+                success_url: successUrl,
+                cancel_url: `${window.location.origin}?status=cancel`
             });
 
             if (stripeRes.data.url) {
@@ -129,6 +158,49 @@ const PublicStorefront = () => {
 
     return (
         <div className={styles.storeContainer}>
+            {/* --- MODAL ÉXITO PAGO --- */}
+            {paymentSuccess && (
+                <div className={styles.successOverlay}>
+                    <div className={styles.successCard}>
+                        <div className={styles.successIcon}>✅</div>
+                        <h2>¡Pago Confirmado!</h2>
+                        <p>Gracias por tu compra. Tu pedido #{lastPedidoId} está siendo procesado.</p>
+                        <div className={styles.successActions}>
+                            <Button 
+                                variant="primary" 
+                                onClick={async () => {
+                                    try {
+                                        // Buscar la factura asociada al pedido
+                                        const res = await api.get(`/facturas/?pedido=${lastPedidoId}`);
+                                        const factura = res.data.results ? res.data.results[0] : res.data[0];
+                                        if (factura) {
+                                            // Descargar con autenticación (blob)
+                                            const pdfRes = await api.get(`facturas/${factura.nro}/descargar_pdf/`, {
+                                                responseType: 'blob'
+                                            });
+                                            const url = window.URL.createObjectURL(new Blob([pdfRes.data]));
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.setAttribute('download', `factura-${factura.nro}.pdf`);
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            link.remove();
+                                        } else {
+                                            alert("La factura aún se está generando, intenta en un momento.");
+                                        }
+                                    } catch (e) {
+                                        console.error("Error al buscar factura", e);
+                                    }
+                                }}
+                            >
+                                Descargar Factura PDF
+                            </Button>
+                            <Button variant="outline" onClick={() => setPaymentSuccess(false)}>Seguir comprando</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* --- HEADER TIENDA --- */}
             <header className={styles.storeHeader}>
                 <div className={styles.headerContent}>
@@ -146,7 +218,11 @@ const PublicStorefront = () => {
                             <span>Total:</span>
                             <strong>Bs. {total.toFixed(2)}</strong>
                         </div>
-                        <button className={styles.cartBtn} title="Ver Carrito">
+                        <button 
+                            className={styles.cartBtn} 
+                            title="Ver Carrito"
+                            onClick={() => setIsCartOpen(true)}
+                        >
                             <ShoppingBag size={20} />
                             <span className={styles.cartBadge}>{cart.length}</span>
                         </button>
@@ -318,6 +394,65 @@ const PublicStorefront = () => {
                     )}
                 </section>
             </main>
+            {/* --- CART DRAWER --- */}
+            {isCartOpen && (
+                <div className={styles.cartOverlay} onClick={() => setIsCartOpen(false)}>
+                    <div className={styles.cartDrawer} onClick={e => e.stopPropagation()}>
+                        <div className={styles.drawerHeader}>
+                            <h3>Tu Carrito</h3>
+                            <button onClick={() => setIsCartOpen(false)}><X size={24} /></button>
+                        </div>
+                        
+                        <div className={styles.drawerContent}>
+                            {cart.length === 0 ? (
+                                <div className={styles.emptyCart}>
+                                    <ShoppingBag size={48} />
+                                    <p>Tu carrito está vacío</p>
+                                    <Button onClick={() => setIsCartOpen(false)}>Empezar a comprar</Button>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className={styles.cartItemsList}>
+                                        {cart.map(item => (
+                                            <div key={item.id} className={styles.cartItemRow}>
+                                                <div className={styles.itemImg}>
+                                                    <img src={item.imagen_url || '/placeholder.png'} alt={item.nombre} />
+                                                </div>
+                                                <div className={styles.itemInfo}>
+                                                    <h4>{item.nombre}</h4>
+                                                    <div className={styles.qtyControls}>
+                                                        <button onClick={() => updateQuantity(item.id, -1)}>-</button>
+                                                        <span>{item.quantity}</span>
+                                                        <button onClick={() => updateQuantity(item.id, 1)}>+</button>
+                                                    </div>
+                                                </div>
+                                                <div className={styles.itemPrice}>
+                                                    <span>Bs. {(item.precio * item.quantity).toFixed(2)}</span>
+                                                    <button onClick={() => removeFromCart(item.id)} className={styles.removeBtn}>Eliminar</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className={styles.drawerFooter}>
+                                        <div className={styles.totalRow}>
+                                            <span>Subtotal</span>
+                                            <strong>Bs. {total.toFixed(2)}</strong>
+                                        </div>
+                                        <Button 
+                                            variant="primary" 
+                                            fullWidth 
+                                            loading={isCheckingOut}
+                                            onClick={handleCheckout}
+                                        >
+                                            Pagar ahora
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

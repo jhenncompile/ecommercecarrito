@@ -16,11 +16,19 @@ class Pedido(models.Model):
     
     ESTADO_CHOICES = [
         ('PENDIENTE', 'Pendiente'),
+        ('PAGADO', 'Pagado'),
         ('PROCESADO', 'Procesado'),
         ('ENVIADO', 'Enviado'),
         ('ENTREGADO', 'Entregado'),
         ('CANCELADO', 'Cancelado'),
     ]
+
+    stripe_session_id = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        verbose_name='Stripe Session ID'
+    )
     
     carrito = models.OneToOneField(
         Carrito,

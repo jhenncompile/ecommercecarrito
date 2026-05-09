@@ -44,7 +44,42 @@ class FacturaViewSet(BaseViewSet):
     serializer_class = FacturaSerializer
     modulo_auditoria = "Factura"
     lookup_field = 'nro'
+
+    def get_queryset(self):
+        from django.db import connection
+        from django_tenants.utils import schema_context
+        from customers.models import Client
+        
+        qs = Factura.objects.all()
+        pedido_id = self.request.query_params.get('pedido')
+        
+        # Si estamos en public y buscamos por pedido, rastreamos todas las tiendas
+        if connection.schema_name == 'public' and pedido_id:
+            tenants = Client.objects.exclude(schema_name='public')
+            for tenant in tenants:
+                with schema_context(tenant.schema_name):
+                    factura = Factura.objects.filter(pedido_id=pedido_id).first()
+                    if factura:
+                        return Factura.objects.filter(id=factura.id)
+        
+        return qs
     
+    def get_object(self):
+        from django.db import connection
+        from django_tenants.utils import schema_context
+        from customers.models import Client
+        
+        nro = self.kwargs.get('nro')
+        if connection.schema_name == 'public' and nro:
+            tenants = Client.objects.exclude(schema_name='public')
+            for tenant in tenants:
+                with schema_context(tenant.schema_name):
+                    try:
+                        return Factura.objects.get(nro=nro)
+                    except Factura.DoesNotExist:
+                        continue
+        return super().get_object()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = FacturaService()
@@ -72,6 +107,27 @@ class FacturaViewSet(BaseViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
     
+    @action(detail=True, methods=['get'])
+    def descargar_pdf(self, request, nro=None):
+        """Genera y descarga el PDF de la factura."""
+        try:
+            from django.http import FileResponse
+            from ..utils.pdf_generator import generar_pdf_factura
+            
+            factura = self.get_object()
+            pdf_buffer = generar_pdf_factura(factura)
+            
+            return FileResponse(
+                pdf_buffer, 
+                as_attachment=True, 
+                filename=f"factura_{factura.nro}.pdf"
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
     @action(detail=True, methods=['post'])
     def anular(self, request, nro=None):
         """Anula una factura."""

@@ -30,10 +30,33 @@ class PedidoService(BaseService):
         carrito.save()
         
         return pedido
-    
+
+    def crear_pedido_directo(self, cliente_id, items):
+        """Crea un carrito y un pedido en un solo paso."""
+        from app_negocio.models import CarritoItem, Producto
+        from customers.models import Cliente
+        
+        with transaction.atomic():
+            cliente = Cliente.objects.get(id=cliente_id)
+            carrito = Carrito.objects.create(cliente=cliente, estado='CERRADO')
+            
+            for item in items:
+                producto = Producto.objects.get(id=item['producto'])
+                CarritoItem.objects.create(
+                    carrito=carrito,
+                    producto=producto,
+                    cantidad=item['cantidad']
+                )
+            
+            pedido = Pedido.objects.create(
+                carrito=carrito,
+                estado='PENDIENTE'
+            )
+            return pedido
+
     def cambiar_estado(self, pedido_id, nuevo_estado):
         """Cambia el estado de un pedido."""
-        estados_validos = ['PENDIENTE', 'PROCESADO', 'ENVIADO', 'ENTREGADO', 'CANCELADO']
+        estados_validos = ['PENDIENTE', 'PAGADO', 'PROCESADO', 'ENVIADO', 'ENTREGADO', 'CANCELADO']
         
         if nuevo_estado not in estados_validos:
             raise ValueError(f"Estado inválido. Válidos: {estados_validos}")

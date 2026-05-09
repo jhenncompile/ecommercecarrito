@@ -14,10 +14,21 @@ export default function SSOReceiverView() {
     const token    = params.get('token');
     const refresh  = params.get('refresh');
     const fullName = params.get('full_name');
+    const role     = params.get('role') || 'vendedor';
 
     if (token) {
-      login(token, refresh || '', fullName ? decodeURIComponent(fullName) : '');
-      navigate('/dashboard', { replace: true });
+      login(token, refresh || '', fullName ? decodeURIComponent(fullName) : '', role);
+      
+      const hostname = window.location.hostname;
+      const baseDomain = getBaseDomain(hostname);
+      
+      // Si estamos en un subdominio (tienda), vamos al catálogo.
+      // Si estamos en el dominio principal, vamos al dashboard.
+      if (hostname !== baseDomain && hostname !== 'localhost') {
+        navigate('/catalogo', { replace: true });
+      } else {
+        navigate(role === 'cliente' ? '/mi-portal' : '/dashboard', { replace: true });
+      }
     } else {
       const baseDomain = getBaseDomain(window.location.hostname);
       const port = window.location.port ? `:${window.location.port}` : '';

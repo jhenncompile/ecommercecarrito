@@ -52,8 +52,13 @@ urlpatterns = [
 
     # Pagos y Facturas
     path('api/facturas/', FacturaViewSet.as_view({'get': 'list', 'post': 'create'}), name='factura-list'),
+    path('api/facturas/<str:nro>/descargar_pdf/', FacturaViewSet.as_view({'get': 'descargar_pdf'}), name='factura-pdf'),
+    path('api/tipos-pago/', TipoPagoViewSet.as_view({'get': 'list', 'post': 'create'}), name='tipo-pago-list'),
+    
     path('api/pagos/', PagoViewSet.as_view({'get': 'list', 'post': 'create'}), name='pago-list'),
     path('api/pagos/create-checkout-session/', PagoViewSet.as_view({'post': 'create_checkout_session'}), name='pago-stripe-session'),
+    path('api/pagos/webhook/', PagoViewSet.as_view({'post': 'stripe_webhook'}), name='pago-stripe-webhook'),
+    path('api/pagos/confirm-success/', PagoViewSet.as_view({'post': 'confirm_success'}), name='pago-confirm-success'),
 
     # Categorías
     path('api/categorias/', CategoriaViewSet.as_view({'get': 'list', 'post': 'create'}), name='categoria-list'),

@@ -20,11 +20,21 @@ const ClienteDashboard = () => {
     const [stats, setStats] = useState({ orders: 0, spent: 0, pending: 0 });
     const [recentOrders, setRecentOrders] = useState([]);
     const [shops, setShops] = useState([]);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
+                // Confirmar pago si venimos de Stripe
+                const params = new URLSearchParams(window.location.search);
+                const statusStr = params.get('status');
+                const pedidoId = params.get('pedido_id');
+                
+                if (statusStr === 'success' && pedidoId) {
+                    await api.post('/pagos/confirm-success/', { pedido_id: pedidoId });
+                    // Limpiar la URL para evitar re-confirmaciones
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+
                 const hostname = window.location.hostname;
                 const baseDomain = getBaseDomain(hostname);
                 
@@ -48,7 +58,8 @@ const ClienteDashboard = () => {
 
                 if (ordersRes) {
                     const orders = ordersRes.data || [];
-                    setRecentOrders(orders.slice(0, 5));
+                    const recentOrders = Array.isArray(orders) ? orders.slice(0, 5) : [];
+                    setRecentOrders(recentOrders);
                     setStats({
                         orders: orders.length,
                         spent: orders.reduce((acc, o) => acc + parseFloat(o.total || 0), 0),
@@ -57,8 +68,6 @@ const ClienteDashboard = () => {
                 }
             } catch (err) {
                 console.error("Error fetching client data", err);
-            } finally {
-                setLoading(false);
             }
         };
         fetchData();
@@ -143,9 +152,7 @@ const ClienteDashboard = () => {
                                     <p>{shop.subdominio || `${shop.schema_name}.localhost`}</p>
                                 </div>
                                 <a 
-                                    href={`http://${shop.subdominio || `${shop.schema_name}${process.env.REACT_APP_TENANT_DOMAIN_SUFFIX || '.localhost'}`}${window.location.port ? `:${window.location.port}` : ''}/catalogo`} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
+                                    href={`http://${shop.subdominio || `${shop.schema_name}${process.env.REACT_APP_TENANT_DOMAIN_SUFFIX || '.localhost'}`}${window.location.port ? `:${window.location.port}` : ''}/sso?token=${localStorage.getItem('access_token')}&refresh=${localStorage.getItem('refresh_token')}&full_name=${encodeURIComponent(localStorage.getItem('user_full_name') || '')}&role=${localStorage.getItem('user_role')}`} 
                                     className={styles.shopLink}
                                 >
                                     <ExternalLink size={16} />

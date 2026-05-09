@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy } from 'react';
 import { getBaseDomain } from 'core/utils/domain';
 
 const HomeView = lazy(() => import('./HomeView'));

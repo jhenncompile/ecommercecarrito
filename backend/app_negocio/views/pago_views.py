@@ -1,116 +1,168 @@
 import stripe
+from django.db import connection
 from django.conf import settings
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from ..models.pedido import Pedido
-from ..models.factura import Factura
+from django.shortcuts import get_object_or_404
+from django_tenants.utils import schema_context
 import logging
 
+from ..models.pedido import Pedido
+from ..models.carrito import Carrito
+from ..models.carrito_item import CarritoItem
+
 logger = logging.getLogger(__name__)
-stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class PagoViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    def _get_stripe_key(self):
+        key = getattr(settings, 'STRIPE_SECRET_KEY', None)
+        if not key:
+            print("❌ ERROR: No se encontró STRIPE_SECRET_KEY en settings")
+            return None
+        stripe.api_key = key
+        return key
+
     @action(detail=False, methods=['post'], url_path='create-checkout-session')
     def create_checkout_session(self, request):
-        """
-        Crea una sesión de pago en Stripe para un pedido específico.
-        """
         pedido_id = request.data.get('pedido_id')
-        if not pedido_id:
-            return Response({'error': 'pedido_id es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+        print(f"📦 Procesando pago para pedido: {pedido_id}")
+        
+        if not self._get_stripe_key():
+            return Response({'error': 'Configuración de Stripe incompleta'}, status=500)
 
         try:
             pedido = Pedido.objects.get(id=pedido_id)
-            # Validar que el pedido pertenezca al usuario (opcional, dependiendo de la lógica)
             
-            # Construir ítems para Stripe
+            if pedido.estado == 'PAGADO':
+                return Response({'error': 'Este pedido ya ha sido pagado'}, status=400)
+
+            # Preparar items
             line_items = []
-            for item in pedido.items.all():
+            if not hasattr(pedido, 'carrito') or not pedido.carrito:
+                print("❌ ERROR: El pedido no tiene carrito")
+                return Response({'error': 'El pedido no tiene un carrito asociado'}, status=400)
+
+            for item in pedido.carrito.items.all():
+                if not item.producto.precio:
+                    print(f"⚠️ ADVERTENCIA: El producto {item.producto.nombre} no tiene precio.")
+                    continue
+                monto_centavos = int(round(float(item.producto.precio) * 100))
                 line_items.append({
                     'price_data': {
-                        'currency': 'bob', # O la moneda configurada
+                        'currency': 'bob',
                         'product_data': {
                             'name': item.producto.nombre,
-                            'description': item.producto.descripcion[:100] if item.producto.descripcion else '',
                         },
-                        'unit_amount': int(item.precio_unitario * 100), # Stripe usa centavos
+                        'unit_amount': monto_centavos,
                     },
                     'quantity': item.cantidad,
                 })
 
+            if not line_items:
+                return Response({'error': 'El carrito está vacío'}, status=400)
+
+            # Crear sesión
             checkout_session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=line_items,
                 mode='payment',
-                success_url=request.data.get('success_url', 'http://localhost:3000/success'),
-                cancel_url=request.data.get('cancel_url', 'http://localhost:3000/cancel'),
+                success_url=request.data.get('success_url'),
+                cancel_url=request.data.get('cancel_url'),
                 metadata={
                     'pedido_id': pedido.id,
-                    'tenant': getattr(settings, 'TENANT_NAME', 'unknown')
+                    'tenant': connection.schema_name
                 }
             )
+            
+            pedido.stripe_session_id = checkout_session.id
+            pedido.save()
 
+            print(f"✅ Sesión de Stripe creada: {checkout_session.id}")
             return Response({'id': checkout_session.id, 'url': checkout_session.url})
+
         except Pedido.DoesNotExist:
-            return Response({'error': 'Pedido no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            print(f"❌ ERROR: Pedido {pedido_id} no existe")
+            return Response({'error': 'Pedido no encontrado'}, status=404)
+        except stripe.error.StripeError as e:
+            print(f"❌ STRIPE ERROR: {str(e)}")
+            return Response({'error': str(e)}, status=400)
         except Exception as e:
-            logger.error(f"Stripe Session Error: {str(e)}")
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            import traceback
+            print(f"❌ BACKEND CRITICAL ERROR: {str(e)}")
+            print(traceback.format_exc())
+            return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['post'], url_path='confirm-success', permission_classes=[IsAuthenticated])
+    def confirm_success(self, request):
+        pedido_id = request.data.get('pedido_id')
+        tenant = request.data.get('tenant')
+        
+        if not pedido_id:
+            return Response({'error': 'pedido_id es requerido'}, status=400)
+
+        print(f"🔄 Confirmando éxito para pedido {pedido_id} en tenant {tenant or 'actual'}")
+        
+        try:
+            if tenant:
+                with schema_context(tenant):
+                    self._marcar_pagado(pedido_id)
+            else:
+                self._marcar_pagado(pedido_id)
+            return Response({'status': 'Pedido marcado como pagado'})
+        except Exception as e:
+            import traceback
+            print(f"❌ Error confirmando éxito: {str(e)}")
+            print(traceback.format_exc())
+            return Response({'error': str(e)}, status=500)
 
     @action(detail=False, methods=['post'], url_path='webhook', permission_classes=[AllowAny])
     def stripe_webhook(self, request):
-        """
-        Recibe notificaciones de Stripe. Si no hay WEBHOOK_SECRET, 
-        se procesa sin verificar firma (útil para pruebas locales sin CLI de Stripe).
-        """
         payload = request.body
-        endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+        sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+        endpoint_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', None)
 
-        if endpoint_secret:
-            sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-            try:
+        try:
+            if endpoint_secret and sig_header:
                 event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-            except Exception as e:
-                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            # Si no hay secreto, confiamos en el payload (SOLO PARA DESARROLLO/SANDBOX)
-            import json
-            try:
+            else:
+                import json
                 event = json.loads(payload)
-            except Exception:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"❌ WEBHOOK ERROR: {str(e)}")
+            return Response({'error': str(e)}, status=400)
 
-        # Manejar el evento
-        event_type = event.get('type') if not endpoint_secret else event['type']
-        data_object = event.get('data', {}).get('object', {}) if not endpoint_secret else event['data']['object']
+        data_object = event.get('data', {}).get('object', {})
+        if event.get('type') == 'checkout.session.completed':
+            metadata = data_object.get('metadata', {})
+            pedido_id = metadata.get('pedido_id')
+            tenant = metadata.get('tenant')
+            
+            if pedido_id and tenant:
+                with schema_context(tenant):
+                    self._marcar_pagado(pedido_id)
 
-        if event_type == 'checkout.session.completed':
-            pedido_id = data_object.get('metadata', {}).get('pedido_id')
-            if pedido_id:
-                self._marcar_pagado(pedido_id)
-
-        return Response(status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=['post'], url_path='confirm-success')
-    def confirm_success(self, request):
-        """
-        Endpoint de respaldo para confirmar pago cuando el cliente regresa a la app.
-        """
-        pedido_id = request.data.get('pedido_id')
-        if pedido_id:
-            self._marcar_pagado(pedido_id)
-            return Response({'status': 'ok'})
-        return Response({'error': 'no id'}, status=400)
+        return Response(status=200)
 
     def _marcar_pagado(self, pedido_id):
         try:
             pedido = Pedido.objects.get(id=pedido_id)
-            pedido.estado = 'pagado'
-            pedido.save()
-            logger.info(f"Pedido {pedido_id} marcado como PAGADO")
-        except Pedido.DoesNotExist:
-            pass
+            if pedido.estado != 'PAGADO':
+                pedido.estado = 'PAGADO'
+                pedido.save()
+                
+                try:
+                    from ..services.factura_service import FacturaService
+                    from ..models.factura import TipoPago
+                    tp = TipoPago.objects.filter(nombre__iexact='Stripe').first()
+                    if not tp:
+                        tp = TipoPago.objects.create(nombre='Stripe')
+                    FacturaService().crear_factura_desde_pedido(pedido_id, tp.id)
+                    print(f"📄 Factura generada para pedido {pedido_id}")
+                except Exception as ef:
+                    print(f"⚠️ Error al generar factura: {str(ef)}")
+        except Exception as e:
+            print(f"❌ ERROR en _marcar_pagado: {str(e)}")
