@@ -24,6 +24,7 @@ class CartRepository {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return CartModel.fromJson(jsonDecode(response.body));
     } else {
+      print('[DEBUG] Error al obtener el carrito: ${response.statusCode} - ${response.body}');
       throw Exception('Error al obtener el carrito: ${response.body}');
     }
   }
