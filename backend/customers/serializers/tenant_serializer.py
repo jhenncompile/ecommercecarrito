@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from customers.models import Client, Domain
+from .rol import Rol
+from .tenant import Client, Domain
 from ..services.tenant_service import TenantService # ✅ Importación del servicio
 import re
 

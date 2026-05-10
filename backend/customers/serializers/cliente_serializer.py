@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from customers.models import Cliente
+from ..models.cliente import Cliente
 
 
 def build_cliente_token_response(cliente):

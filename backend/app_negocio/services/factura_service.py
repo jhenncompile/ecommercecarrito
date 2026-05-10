@@ -1,6 +1,7 @@
 from core.services import BaseService
 from app_negocio.models import Factura, TipoPago, DetalleFactura, Pedido
-from customers.models import Cliente
+from django.db import connection
+from customers.models.cliente import Cliente
 from django.db import transaction
 from decimal import Decimal
 import random

@@ -540,11 +540,10 @@ def restart_service():
         print_error("Debes ejecutar como root (sudo)")
         return
     
-    print("1. Django")
-    print("2. Frontend")
-    print("3. Nginx")
-    print("4. PostgreSQL")
-    print("5. Todos")
+    print("1. Django (Puerto 8001)")
+    print("2. Frontend (Puerto 3000)")
+    print("3. PostgreSQL")
+    print("4. TODO (Backend + Frontend)")
     print()
     
     choice = input("Selecciona servicio: ").strip()
@@ -552,14 +551,29 @@ def restart_service():
     services = {
         '1': 'django_saas',
         '2': 'frontend_saas',
-        '3': 'nginx',
-        '4': 'postgresql',
-        '5': ['django_saas', 'frontend_saas', 'nginx', 'postgresql'],
+        '3': 'postgresql',
+        '4': ['django_saas', 'frontend_saas'],
     }
     
     if choice in services:
         svcs = services[choice] if isinstance(services[choice], list) else [services[choice]]
         
+        project_path = str(PROJECT_ROOT)
+        
+        # 1. Actualizar dependencias de Backend si se reinicia Django o Todo
+        if choice in ['1', '4']:
+            print_info("📦 Actualizando dependencias de Backend...")
+            subprocess.run([f"{project_path}/backend/venv/bin/pip", "install", "-r", f"{project_path}/backend/requirements.txt"], check=False)
+            print_info("🗄️ Ejecutando migraciones...")
+            subprocess.run([f"{project_path}/backend/venv/bin/python", "manage.py", "migrate"], cwd=f"{project_path}/backend", check=False)
+
+        # 2. Actualizar dependencias y Build de Frontend si se reinicia Frontend o Todo
+        if choice in ['2', '4']:
+            print_info("📦 Actualizando Frontend (npm install)...")
+            subprocess.run(["npm", "install"], cwd=f"{project_path}/frontend", check=False)
+            print_info("🏗️ Generando Build de Frontend...")
+            subprocess.run(["npm", "run", "build"], cwd=f"{project_path}/frontend", check=False)
+
         for svc in svcs:
             try:
                 print_info(f"Reiniciando {svc}...")
@@ -637,11 +651,9 @@ User={run_user}
 Group={run_user}
 WorkingDirectory={project_path}/backend
 Environment="PATH={project_path}/backend/venv/bin"
-ExecStart={gunicorn_bin} config.wsgi:application --bind 127.0.0.1:{django_port} --workers 3
+ExecStart={gunicorn_bin} config.wsgi:application --bind 127.0.0.1:{django_port} --workers 3 --access-logfile - --error-logfile -
 Restart=on-failure
 RestartSec=5s
-StandardOutput=append:/var/log/django_saas.log
-StandardError=append:/var/log/django_saas_error.log
 
 [Install]
 WantedBy=multi-user.target
@@ -723,14 +735,15 @@ def create_all_ip():
     venv_python  = f'{project_path}/backend/venv/bin/python'
     if os.path.exists(gunicorn_bin):
         exec_start = (f'{gunicorn_bin} config.wsgi:application '
-                      f'--bind 0.0.0.0:{django_port} --workers 2 --reload')
-        print_info('Usando gunicorn para Django')
+                      f'--bind 0.0.0.0:{django_port} --workers 2 --reload '
+                      f'--access-logfile - --error-logfile -')
+        print_info('Usando gunicorn para Django con logs en tiempo real')
     else:
         exec_start = f'{venv_python} manage.py runserver 0.0.0.0:{django_port}'
         print_warning('gunicorn no encontrado, usando runserver')
 
     django_service = f"""[Unit]
-Description=Django SaaS - IP Directa
+Description=Django SaaS - Standalone (Port 8001)
 After=network.target postgresql.service
 
 [Service]
@@ -740,10 +753,10 @@ Group={run_user}
 WorkingDirectory={project_path}/backend
 Environment="PATH={project_path}/backend/venv/bin"
 ExecStart={exec_start}
-Restart=on-failure
-RestartSec=5s
-StandardOutput=append:/var/log/django_saas.log
-StandardError=append:/var/log/django_saas_error.log
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -752,9 +765,8 @@ WantedBy=multi-user.target
         f.write(django_service)
     print_success('django_saas.service creado')
 
-    # 3. Servicio Frontend (serve el build directamente con npx serve)
     frontend_service = f"""[Unit]
-Description=Frontend SaaS - serve (IP Directa)
+Description=Frontend SaaS - Standalone (Port 3000)
 After=network.target
 
 [Service]
@@ -766,10 +778,10 @@ Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 Environment="HOST=0.0.0.0"
 Environment="PORT={react_port}"
 ExecStart=/usr/bin/npx serve -s build -l {react_port}
-Restart=on-failure
-RestartSec=5s
-StandardOutput=append:/var/log/frontend_saas.log
-StandardError=append:/var/log/frontend_saas_error.log
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

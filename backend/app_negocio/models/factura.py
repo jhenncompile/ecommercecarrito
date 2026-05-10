@@ -1,6 +1,6 @@
 from django.db import models
 from .pedido import Pedido
-from customers.models import Cliente
+from .cliente import Cliente
 
 
 class TipoPago(models.Model):

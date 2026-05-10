@@ -16,7 +16,7 @@ class CarritoService(BaseService):
 
     def obtener_o_crear_carrito_abierto(self, cliente_id):
         """Obtiene el carrito abierto de un cliente indicando si fue creado."""
-        from customers.models import Cliente
+        from customers.models.cliente import Cliente
         cliente = Cliente.objects.get(id=cliente_id)
         carrito = (
             Carrito.objects

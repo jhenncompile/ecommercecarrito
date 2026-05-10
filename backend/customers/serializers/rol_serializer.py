@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from customers.models import Rol
+from ..models.rol import Rol
 
 
 class RolSerializer(serializers.ModelSerializer):

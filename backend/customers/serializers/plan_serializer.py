@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from customers.models import Plan
+from ..models.plan import Plan
 
 
 class PlanSerializer(serializers.ModelSerializer):

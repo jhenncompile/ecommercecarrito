@@ -1,5 +1,6 @@
 from django.db import models
-from customers.models import Cliente
+from django.db import connection
+from customers.models.cliente import Cliente
 
 
 class Carrito(models.Model):
