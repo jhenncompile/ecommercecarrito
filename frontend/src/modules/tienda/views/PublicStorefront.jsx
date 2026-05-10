@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getBaseDomain } from 'core/utils/domain';
 import {
     Search,
     ArrowUpDown,
@@ -11,7 +10,7 @@ import {
     ShoppingCart
 } from 'lucide-react';
 import { productosApi, categoriasApi } from '../../productos_catalogo/services/productosApi';
-import { Button, Badge, Spinner } from 'shared/components';
+import { Button, Spinner } from 'shared/components';
 import { useCart } from '../hooks/useCart';
 import api from 'core/services/api';
 import styles from './PublicStorefront.module.css';
@@ -38,6 +37,22 @@ const PublicStorefront = () => {
     const { cart, addToCart, removeFromCart, updateQuantity, total, clearCart } = useCart();
     const [isCartOpen, setIsCartOpen] = useState(false);
 
+    // --- Recomendaciones del carrito ---
+    const [recommendations, setRecommendations] = useState([]);
+    const [loadingRecs, setLoadingRecs] = useState(false);
+    const lastProductId = cart.length > 0 ? cart[cart.length - 1].id : null;
+
+    useEffect(() => {
+        if (lastProductId && isCartOpen) {
+            setLoadingRecs(true);
+            api.get(`/productos/${lastProductId}/recomendaciones/`)
+                .then(res => setRecommendations(res.data.recommendations || []))
+                .catch(() => setRecommendations([]))
+                .finally(() => setLoadingRecs(false));
+        } else {
+            setRecommendations([]);
+        }
+    }, [lastProductId, isCartOpen]);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
