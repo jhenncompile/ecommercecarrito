@@ -1,173 +1,77 @@
 import os
-import sys
 import django
-from pathlib import Path
+import random
+from django.utils.crypto import get_random_string
 
-# 1. AJUSTE DE RUTAS
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-BACKEND_DIR = BASE_DIR / "backend"
-sys.path.append(str(BACKEND_DIR))
-
-# 2. Configuración del entorno
+# Configuración de Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from customers.models import Client, Domain, Usuario, Rol
-from app_negocio.models import Producto, Categoria
 from django_tenants.utils import schema_context
+from app_negocio.models import Categoria, Producto
+from customers.models import Client
 
-def run_seeder():
-    print("--- 🚀 Iniciando Seeder Multi-tenant corregido ---")
-
-    # 3. Esquema Público
-    public_tenant, _ = Client.objects.get_or_create(
-        schema_name='public', 
-        defaults={'name': 'Plataforma Global'}
+def obtener_instancia_categoria(nombre_cat):
+    """Garantiza que devolvemos un objeto Categoria real."""
+    obj, _ = Categoria.objects.get_or_create(
+        nombre=nombre_cat,
+        defaults={'descripcion': f'Categoría de {nombre_cat}', 'activo': True}
     )
-    Domain.objects.get_or_create(
-        domain='localhost', 
-        tenant=public_tenant, 
-        defaults={'is_primary': True}
-    )
-    print("✅ Dominio 'localhost' listo.")
+    return obj
 
-    # 4. Datos de los Clientes (Escenario C: Marketplace)
-    tenants_data = [
-        {
-            'schema': 'cliente1', 
-            'name': 'Tienda de Tecnología',
-            'nombre_comercial': 'TechStore Bolivia',
-            'descripcion': 'Tienda especializada en productos de tecnología y electrónica de última generación',
-            'categoria_tienda': 'electronica',
-            'logo_url': 'https://via.placeholder.com/150?text=TechStore',
-            'domain': 'cliente1.localhost', 
-            'admin_email': 'adm1@admin.com'
-        },
-        {
-            'schema': 'cliente2', 
-            'name': 'Boutique de Ropa',
-            'nombre_comercial': 'Elegancia Fashion',
-            'descripcion': 'Boutique de moda con ropa exclusiva para hombres y mujeres de diseño local',
-            'categoria_tienda': 'ropa',
-            'logo_url': 'https://via.placeholder.com/150?text=Elegancia',
-            'domain': 'cliente2.localhost', 
-            'admin_email': 'adm2@admin.com'
-        },
-        {
-            'schema': 'cliente3', 
-            'name': 'Café Artesanal',
-            'nombre_comercial': 'Café Santa Cruz',
-            'descripcion': 'Café artesanal con productos 100% bolivianos de alta calidad',
-            'categoria_tienda': 'alimentos',
-            'logo_url': 'https://via.placeholder.com/150?text=CafeSC',
-            'domain': 'cliente3.localhost', 
-            'admin_email': 'adm3@admin.com'
-        },
-        {
-            'schema': 'cliente4', 
-            'name': 'Librería Educativa',
-            'nombre_comercial': 'LibroMundo',
-            'descripcion': 'Librería con la mayor variedad de libros, revistas y material educativo',
-            'categoria_tienda': 'libros',
-            'logo_url': 'https://via.placeholder.com/150?text=LibroMundo',
-            'domain': 'cliente4.localhost', 
-            'admin_email': 'adm4@admin.com'
-        },
+def poblar_productos_inteligentes(cantidad, cat_electronica, cat_hogar, cat_ropa):
+    """Crea productos con descripciones para que la IA pueda comparar."""
+    datos_maestros = [
+        ("Laptop Gamer Pro", "Computadora de alto rendimiento con tarjeta RTX, 16GB RAM y procesador i9. Ideal para gaming y diseño."),
+        ("Mouse Inalámbrico", "Mouse ergonómico con conexión bluetooth de alta velocidad y sensor óptico preciso."),
+        ("Teclado Mecánico", "Teclado con switches mecánicos, luces RGB y respuesta rápida para oficina o juegos."),
+        ("Audífonos Noise Cancelling", "Audífonos de diadema con cancelación activa de ruido y sonido envolvente."),
+        ("Monitor 4K 27''", "Pantalla de alta resolución para profesionales del diseño y video."),
+        ("Camiseta Deportiva", "Prenda de poliéster transpirable para entrenamiento intenso."),
+        ("Sudadera con Capucha", "Abrigo de algodón cómodo para clima frío y estilo casual."),
+        ("Cafetera Express", "Máquina de café con molino integrado para hogar u oficina."),
+        ("Lámpara LED Intelligente", "Iluminación ajustable con control desde el móvil y bajo consumo.")
     ]
 
-    for data in tenants_data:
-        print(f"\n⚙️ Procesando: {data['name']}...")
+    for i in range(cantidad):
+        # Elegir un producto del pool o uno genérico
+        info = random.choice(datos_maestros) if i < len(datos_maestros) else (f"Producto {i}", "Descripción de prueba.")
         
-        tenant, _ = Client.objects.get_or_create(
-            schema_name=data['schema'], 
-            defaults={
-                'name': data['name'],
-                'nombre_comercial': data['nombre_comercial'],
-                'descripcion': data['descripcion'],
-                'categoria_tienda': data['categoria_tienda'],
-                'logo_url': data['logo_url'],
-            }
-        )
-        
-        # Actualizar campos comerciales si ya existía
-        if not _:
-            tenant.nombre_comercial = data['nombre_comercial']
-            tenant.descripcion = data['descripcion']
-            tenant.categoria_tienda = data['categoria_tienda']
-            tenant.logo_url = data['logo_url']
-            tenant.save()
-        
-        Domain.objects.get_or_create(
-            domain=data['domain'], 
-            tenant=tenant, 
-            defaults={'is_primary': True}
+        # Asignar categoría según el nombre
+        if any(keyword in info[0] for keyword in ["Laptop", "Mouse", "Teclado", "Audífonos", "Monitor"]):
+            categoria_obj = cat_electronica
+        elif "Cafetera" in info[0] or "Lámpara" in info[0]:
+            categoria_obj = cat_hogar
+        else:
+            categoria_obj = cat_ropa
+
+        Producto.objects.create(
+            nombre=info[0] if i < len(datos_maestros) else f"{info[0]} {i}",
+            descripcion=info[1],
+            sku=f"SKU-{get_random_string(5).upper()}",
+            precio=random.uniform(20.0, 1000.0),
+            stock=random.randint(5, 50),
+            categoria=categoria_obj,  # <--- OBJETO REAL, NO STRING
+            activo=True
         )
 
-        # Entramos al contexto del esquema del cliente para crear datos internos
-        with schema_context(tenant.schema_name):
-            
-            # 5. CREACIÓN DE ROLES (Indispensable para el sistema)
-            rol_admin, _ = Rol.objects.get_or_create(nombre="Administrador", descripcion="Acceso total")
-            Rol.objects.get_or_create(nombre="Vendedor", descripcion="Gestión de ventas y productos")
-            Rol.objects.get_or_create(nombre="Cliente", descripcion="Acceso a catálogo y compras")
-            print(f"🔑 Roles creados en '{tenant.schema_name}'")
+def ejecutar():
+    tenants = Client.objects.exclude(schema_name='public')
+    if not tenants.exists():
+        print("❌ No hay tiendas creadas. Crea primero los tenants.")
+        return
 
-            # 6. CREACIÓN DE USUARIO SUPERVISOR
-            if not Usuario.objects.filter(email=data['admin_email']).exists():
-                Usuario.objects.create_superuser(
-                    email=data['admin_email'],
-                    password="123",
-                    tenant=tenant,
-                    rol=rol_admin # Asignamos el rol creado
-                )
-                print(f"👤 Superusuario '{data['admin_email']}' creado.")
+    for t in tenants:
+        print(f"🚀 Poblando tienda: {t.name}...")
+        with schema_context(t.schema_name):
+            # Crear/obtener categorías DENTRO del contexto del tenant
+            cat_electronica = obtener_instancia_categoria("Electrónica")
+            cat_hogar = obtener_instancia_categoria("Hogar")
+            cat_ropa = obtener_instancia_categoria("Ropa")
 
-            # 7. CREACIÓN DE CATEGORÍAS (Para evitar el error de NotNullViolation)
-            Producto.objects.all().delete()
-            Categoria.objects.all().delete()
-            
-            if 'electronica' in data['categoria_tienda'].lower():
-                cat_principal, _ = Categoria.objects.get_or_create(nombre="Hardware")
-                items = [
-                    {'nombre': 'Laptop Pro 16"', 'precio': 2500.0, 'stock': 5, 'categoria': cat_principal},
-                    {'nombre': 'Mouse Ergonómico', 'precio': 45.0, 'stock': 20, 'categoria': cat_principal},
-                    {'nombre': 'Teclado Mecánico RGB', 'precio': 120.0, 'stock': 15, 'categoria': cat_principal},
-                ]
-            elif 'ropa' in data['categoria_tienda'].lower():
-                cat_principal, _ = Categoria.objects.get_or_create(nombre="Vestimenta")
-                items = [
-                    {'nombre': 'Chaqueta de Cuero', 'precio': 89.99, 'stock': 12, 'categoria': cat_principal},
-                    {'nombre': 'Jeans Slim Fit', 'precio': 45.50, 'stock': 30, 'categoria': cat_principal},
-                    {'nombre': 'Vestido Elegante', 'precio': 75.99, 'stock': 8, 'categoria': cat_principal},
-                ]
-            elif 'alimentos' in data['categoria_tienda'].lower():
-                cat_principal, _ = Categoria.objects.get_or_create(nombre="Bebidas")
-                items = [
-                    {'nombre': 'Café Arabica 500g', 'precio': 12.99, 'stock': 50, 'categoria': cat_principal},
-                    {'nombre': 'Café Espresso 1kg', 'precio': 22.50, 'stock': 35, 'categoria': cat_principal},
-                    {'nombre': 'Té Premium Variado', 'precio': 8.99, 'stock': 40, 'categoria': cat_principal},
-                ]
-            elif 'libros' in data['categoria_tienda'].lower():
-                cat_principal, _ = Categoria.objects.get_or_create(nombre="Ficción")
-                items = [
-                    {'nombre': '100 Años de Soledad', 'precio': 18.99, 'stock': 20, 'categoria': cat_principal},
-                    {'nombre': 'El Quijote - Edición Completa', 'precio': 25.50, 'stock': 15, 'categoria': cat_principal},
-                    {'nombre': 'Las Venas Abiertas de América Latina', 'precio': 16.99, 'stock': 25, 'categoria': cat_principal},
-                ]
-            else:
-                cat_principal, _ = Categoria.objects.get_or_create(nombre="General")
-                items = [
-                    {'nombre': 'Producto 1', 'precio': 19.99, 'stock': 10, 'categoria': cat_principal},
-                    {'nombre': 'Producto 2', 'precio': 29.99, 'stock': 15, 'categoria': cat_principal},
-                ]
-            
-            # 8. INSERTAR PRODUCTOS
-            for item in items:
-                Producto.objects.create(**item)
-            
-            print(f"📦 Categoría '{cat_principal.nombre}' y {len(items)} productos creados.")
-
-    print("\n--- ✨ Seeder finalizado con éxito ---")
+            Producto.objects.all().delete() # Limpiamos para no duplicar
+            poblar_productos_inteligentes(15, cat_electronica, cat_hogar, cat_ropa)
+            print(f"✅ 15 productos creados en {t.schema_name}")
 
 if __name__ == "__main__":
-    run_seeder()
+    ejecutar()

@@ -28,7 +28,7 @@ from django.db import models
 from django_tenants.utils import tenant_context, schema_context
 from customers.models import Client, Domain, Usuario, Bitacora
 from customers.services.bitacora_service import BitacoraService
-from app_negocio.models import Producto
+from app_negocio.models import Producto, Categoria
 
 # ========================================================================
 # GENERADOR DE NEGOCIO (COHERENTE)
@@ -176,8 +176,14 @@ class DatabaseSeeder:
 
                 # 3. Crear Productos (dentro del tenant actual)
                 num_prods = random.randint(p_range[0], p_range[1])
+                # Obtener o crear la categoría General
+                categoria_default, _ = Categoria.objects.get_or_create(
+                    nombre='General',
+                    defaults={'descripcion': 'Categoría por defecto', 'activo': True}
+                )
                 for p in range(1, num_prods + 1):
                     p_data = BusinessGenerator.random_product_data(p)
+                    p_data['categoria'] = categoria_default  # Asignar la instancia, no el string
                     Producto.objects.create(**p_data)
                 print(f"    - {num_prods} productos creados en {schema}.")
 
@@ -206,10 +212,16 @@ class DatabaseSeeder:
         
         for tenant in tenants:
             with tenant_context(tenant):
+                # Obtener o crear la categoría General
+                categoria_default, _ = Categoria.objects.get_or_create(
+                    nombre='General',
+                    defaults={'descripcion': 'Categoría por defecto', 'activo': True}
+                )
                 num_prods = random.randint(p_range[0], p_range[1])
                 for p in range(1, num_prods + 1):
                     # Agregamos random int superior para evitar choques en el sufijo del SKU o Nombre de p_data
                     p_data = BusinessGenerator.random_product_data(p + random.randint(1000, 9999))
+                    p_data['categoria'] = categoria_default  # Asignar la instancia, no el string
                     Producto.objects.create(**p_data)
                 print(f"  - {num_prods} productos añadidos a {tenant.schema_name}")
         print("\n[OK] Generacion de productos finalizada.")

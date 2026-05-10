@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getBaseDomain } from 'core/utils/domain';
-import { 
-    Search, 
-    ShoppingBag, 
+import {
+    Search,
+    ShoppingBag,
     ArrowUpDown,
     LayoutGrid,
     List as ListIcon,
@@ -15,6 +15,98 @@ import { Button, Badge, Spinner } from 'shared/components';
 import { useCart } from '../hooks/useCart';
 import api from 'core/services/api';
 import styles from './PublicStorefront.module.css';
+
+const CartRecommendations = ({ cart, addToCart }) => {
+    const [recommendations, setRecommendations] = useState([]);
+
+    useEffect(() => {
+        if (!cart || cart.length === 0) {
+            setRecommendations([]);
+            return;
+        }
+
+        const seedProduct = cart[cart.length - 1];
+
+        const fetchRecommendations = async () => {
+            try {
+                const res = await api.get(`/productos/${seedProduct.id}/recomendaciones/`);
+                if (res.status === 200) {
+                    setRecommendations(res.data.recommendations || []);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchRecommendations();
+    }, [cart]);
+
+    if (!cart || cart.length === 0 || recommendations.length === 0) return null;
+
+    return (
+        <div className="mt-4 border-t-[6px] border-gray-100 bg-gradient-to-b from-gray-50 to-white pt-6 pb-6 w-full relative">
+            <div className="flex items-center gap-2 mb-4 px-6">
+                <span className="text-yellow-500">✨</span>
+                <h4 className="text-md font-bold text-gray-800 tracking-tight">Sugerencias para ti</h4>
+            </div>
+
+            {/* Scroll Horizontal Container */}
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-6 pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {/* CSS en línea para ocultar el scrollbar en Webkit, aunque idealmente se usa una clase global */}
+                <style>{`
+                    .flex.overflow-x-auto::-webkit-scrollbar { display: none; }
+                `}</style>
+
+                {recommendations.map(prod => (
+                    <div
+                        key={prod.id}
+                        className="snap-start min-w-[160px] max-w-[160px] bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 p-3 flex flex-col relative group overflow-hidden transition-all duration-300 hover:shadow-[0_8px_20px_-6px_rgba(6,81,237,0.2)] hover:-translate-y-1"
+                    >
+                        {/* Indicador de Match IA */}
+                        {prod.score !== undefined && (
+                            <div className="absolute top-2 left-2 z-10">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-md shadow-sm">
+                                    {Math.round(prod.score * 100)}% Match
+                                </span>
+                            </div>
+                        )}
+
+                        <div className="w-full h-32 mb-3 bg-white flex items-center justify-center rounded-lg overflow-hidden group-hover:scale-105 transition-transform duration-500">
+                            {prod.imagen_url ? (
+                                <img src={prod.imagen_url} alt={prod.nombre} className="object-cover w-full h-full" />
+                            ) : (
+                                <div className="bg-gray-50 w-full h-full flex items-center justify-center">
+                                    <span className="text-gray-300 text-[10px] uppercase font-semibold tracking-wider">Sin imagen</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex-grow flex flex-col justify-between">
+                            <div>
+                                <p className="text-xs font-semibold text-gray-700 line-clamp-2 leading-tight mb-1" title={prod.nombre}>
+                                    {prod.nombre}
+                                </p>
+                            </div>
+                            <div className="mt-2 flex items-center justify-between">
+                                <span className="text-sm font-black text-gray-900">
+                                    Bs.{parseFloat(prod.precio).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Botón Flotante de Añadir */}
+                        <button
+                            onClick={() => addToCart(prod)}
+                            className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors duration-300 flex items-center justify-center gap-1 shadow-sm"
+                        >
+                            <span>+ Añadir</span>
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 const PublicStorefront = () => {
     // --- Estado de Datos ---
@@ -98,7 +190,7 @@ const PublicStorefront = () => {
             // Confirmar en el backend por si el webhook se retrasa
             if (pid) {
                 const tenant = query.get('tenant') || window.location.hostname.split('.')[0];
-                api.post('/pagos/confirm-success/', { 
+                api.post('/pagos/confirm-success/', {
                     pedido_id: pid,
                     tenant: tenant
                 }).catch(e => console.error("Error confirmando éxito", e));
@@ -129,7 +221,7 @@ const PublicStorefront = () => {
             // Si hay un puerto en la URL actual, lo mantenemos (ej. 3000 en dev)
             const currentPort = window.location.port ? `:${window.location.port}` : '';
             const tenantSub = window.location.hostname.split('.')[0];
-            
+
             const successUrl = `${window.location.protocol}//${baseDomain}${currentPort}/mi-portal?status=success&pedido_id=${pedidoId}&tenant=${tenantSub}`;
 
             const stripeRes = await api.post('/pagos/create-checkout-session/', {
@@ -166,8 +258,8 @@ const PublicStorefront = () => {
                         <h2>¡Pago Confirmado!</h2>
                         <p>Gracias por tu compra. Tu pedido #{lastPedidoId} está siendo procesado.</p>
                         <div className={styles.successActions}>
-                            <Button 
-                                variant="primary" 
+                            <Button
+                                variant="primary"
                                 onClick={async () => {
                                     try {
                                         // Buscar la factura asociada al pedido
@@ -206,9 +298,9 @@ const PublicStorefront = () => {
                 <div className={styles.headerContent}>
                     <div className={styles.searchWrapper}>
                         <Search className={styles.searchIcon} size={18} />
-                        <input 
-                            type="text" 
-                            placeholder="¿Qué estás buscando hoy?..." 
+                        <input
+                            type="text"
+                            placeholder="¿Qué estás buscando hoy?..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -218,8 +310,8 @@ const PublicStorefront = () => {
                             <span>Total:</span>
                             <strong>Bs. {total.toFixed(2)}</strong>
                         </div>
-                        <button 
-                            className={styles.cartBtn} 
+                        <button
+                            className={styles.cartBtn}
                             title="Ver Carrito"
                             onClick={() => setIsCartOpen(true)}
                         >
@@ -227,9 +319,9 @@ const PublicStorefront = () => {
                             <span className={styles.cartBadge}>{cart.length}</span>
                         </button>
                         {cart.length > 0 && (
-                            <Button 
-                                variant="primary" 
-                                size="sm" 
+                            <Button
+                                variant="primary"
+                                size="sm"
                                 loading={isCheckingOut}
                                 onClick={handleCheckout}
                             >
@@ -252,15 +344,15 @@ const PublicStorefront = () => {
                     <div className={styles.filterSection}>
                         <h4>Categorías</h4>
                         <div className={styles.catLinks}>
-                            <button 
-                                className={!selectedCat ? styles.activeCat : ''} 
+                            <button
+                                className={!selectedCat ? styles.activeCat : ''}
                                 onClick={() => setSelectedCat('')}
                             >
                                 Todas
                             </button>
                             {categories.map(cat => (
-                                <button 
-                                    key={cat.id} 
+                                <button
+                                    key={cat.id}
                                     className={selectedCat === cat.id ? styles.activeCat : ''}
                                     onClick={() => setSelectedCat(cat.id)}
                                 >
@@ -274,16 +366,16 @@ const PublicStorefront = () => {
                     <div className={styles.filterSection}>
                         <h4>Rango de Precio (Bs.)</h4>
                         <div className={styles.priceInputs}>
-                            <input 
-                                type="number" 
-                                placeholder="Min" 
+                            <input
+                                type="number"
+                                placeholder="Min"
                                 value={priceRange.min}
                                 onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
                             />
                             <span>-</span>
-                            <input 
-                                type="number" 
-                                placeholder="Max" 
+                            <input
+                                type="number"
+                                placeholder="Max"
                                 value={priceRange.max}
                                 onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
                             />
@@ -295,8 +387,8 @@ const PublicStorefront = () => {
                         <h4>Talla</h4>
                         <div className={styles.tagGroup}>
                             {['S', 'M', 'L', 'XL'].map(talla => (
-                                <button 
-                                    key={talla} 
+                                <button
+                                    key={talla}
                                     className={attributes.talla === talla ? styles.activeTag : ''}
                                     onClick={() => handleAttrChange('talla', talla)}
                                 >
@@ -324,20 +416,20 @@ const PublicStorefront = () => {
                                 </select>
                             </div>
                             <div className={styles.viewToggle}>
-                                <button 
-                                    className={viewMode === 'grid' ? styles.activeView : ''} 
+                                <button
+                                    className={viewMode === 'grid' ? styles.activeView : ''}
                                     onClick={() => setViewMode('grid')}
                                 >
                                     <LayoutGrid size={18} />
                                 </button>
-                                <button 
-                                    className={viewMode === 'list' ? styles.activeView : ''} 
+                                <button
+                                    className={viewMode === 'list' ? styles.activeView : ''}
                                     onClick={() => setViewMode('list')}
                                 >
                                     <ListIcon size={18} />
                                 </button>
                             </div>
-                            <button 
+                            <button
                                 className={styles.mobileFilterToggle}
                                 onClick={() => setShowMobileFilters(!showMobileFilters)}
                             >
@@ -380,7 +472,7 @@ const PublicStorefront = () => {
                                                 <span className={styles.currency}>Bs.</span>
                                                 <span className={styles.priceValue}>{parseFloat(prod.precio).toFixed(2)}</span>
                                             </div>
-                                            <button 
+                                            <button
                                                 className={styles.addToCartBtn}
                                                 onClick={() => addToCart(prod)}
                                             >
@@ -402,7 +494,7 @@ const PublicStorefront = () => {
                             <h3>Tu Carrito</h3>
                             <button onClick={() => setIsCartOpen(false)}><X size={24} /></button>
                         </div>
-                        
+
                         <div className={styles.drawerContent}>
                             {cart.length === 0 ? (
                                 <div className={styles.emptyCart}>
@@ -430,22 +522,29 @@ const PublicStorefront = () => {
                                                     <span>Bs. {(item.precio * item.quantity).toFixed(2)}</span>
                                                     <button onClick={() => removeFromCart(item.id)} className={styles.removeBtn}>Eliminar</button>
                                                 </div>
+
                                             </div>
                                         ))}
+
+
                                     </div>
+
+                                    <Button
+                                        variant="primary"
+                                        fullWidth
+                                        loading={isCheckingOut}
+                                        onClick={handleCheckout}
+                                    >
+                                        Pagar ahora
+                                    </Button>
+
+                                    <CartRecommendations cart={cart} addToCart={addToCart} />
                                     <div className={styles.drawerFooter}>
                                         <div className={styles.totalRow}>
                                             <span>Subtotal</span>
                                             <strong>Bs. {total.toFixed(2)}</strong>
                                         </div>
-                                        <Button 
-                                            variant="primary" 
-                                            fullWidth 
-                                            loading={isCheckingOut}
-                                            onClick={handleCheckout}
-                                        >
-                                            Pagar ahora
-                                        </Button>
+
                                     </div>
                                 </>
                             )}

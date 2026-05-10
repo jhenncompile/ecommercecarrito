@@ -4,7 +4,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import action
 from core.views import BaseViewSet
 from ..models.producto import Producto
+from rest_framework.response import Response
+from rest_framework import status
+from django.db.models import Case, When
 from ..serializers.producto_serializer import ProductoSerializer
+from ..serializers.recommendation_serializer import ProductoRecomendadoSerializer
+
 
 class ProductoViewSet(BaseViewSet):
     queryset = Producto.objects.all()
@@ -48,3 +53,39 @@ class ProductoViewSet(BaseViewSet):
         if self.request.method == 'GET':
             return [AllowAny()]
         return [IsAuthenticated()]
+    
+    @action(detail=True, methods=['get'], url_path='recomendaciones')
+    def recomendaciones(self, request, pk=None):
+        from ..services.recommendation_service import RecommendationService
+        
+        # Validación de entrada (Evita el Error 500)
+        try:
+            p_id = int(pk)
+        except (ValueError, TypeError):
+            return Response({"error": "ID inválido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        service = RecommendationService()
+        reco_data = service.obtener_recomendaciones(p_id) # Retorna [(id, score), ...]
+        
+        if not reco_data:
+            return Response([])
+
+        reco_ids = [item[0] for item in reco_data]
+        scores_map = {item[0]: item[1] for item in reco_data}
+
+        # Preservar el orden de relevancia de la IA en la Query
+        preserved_order = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(reco_ids)])
+        
+        productos = Producto.objects.filter(id__in=reco_ids, activo=True).order_by(preserved_order)
+
+        # Inyectamos el score manualmente antes de serializar
+        for p in productos:
+            p.score = scores_map.get(p.id, 0.0)
+
+        serializer = ProductoRecomendadoSerializer(productos, many=True)
+        
+        return Response({
+            "product_id": p_id,
+            "recommendations": serializer.data,
+            "meta": {"count": len(serializer.data), "engine": "tfidf_cosine_v2"}
+        })
