@@ -12,10 +12,34 @@ import {
   User,
   ClipboardList,
   ShoppingBag,
+  Shield,
+  Store,
 } from 'lucide-react';
 
 // ─── MÓDULOS AUTENTICADOS (con sidebar) ─────────────────────
 export const APP_MODULES = [
+  {
+    id: 'admin',
+    path: '/su',
+    label: 'Bitácora',
+    icon: Shield,
+    component: lazy(() => import('modules/admin/views/AdminView')),
+    protected: true,
+    inSidebar: true,
+    group: 'admin',
+    roles: ['admin'],
+  },
+  {
+    id: 'admin_tiendas',
+    path: '/su/tiendas',
+    label: 'Gestión Tiendas',
+    icon: Store,
+    component: lazy(() => import('modules/admin/views/AdminTiendasView')),
+    protected: true,
+    inSidebar: true,
+    group: 'admin',
+    roles: ['admin'],
+  },
   {
     id: 'panel',
     path: '/dashboard',

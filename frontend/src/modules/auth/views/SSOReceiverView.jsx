@@ -14,7 +14,8 @@ export default function SSOReceiverView() {
     const token    = params.get('token');
     const refresh  = params.get('refresh');
     const fullName = params.get('full_name');
-    const role     = params.get('role') || 'vendedor';
+    const isSuper  = params.get('is_superuser') === 'true';
+    const role     = isSuper ? 'admin' : (params.get('role') || 'vendedor');
 
     if (token) {
       login(token, refresh || '', fullName ? decodeURIComponent(fullName) : '', role);
@@ -24,14 +25,16 @@ export default function SSOReceiverView() {
       
       // Si es cliente y está en un subdominio, va al catálogo.
       // Si es vendedor/admin, siempre va al dashboard (su panel de control).
-      if (role === 'cliente') {
+      if (role === 'admin') {
+        navigate('/su', { replace: true });
+      } else if (role === 'cliente') {
         if (hostname !== baseDomain && hostname !== 'localhost') {
           navigate('/catalogo', { replace: true });
         } else {
           navigate('/mi-portal', { replace: true });
         }
       } else {
-        // Vendedor o Admin: Siempre al Dashboard
+        // Vendedor: Siempre al Dashboard
         navigate('/dashboard', { replace: true });
       }
     } else {

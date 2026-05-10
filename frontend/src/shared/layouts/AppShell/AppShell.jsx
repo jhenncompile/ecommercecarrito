@@ -12,6 +12,7 @@ const GROUP_LABELS = {
   analisis:  'Análisis',
   config:    'Configuración',
   cliente:   'Mi Espacio',
+  admin:     'Administración Global',
   general:   'General',
 };
 

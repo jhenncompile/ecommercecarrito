@@ -9,7 +9,8 @@ def get_auth_extra_data(user):
         'full_name':   user.get_full_name() or user.email.split('@')[0].capitalize(),
         'tenant_id':   None,
         'schema_name': None,
-        'subdomain':   None
+        'subdomain':   None,
+        'is_superuser': user.is_superuser
     }
 
     if user.tenant:

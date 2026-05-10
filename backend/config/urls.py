@@ -19,6 +19,7 @@ from customers.views.plan_views import PlanViewSet
 from voice_query.views.query_view import VoiceQueryView
 from customers.views.cliente_views import ClienteViewSet, ClienteLoginView
 from customers.views.tenant_views import TiendaPublicViewSet
+from customers.views.bitacora_views import BitacoraViewSet
 
 # 1. Configuramos el enrutador de la API
 router = DefaultRouter()
@@ -37,6 +38,7 @@ router.register(r'usuarios', UsuarioCrudViewSet, basename='usuarios')
 router.register(r'roles', RolViewSet, basename='roles')
 router.register(r'planes', PlanViewSet, basename='planes')
 router.register(r'clientes', ClienteViewSet, basename='clientes')
+router.register(r'bitacora', BitacoraViewSet, basename='bitacora')
 
 # Escenario C: Marketplace Público
 router.register(r'tiendas-publicas', TiendaPublicViewSet, basename='tiendas-publicas')

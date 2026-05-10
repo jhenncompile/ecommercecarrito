@@ -92,10 +92,11 @@ def create_user():
             continue
         break
     
-    # Permisos
+    # Permisos (Forzado a Superusuario por seguridad del script)
     print("\nPermisos:")
-    is_staff = input("¿Es administrador? (s/n): ").lower() == 's'
-    is_superuser = input("¿Es superusuario? (s/n): ").lower() == 's'
+    print("[!] Este script ahora solo crea Super Usuarios (Admins Globales).")
+    is_staff = True
+    is_superuser = True
     is_active = input("¿Estado activo? (s/n): ").lower() in ['s', '']  # Default: sí
     
     # Crear usuario
