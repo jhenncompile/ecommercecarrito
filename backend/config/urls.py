@@ -15,11 +15,13 @@ from customers.views.usuario_views import (
     TenantListView, TenantCreateView, MiPerfilView
 )
 from customers.views.rol_views import RolViewSet
+from customers.views.permiso_views import PermisoViewSet
 from customers.views.plan_views import PlanViewSet
 from voice_query.views.query_view import VoiceQueryView
 from customers.views.cliente_views import ClienteViewSet, ClienteLoginView
 from customers.views.tenant_views import TiendaPublicViewSet, TiendaPerfilView
 from customers.views.bitacora_views import BitacoraViewSet
+from customers.views.respaldo_views import RespaldoViewSet
 
 # 1. Configuramos el enrutador de la API
 router = DefaultRouter()
@@ -36,9 +38,11 @@ router.register(r'pagos', PagoViewSet, basename='pagos')
 # Customers
 router.register(r'usuarios', UsuarioCrudViewSet, basename='usuarios')
 router.register(r'roles', RolViewSet, basename='roles')
+router.register(r'permisos', PermisoViewSet, basename='permisos')
 router.register(r'planes', PlanViewSet, basename='planes')
 router.register(r'clientes', ClienteViewSet, basename='clientes')
 router.register(r'bitacora', BitacoraViewSet, basename='bitacora')
+router.register(r'respaldos', RespaldoViewSet, basename='respaldos')
 
 # Escenario C: Marketplace Público
 router.register(r'tiendas-publicas', TiendaPublicViewSet, basename='tiendas-publicas')

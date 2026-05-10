@@ -3,22 +3,42 @@ import zlib
 
 class RespaldoSistema(models.Model):
     """
-    Guarda snapshots del sistema en formato binario ofuscado.
-    Este modelo vive en el esquema público (SHARED_APPS).
+    Guarda snapshots del sistema con estructura de lista doblemente ligada para versionado.
     """
     timestamp = models.DateTimeField(auto_now_add=True)
     nombre = models.CharField(max_length=100)
-    blob_data = models.BinaryField(help_text="Datos del respaldo comprimidos y ofuscados")
-    checksum = models.CharField(max_length=64, blank=True)
-    metadata = models.JSONField(default=dict, help_text="Información técnica del respaldo")
+    archivo_path = models.CharField(max_length=255, blank=True, null=True, help_text="Ruta física en el servidor")
+    blob_data = models.BinaryField(null=True, blank=True, help_text="Copia de seguridad en DB (opcional)")
+    
+    # Estructura de punteros (Cola y Siguiente)
+    anterior = models.OneToOneField(
+        'self', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='sucesor',
+        verbose_name='Versión Anterior (Cola)'
+    )
+    siguiente = models.OneToOneField(
+        'self', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='predecesor',
+        verbose_name='Versión Siguiente'
+    )
+
+    metadata = models.JSONField(default=dict, help_text="Info técnica: tablas, tamaño, etc.")
 
     class Meta:
+        db_table = 'customers_respaldo'
         verbose_name = "Respaldo del Sistema"
         verbose_name_plural = "Respaldos del Sistema"
-        ordering = ['-timestamp']
+        ordering = ['timestamp']  # Cronológico
 
     def __str__(self):
-        return f"Respaldo {self.nombre} - {self.timestamp}"
+        return f"v.{self.timestamp.strftime('%d/%m')} - {self.nombre}"
+
 
     @property
     def size_mb(self):

@@ -38,14 +38,12 @@ class MyTokenObtainPairSerializer(serializers.Serializer):
         }
 
 class UsuarioCrudSerializer(serializers.ModelSerializer):
-    rol = serializers.SerializerMethodField()
+    roles_detalles = serializers.SerializerMethodField()
     tenant_info = serializers.SerializerMethodField()
     
-    def get_rol(self, obj):
-        """Devuelve el nombre del rol si existe"""
-        if obj.rol:
-            return {'id': obj.rol.id, 'nombre': obj.rol.nombre}
-        return None
+    def get_roles_detalles(self, obj):
+        """Devuelve lista de roles"""
+        return [{'id': r.id, 'nombre': r.nombre} for r in obj.roles.all()]
     
     def get_tenant_info(self, obj):
         """Devuelve info del tenant solo si es admin/superusuario"""

@@ -30,13 +30,11 @@ class Usuario(AbstractUser):
         blank=True
     )
     
-    rol = models.ForeignKey(
+    roles = models.ManyToManyField(
         Rol,
-        on_delete=models.RESTRICT,
         related_name='usuarios',
-        verbose_name='Rol',
-        null=True,
-        blank=True
+        blank=True,
+        verbose_name='Roles'
     )
 
     objects = UsuarioManager()

@@ -31,6 +31,7 @@ const PublicStorefront = () => {
     const [viewMode, setViewMode] = useState('grid');
     const [showMobileFilters, setShowMobileFilters] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
     const checkoutInProgress = React.useRef(false);
 
     // --- Carrito ---
@@ -315,8 +316,6 @@ const PublicStorefront = () => {
                             />
                         </div>
                     </div>
-
-
                 </aside>
 
                 {/* --- CONTENIDO PRINCIPAL --- */}
@@ -374,7 +373,7 @@ const PublicStorefront = () => {
                                 </div>
                             ) : (
                                 products.map(prod => (
-                                    <div key={prod.id} className={styles.productCard}>
+                                    <div key={prod.id} className={styles.productCard} onClick={() => setSelectedProduct(prod)}>
                                         <div className={styles.imageBox}>
                                             {prod.imagen_url ? (
                                                 <img src={prod.imagen_url} alt={prod.nombre} />
@@ -394,7 +393,10 @@ const PublicStorefront = () => {
                                             </div>
                                             <button
                                                 className={styles.addToCartBtn}
-                                                onClick={() => addToCart(prod)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    addToCart(prod);
+                                                }}
                                             >
                                                 Agregar al carrito
                                             </button>
@@ -433,7 +435,7 @@ const PublicStorefront = () => {
                                                     <div className={styles.itemImg}>
                                                         <img src={item.imagen_url || '/placeholder.png'} alt={item.nombre} />
                                                     </div>
-                                                    <div className={styles.itemInfo}>
+                                                    <div className={item.itemInfo}>
                                                         <h4>{item.nombre}</h4>
                                                         <div className={styles.qtyControls}>
                                                             <button onClick={() => updateQuantity(item.id, -1)}>-</button>
@@ -502,6 +504,67 @@ const PublicStorefront = () => {
                                 )}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+            {/* --- PRODUCT DETAIL MODAL --- */}
+            {selectedProduct && (
+                <div className={styles.detailOverlay} onClick={() => setSelectedProduct(null)}>
+                    <div className={styles.detailCard} onClick={e => e.stopPropagation()}>
+                        <button className={styles.closeDetail} onClick={() => setSelectedProduct(null)}>
+                            <X size={20} />
+                        </button>
+                        
+                        <div className={styles.detailImage}>
+                            {selectedProduct.imagen_url ? (
+                                <img src={selectedProduct.imagen_url} alt={selectedProduct.nombre} />
+                            ) : (
+                                <div className={styles.noImage}><ImageOff size={64} /></div>
+                            )}
+                        </div>
+
+                        <div className={styles.detailContent}>
+                            <div className={styles.detailHeader}>
+                                <span className={styles.detailCategory}>{selectedProduct.categoria_detail?.nombre}</span>
+                                <h2 className={styles.detailName}>{selectedProduct.nombre}</h2>
+                            </div>
+
+                            <div className={styles.detailPrice}>
+                                <span className={styles.cur}>Bs.</span>
+                                <span className={styles.val}>{parseFloat(selectedProduct.precio).toFixed(2)}</span>
+                            </div>
+
+                            <p className={styles.detailDesc}>
+                                {selectedProduct.descripcion || 'Sin descripción disponible para este producto.'}
+                            </p>
+
+                            <div className={styles.detailMeta}>
+                                <div className={styles.metaItem}>
+                                    <span className={styles.metaLabel}>Disponibilidad</span>
+                                    <span className={`${styles.metaValue} ${selectedProduct.stock > 0 ? styles.stockOk : styles.stockOut}`}>
+                                        {selectedProduct.stock > 0 ? `${selectedProduct.stock} unidades` : 'Agotado'}
+                                    </span>
+                                </div>
+                                <div className={styles.metaItem}>
+                                    <span className={styles.metaLabel}>Código de producto</span>
+                                    <span className={styles.metaValue}>#PRD-{selectedProduct.id}</span>
+                                </div>
+                            </div>
+
+                            <div className={styles.detailActions}>
+                                <Button 
+                                    variant="primary"
+                                    onClick={() => {
+                                        addToCart(selectedProduct);
+                                        setSelectedProduct(null);
+                                    }}
+                                    disabled={selectedProduct.stock <= 0}
+                                >
+                                    <ShoppingCart size={20} style={{marginRight: '10px'}} />
+                                    Agregar al carrito
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

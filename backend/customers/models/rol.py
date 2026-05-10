@@ -1,15 +1,11 @@
 from django.db import models
 
 
+from .permiso import Permiso
+
 class Rol(models.Model):
     """
     Modelo de roles para controlar permisos de usuarios.
-    
-    Roles predefinidos:
-    - ADMIN: Acceso total
-    - VENDEDOR: Puede gestionar productos y ver ventas
-    - CLIENTE: Acceso limitado (ver su perfil, pedidos)
-    - VIEWER: Solo lectura
     """
     
     NIVEL_CHOICES = [
@@ -33,6 +29,12 @@ class Rol(models.Model):
         choices=NIVEL_CHOICES,
         default=4,
         verbose_name='Nivel de Permisos'
+    )
+    permisos = models.ManyToManyField(
+        Permiso,
+        related_name='roles',
+        blank=True,
+        verbose_name='Permisos Asignados'
     )
     activo = models.BooleanField(
         default=True,
