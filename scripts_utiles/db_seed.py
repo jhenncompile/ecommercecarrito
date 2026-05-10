@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # ========================================================================
-# SCRIPT DE SEEDERS V5.2 - MOTOR DE ESPECIALIZACIÓN ALEATORIA
+# SCRIPT DE SEEDERS V5.4 - ESTRUCTURA DE NEGOCIO REAL
 # ========================================================================
-# Cada tienda elige categorías al azar. Optimizado para recomendaciones.
+# Corregidos modelos: Plan, Carrito, Pedido y Factura.
 
 import os
 import sys
@@ -30,7 +30,7 @@ except ImportError:
 
 from django_tenants.utils import tenant_context, schema_context
 from customers.models import Client, Domain, Usuario, Rol, Plan, Cliente
-from app_negocio.models import Producto, Categoria, Pedido, Factura
+from app_negocio.models import Producto, Categoria, Pedido, Factura, Carrito, CarritoItem, TipoPago
 
 fake = Faker(['es_ES', 'es_MX'])
 
@@ -38,51 +38,14 @@ class BusinessGenerator:
     PASSWORD_STANDAR = "Password123!"
     
     KEYWORDS_POR_CATEGORIA = {
-        'Electrónica': [
-            'pro', 'procesador', 'digital', 'inteligente', 'batería', 'conexión', 'velocidad', 'tech',
-            'pantalla', 'inalámbrico', 'bluetooth', 'wifi', 'sensor', 'circuito', 'voltaje', 'corriente',
-            'usb', 'hdmi', 'led', 'audio', 'cámara', 'resolución', 'memoria', 'almacenamiento', 'carga',
-            'cable', 'microcontrolador', 'placa', 'amplificador', 'frecuencia', 'portátil', 'gadget'
-        ],
-        'Moda': [
-            'algodón', 'tela', 'diseño', 'estilo', 'elegante', 'confort', 'tendencia', 'ropa',
-            'vestido', 'camisa', 'pantalón', 'zapatos', 'talla', 'costura', 'casual', 'formal',
-            'urbano', 'temporada', 'invierno', 'verano', 'accesorios', 'cuero', 'denim', 'boutique',
-            'calzado', 'chaqueta', 'abrigo', 'textil', 'estampado', 'moda'
-        ],
-        'Hogar': [
-            'decoración', 'madera', 'interior', 'moderno', 'calidad', 'duradero', 'confort', 'casa',
-            'mueble', 'sofá', 'iluminación', 'cocina', 'baño', 'jardín', 'limpieza', 'organización',
-            'espacio', 'minimalista', 'cerámica', 'vidrio', 'electrodoméstico', 'descanso', 'cama',
-            'almohada', 'sala', 'comedor', 'terraza', 'climatización', 'hogar'
-        ],
-        'Salud': [
-            'vital', 'natural', 'orgánico', 'bienestar', 'cuidado', 'suplemento', 'fit',
-            'vitaminas', 'nutrición', 'piel', 'higiene', 'medicina', 'terapia', 'relajación',
-            'saludable', 'vegano', 'proteína', 'dieta', 'cuerpo', 'mente', 'clínico', 'prevención',
-            'antioxidante', 'colágeno', 'hidratación', 'metabolismo', 'farmacia'
-        ],
-        'Deportes': [
-            'rendimiento', 'fuerza', 'entrenamiento', 'atlético', 'deporte', 'dinámico',
-            'gimnasio', 'fitness', 'cardio', 'resistencia', 'flexibilidad', 'muscular', 'zapatillas',
-            'pelota', 'bicicleta', 'natación', 'correr', 'yoga', 'pesas', 'competición', 'outdoor',
-            'rutina', 'suplementación', 'ciclismo', 'maratón', 'cancha', 'equipo'
-        ],
-        'Informática y Redes': [
-            'servidor', 'router', 'switch', 'nube', 'software', 'hardware', 'código', 'datos',
-            'red', 'hosting', 'vps', 'programación', 'sistema', 'computadora', 'laptop', 'teclado',
-            'ratón', 'monitor', 'almacenamiento', 'ssd', 'lan', 'proxy', 'base de datos', 'linux'
-        ],
-        'Videojuegos': [
-            'consola', 'pc', 'gamer', 'multijugador', 'aventura', 'acción', 'rpg', 'gráficos',
-            'mando', 'headset', 'streaming', 'fps', 'indie', 'logros', 'virtual', 'arcade',
-            'narrativo', 'simulador', 'online', 'launcher', 'mod'
-        ],
-        'Herramientas y Bricolaje': [
-            'taladro', 'destornillador', 'soldador', 'medición', 'tester', 'crimpadora', 'pinzas',
-            'taller', 'reparación', 'mantenimiento', 'voltímetro', 'tornillo', 'tuerca', 'llave',
-            'martillo', 'sierra', 'bricolaje', 'industrial', 'precisión'
-        ]
+        'Electrónica': ['pro', 'procesador', 'digital', 'inteligente', 'batería', 'conexión', 'velocidad', 'tech', 'pantalla', 'inalámbrico', 'bluetooth', 'wifi', 'sensor', 'circuito', 'voltaje', 'corriente', 'usb', 'hdmi', 'led', 'audio', 'cámara', 'resolución', 'memoria', 'almacenamiento', 'carga', 'cable', 'microcontrolador', 'placa', 'amplificador', 'frecuencia', 'portátil', 'gadget'],
+        'Moda': ['algodón', 'tela', 'diseño', 'estilo', 'elegante', 'confort', 'tendencia', 'ropa', 'vestido', 'camisa', 'pantalón', 'zapatos', 'talla', 'costura', 'casual', 'formal', 'urbano', 'temporada', 'invierno', 'verano', 'accesorios', 'cuero', 'denim', 'boutique', 'calzado', 'chaqueta', 'abrigo', 'textil', 'estampado', 'moda'],
+        'Hogar': ['decoración', 'madera', 'interior', 'moderno', 'calidad', 'duradero', 'confort', 'casa', 'mueble', 'sofá', 'iluminación', 'cocina', 'baño', 'jardín', 'limpieza', 'organización', 'espacio', 'minimalista', 'cerámica', 'vidrio', 'electrodoméstico', 'descanso', 'cama', 'almohada', 'sala', 'comedor', 'terraza', 'climatización', 'hogar'],
+        'Salud': ['vital', 'natural', 'orgánico', 'bienestar', 'cuidado', 'suplemento', 'fit', 'vitaminas', 'nutrición', 'piel', 'higiene', 'medicina', 'terapia', 'relajación', 'saludable', 'vegano', 'proteína', 'dieta', 'cuerpo', 'mente', 'clínico', 'prevención', 'antioxidante', 'colágeno', 'hidratación', 'metabolismo', 'farmacia'],
+        'Deportes': ['rendimiento', 'fuerza', 'entrenamiento', 'atlético', 'deporte', 'dinámico', 'gimnasio', 'fitness', 'cardio', 'resistencia', 'flexibilidad', 'muscular', 'zapatillas', 'pelota', 'bicicleta', 'natación', 'correr', 'yoga', 'pesas', 'competición', 'outdoor', 'rutina', 'suplementación', 'ciclismo', 'maratón', 'cancha', 'equipo'],
+        'Informática y Redes': ['servidor', 'router', 'switch', 'nube', 'software', 'hardware', 'código', 'datos', 'red', 'hosting', 'vps', 'programación', 'sistema', 'computadora', 'laptop', 'teclado', 'ratón', 'monitor', 'almacenamiento', 'ssd', 'lan', 'proxy', 'base de datos', 'linux'],
+        'Videojuegos': ['consola', 'pc', 'gamer', 'multijugador', 'aventura', 'acción', 'rpg', 'gráficos', 'mando', 'headset', 'streaming', 'fps', 'indie', 'logros', 'virtual', 'arcade', 'narrativo', 'simulador', 'online', 'launcher', 'mod'],
+        'Herramientas y Bricolaje': ['taladro', 'destornillador', 'soldador', 'medición', 'tester', 'crimpadora', 'pinzas', 'taller', 'reparación', 'mantenimiento', 'voltímetro', 'tornillo', 'tuerca', 'llave', 'martillo', 'sierra', 'bricolaje', 'industrial', 'precisión']
     }
 
     @staticmethod
@@ -102,15 +65,10 @@ class BusinessGenerator:
     def random_product_data(categoria_obj):
         cat_nombre = categoria_obj.nombre
         kws = BusinessGenerator.KEYWORDS_POR_CATEGORIA.get(cat_nombre, [fake.word() for _ in range(3)])
-        
-        # Seleccionar una palabra clave principal para el nombre
         kw_principal = random.choice(kws).capitalize()
-        # Seleccionar keywords para la descripción
         kw_desc = " ".join(random.sample(kws, min(len(kws), 5)))
-        
         adjetivos = ["Pro", "Ultra", "Max", "Lite", "Edition", "Master"]
         nombre = f"{kw_principal} {random.choice(adjetivos)} {get_random_string(3).upper()}"
-        
         return {
             'nombre': nombre,
             'sku': f"SKU-{get_random_string(8).upper()}",
@@ -127,10 +85,13 @@ class DatabaseSeeder:
         self.base_domain = BusinessGenerator.obtener_ip_dominio()
 
     def ejecutar_sincronizacion(self, n_tiendas, n_clientes, p_por_tienda, o_por_cliente):
-        print(f"\n--- ⚡ Motor Especializado V5.2 (Efecto IA) ---")
+        print(f"\n--- ⚡ Motor Especializado V5.4 ---")
 
         with schema_context('public'):
-            plan, _ = Plan.objects.get_or_create(nombre='Plan Maestro', defaults={'precio': 150.0})
+            plan, _ = Plan.objects.get_or_create(
+                nombre='Plan Maestro', 
+                defaults={'precio_mensual': 150.0, 'precio_anual': 1500.0, 'max_usuarios': 50, 'max_productos': 5000}
+            )
             rol_admin, _ = Rol.objects.get_or_create(nombre='Administrador')
 
         # 1. Nuevas Tiendas
@@ -140,8 +101,7 @@ class DatabaseSeeder:
                 schema = f"shop_{fake.unique.user_name()}"[:20].replace('.', '_').lower()
                 with schema_context('public'):
                     tenant, _ = Client.objects.get_or_create(schema_name=schema, defaults={'name': nombre, 'plan': plan, 'nombre_comercial': nombre, 'categoria_tienda': fake.job()})
-                    domain_url = f"{schema}.{self.base_domain}" if self.base_domain != 'localhost' else f"{schema}.localhost"
-                    Domain.objects.get_or_create(domain=domain_url, tenant=tenant, defaults={'is_primary': True})
+                    Domain.objects.get_or_create(domain=f"{schema}.{self.base_domain}" if self.base_domain != 'localhost' else f"{schema}.localhost", tenant=tenant, defaults={'is_primary': True})
                     Usuario.objects.create_user(email=f"admin@{schema}.local", password=BusinessGenerator.PASSWORD_STANDAR, tenant=tenant, rol=rol_admin, is_staff=True)
 
         # 2. Nuevos Clientes
@@ -151,38 +111,45 @@ class DatabaseSeeder:
                     c, created = Cliente.objects.get_or_create(correo=fake.unique.email(), defaults={'nombre': fake.name()})
                     if created: c.set_password(BusinessGenerator.PASSWORD_STANDAR); c.save()
 
-        # 3. Poblar TODAS (Asignación Aleatoria de Categorías)
+        # 3. Poblar TODAS (OG + Nuevas)
         todas = Client.objects.exclude(schema_name='public')
         all_cat_names = list(BusinessGenerator.KEYWORDS_POR_CATEGORIA.keys())
 
         for tenant in todas:
             with tenant_context(tenant):
-                # Cada tienda elige entre 1 y 3 categorías al azar para ser "especialista"
+                # Especialización
                 tienda_cats = random.sample(all_cat_names, random.randint(1, 3))
-                
-                cat_objects = []
-                for cn in tienda_cats:
-                    c_obj, _ = Categoria.objects.get_or_create(nombre=cn)
-                    cat_objects.append(c_obj)
-                
-                # Crear productos solo para esas categorías elegidas
+                cat_objects = [Categoria.objects.get_or_create(nombre=cn)[0] for cn in tienda_cats]
                 for _ in range(p_por_tienda):
-                    p_data = BusinessGenerator.random_product_data(random.choice(cat_objects))
-                    Producto.objects.create(**p_data)
+                    Producto.objects.create(**BusinessGenerator.random_product_data(random.choice(cat_objects)))
                 
-                print(f"  ✅ {tenant.schema_name}: Especializada en {', '.join(tienda_cats)} (+{p_por_tienda} productos)")
+                # Asegurar TipoPago
+                tp, _ = TipoPago.objects.get_or_create(nombre='Efectivo')
+                print(f"  ✅ {tenant.schema_name}: +{p_por_tienda} productos.")
 
         # 4. Pedidos Globales
         todos_clientes = Cliente.objects.all()
         for cliente in todos_clientes:
             for _ in range(o_por_cliente):
-                with tenant_context(random.choice(todas)):
-                    prods = list(Producto.objects.all())
+                t_destino = random.choice(todas)
+                with tenant_context(t_destino):
+                    prods = list(Producto.objects.filter(activo=True))
                     if prods:
+                        # FLUJO REAL: Carrito -> Pedido -> Factura
+                        carrito = Carrito.objects.create(cliente=cliente, estado='CERRADO')
                         p = random.choice(prods)
-                        ped = Pedido.objects.create(cliente=cliente, total=p.precio, estado='ENTREGADO', direccion_envio=fake.address())
-                        Factura.objects.create(pedido=ped, total=ped.total, estado='PAGADA', nro_factura=f"FAC-{get_random_string(6).upper()}")
-        
+                        CarritoItem.objects.create(carrito=carrito, producto=p, cantidad=1)
+                        
+                        pedido = Pedido.objects.create(carrito=carrito, estado='ENTREGADO')
+                        
+                        Factura.objects.create(
+                            nro=f"FAC-{get_random_string(10).upper()}",
+                            pedido=pedido,
+                            cliente=cliente,
+                            tipo_pago=TipoPago.objects.first(),
+                            monto_total=p.precio,
+                            estado='VIGENTE'
+                        )
         print(f"\n✨ Sincronización Finalizada.")
 
 def main():
