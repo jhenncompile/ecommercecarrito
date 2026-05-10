@@ -12,6 +12,8 @@ class AppInput extends StatelessWidget {
   final Widget? suffixWidget;
   final bool readOnly;
 
+  final void Function(String)? onChanged;
+
   const AppInput({
     super.key,
     required this.label,
@@ -22,6 +24,7 @@ class AppInput extends StatelessWidget {
     this.validator,
     this.suffixWidget,
     this.readOnly = false,
+    this.onChanged,
   });
 
   @override
@@ -50,6 +53,7 @@ class AppInput extends StatelessWidget {
           obscureText: obscureText,
           validator: validator,
           readOnly: readOnly,
+          onChanged: onChanged,
           style: TextStyle(
             fontSize: 14, 
             color: readOnly ? AppColors.textGray : AppColors.textPrimary,
