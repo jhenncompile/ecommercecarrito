@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Store, ExternalLink, Search } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import api from 'core/services/api';
 import AppView from 'shared/widgets/AppView/AppView';
-import { getBaseDomain } from 'core/utils/domain';
 
 const ClienteDashboard = () => {
-    const navigate = useNavigate();
     const [shops, setShops] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
