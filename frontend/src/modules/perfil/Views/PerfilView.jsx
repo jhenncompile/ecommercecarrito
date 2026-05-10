@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, User as UserIcon, Store } from 'lucide-react';
 import AppView from 'shared/widgets/AppView/AppView';
 import PerfilHeader from '../components/PerfilHeader';
 import PerfilForm from '../components/PerfilForm';
@@ -9,9 +9,15 @@ import { useTiendaPerfil } from '../hooks/useTiendaPerfil';
 import './PerfilView.css';
 
 export default function PerfilView() {
+  const role = localStorage.getItem('user_role');
+  const isCliente = role === 'cliente';
+  
   const { perfil, loading, error, actualizar } = usePerfil();
+  // Solo cargar tienda si es vendedor
   const { tiendaPerfil, loadingTienda, errorTienda, actualizarTienda } = useTiendaPerfil();
+  
   const [mensaje, setMensaje] = useState(null);
+  const [activeTab, setActiveTab] = useState('personal'); // 'personal' o 'tienda'
 
   const handleGuardarPerfil = async (datos) => {
     const resultado = await actualizar(datos);
@@ -33,20 +39,26 @@ export default function PerfilView() {
     }
   };
 
-  if (loading || loadingTienda) return <AppView title="Perfil"><div>Cargando...</div></AppView>;
+  if (loading || (loadingTienda && !isCliente)) {
+    return (
+      <AppView title="Perfil">
+        <div className="loading-container">Cargando información...</div>
+      </AppView>
+    );
+  }
 
   return (
-    <AppView title="Mi Perfil" subtitle="Gestiona tu información personal">
+    <AppView title="Mi Perfil" subtitle={isCliente ? "Gestiona tu cuenta de cliente" : "Gestiona tu información y tu tienda"}>
       {/* Mensaje de estado */}
       {mensaje && (
-        <div className={`alert alert-${mensaje.tipo}`}>
+        <div className={`alert alert-${mensaje.tipo} profile-alert animate-fade-in`}>
           {mensaje.tipo === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
           <span>{mensaje.texto}</span>
         </div>
       )}
 
-      {(error || errorTienda) && (
-        <div className="alert alert-error">
+      {(error || (errorTienda && !isCliente)) && (
+        <div className="alert alert-error profile-alert">
           <AlertCircle size={20} />
           <span>{error || errorTienda}</span>
         </div>
@@ -55,9 +67,29 @@ export default function PerfilView() {
       {/* Encabezado con foto */}
       {perfil && <PerfilHeader perfil={perfil} />}
 
-      {/* Formulario de edición */}
-      <div className="perfil-container">
-        {perfil && (
+      {/* Navegación por pestañas (solo vendedores) */}
+      {!isCliente && (
+        <div className="profile-tabs">
+          <button 
+            className={`tab-btn ${activeTab === 'personal' ? 'active' : ''}`}
+            onClick={() => setActiveTab('personal')}
+          >
+            <UserIcon size={18} />
+            Datos Personales
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'tienda' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tienda')}
+          >
+            <Store size={18} />
+            Mi Tienda
+          </button>
+        </div>
+      )}
+
+      {/* Formularios */}
+      <div className="perfil-container card">
+        {activeTab === 'personal' && perfil && (
           <PerfilForm
             perfil={perfil}
             onGuardar={handleGuardarPerfil}
@@ -65,14 +97,12 @@ export default function PerfilView() {
           />
         )}
         
-        {tiendaPerfil && (
-          <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
-            <TiendaPerfilForm
-              perfil={tiendaPerfil}
-              onGuardar={handleGuardarTienda}
-              loading={loadingTienda}
-            />
-          </div>
+        {activeTab === 'tienda' && !isCliente && tiendaPerfil && (
+          <TiendaPerfilForm
+            perfil={tiendaPerfil}
+            onGuardar={handleGuardarTienda}
+            loading={loadingTienda}
+          />
         )}
       </div>
     </AppView>

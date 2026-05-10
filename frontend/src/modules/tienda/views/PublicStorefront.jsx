@@ -26,7 +26,7 @@ const PublicStorefront = () => {
     const [search, setSearch] = useState('');
     const [selectedCat, setSelectedCat] = useState('');
     const [priceRange, setPriceRange] = useState({ min: '', max: '' });
-    const [attributes, setAttributes] = useState({}); // { color: 'rojo', talla: 'M' }
+    const [attributes, setAttributes] = useState({});
     const [sortBy, setSortBy] = useState('-creado_en');
     const [viewMode, setViewMode] = useState('grid');
     const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -313,21 +313,7 @@ const PublicStorefront = () => {
                         </div>
                     </div>
 
-                    {/* Atributos (Ejemplo: Talla/Color) */}
-                    <div className={styles.filterSection}>
-                        <h4>Talla</h4>
-                        <div className={styles.tagGroup}>
-                            {['S', 'M', 'L', 'XL'].map(talla => (
-                                <button
-                                    key={talla}
-                                    className={attributes.talla === talla ? styles.activeTag : ''}
-                                    onClick={() => handleAttrChange('talla', talla)}
-                                >
-                                    {talla}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+
                 </aside>
 
                 {/* --- CONTENIDO PRINCIPAL --- */}

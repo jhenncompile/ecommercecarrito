@@ -7,6 +7,12 @@ export const useTiendaPerfil = () => {
   const [errorTienda, setErrorTienda] = useState(null);
 
   useEffect(() => {
+    const role = localStorage.getItem('user_role');
+    if (role === 'cliente') {
+      setLoadingTienda(false);
+      return;
+    }
+
     const cargarTienda = async () => {
       try {
         setLoadingTienda(true);

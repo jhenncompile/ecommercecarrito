@@ -57,13 +57,13 @@ def run_full_sync():
     print("SINCRONIZACIÓN TOTAL ROBUSTA DE BD (VPS READY)")
     print("="*60)
     
-    # 1. Detectar cambios (mega migración)
+    # 1. Detectar cambios (genera migraciones limpias si el modelo cambió)
     run_make_migrations()
     
-    # 2. Aplicar a esquema compartido (Public) explícitamente
+    # 2. Aplicar a esquema compartido (Public)
     run_migrate()
     
-    # 3. Aplicar a esquemas de clientes (Tenants) explícitamente
+    # 3. Aplicar a esquemas de clientes (Tenants)
     run_migrate_schemas()
     
     print("\n" + "="*60)

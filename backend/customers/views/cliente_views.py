@@ -7,6 +7,7 @@ from django.conf import settings
 from urllib.parse import urlencode, urlparse, urlunparse
 import os
 from core.views import BaseViewSet
+from rest_framework.decorators import action
 from customers.models import Cliente, Domain
 from customers.serializers.cliente_serializer import (
     ClienteSerializer,
@@ -76,6 +77,7 @@ class ClienteSSOMixin:
             'token': auth_data['access'],
             'refresh': auth_data['refresh'],
             'full_name': auth_data.get('cliente', {}).get('nombre', ''),
+            'role': 'cliente',
         })
         return urlunparse((scheme, netloc, '/sso', '', query, ''))
 
@@ -139,6 +141,39 @@ class ClienteViewSet(ClienteSSOMixin, BaseViewSet):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
     modulo_auditoria = "Cliente"
+    
+    @action(detail=False, methods=['get', 'patch'], url_path='perfil')
+    def perfil(self, request):
+        """
+        Obtener o actualizar el perfil del cliente autenticado.
+        """
+        # El ID viene del token validado por ClienteJWTAuthentication
+        cliente_id = getattr(request.user, 'cliente_id', None)
+        if not cliente_id:
+            return Response({"detail": "No se pudo identificar al cliente."}, status=status.HTTP_401_UNAUTHORIZED)
+            
+        cliente = Cliente.objects.filter(id=cliente_id).first()
+        if not cliente:
+            return Response({"detail": "Cliente no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            
+        if request.method == 'GET':
+            serializer = self.get_serializer(cliente)
+            return Response(serializer.data)
+            
+        elif request.method == 'PATCH':
+            serializer = self.get_serializer(cliente, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            
+            # Auditoría
+            BitacoraService.registrar_accion(
+                request.user,
+                self.modulo_auditoria,
+                "ACTUALIZAR_PERFIL",
+                request=request,
+                metadatos={'id': cliente.id}
+            )
+            return Response(serializer.data)
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

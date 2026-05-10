@@ -26,10 +26,6 @@ class Migration(migrations.Migration):
                 ('fecha_inicio_suscripcion', models.DateField(blank=True, null=True, verbose_name='Fecha de Inicio de Suscripción')),
                 ('fecha_fin_suscripcion', models.DateField(blank=True, null=True, verbose_name='Fecha de Fin de Suscripción')),
                 ('activo', models.BooleanField(default=True, verbose_name='Activo')),
-                ('nombre_comercial', models.CharField(blank=True, max_length=150, null=True, verbose_name='Nombre Comercial de la Tienda')),
-                ('descripcion', models.TextField(blank=True, null=True, verbose_name='Descripción de la Tienda')),
-                ('categoria_tienda', models.CharField(blank=True, max_length=100, null=True, verbose_name='Categoría de la Tienda')),
-                ('logo_url', models.URLField(blank=True, null=True, verbose_name='URL del Logo de la Tienda')),
             ],
             options={
                 'abstract': False,
