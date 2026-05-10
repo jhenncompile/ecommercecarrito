@@ -1,5 +1,5 @@
 from core.services import BaseService
-from customers.models import Cliente
+from ..models.cliente import Cliente
 from django.contrib.auth.hashers import make_password
 
 

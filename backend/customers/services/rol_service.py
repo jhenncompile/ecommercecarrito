@@ -1,5 +1,5 @@
 from core.services import BaseService
-from customers.models import Rol
+from ..models.rol import Rol
 
 
 class RolService(BaseService):

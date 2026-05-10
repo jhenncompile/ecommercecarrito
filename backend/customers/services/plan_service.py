@@ -1,5 +1,5 @@
 from core.services import BaseService
-from customers.models import Plan
+from ..models.plan import Plan
 
 
 class PlanService(BaseService):

@@ -17,6 +17,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _nitController = TextEditingController();
   final _passwordController = TextEditingController();
   
   bool _isLoading = false;
@@ -31,6 +32,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       'nombre': _nameController.text,
       'correo': _emailController.text,
       'telefono': _phoneController.text,
+      'nit': _nitController.text,
       'contrasena': _passwordController.text,
     });
 
@@ -102,6 +104,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     label: 'Teléfono',
                     controller: _phoneController,
                     labelIcon: Icons.phone_outlined,
+                  ),
+                  const SizedBox(height: 15),
+                  AppInput(
+                    label: 'NIT / CI (Opcional)',
+                    controller: _nitController,
+                    labelIcon: Icons.badge_outlined,
                   ),
                   const SizedBox(height: 15),
                   AppInput(

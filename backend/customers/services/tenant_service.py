@@ -1,7 +1,8 @@
 from django.conf import settings
 from django_tenants.utils import tenant_context
 from rest_framework import serializers
-from customers.models import Client, Domain, Usuario
+from ..models.tenant import Client, Domain
+from ..models.usuario import Usuario
 
 class TenantService:
     """
