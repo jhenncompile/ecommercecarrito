@@ -2,111 +2,19 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getBaseDomain } from 'core/utils/domain';
 import {
     Search,
-    ShoppingBag,
     ArrowUpDown,
     LayoutGrid,
     List as ListIcon,
     Filter,
     X,
-    ImageOff
+    ImageOff,
+    ShoppingCart
 } from 'lucide-react';
 import { productosApi, categoriasApi } from '../../productos_catalogo/services/productosApi';
 import { Button, Badge, Spinner } from 'shared/components';
 import { useCart } from '../hooks/useCart';
 import api from 'core/services/api';
 import styles from './PublicStorefront.module.css';
-
-const CartRecommendations = ({ cart, addToCart }) => {
-    const [recommendations, setRecommendations] = useState([]);
-
-    useEffect(() => {
-        if (!cart || cart.length === 0) {
-            setRecommendations([]);
-            return;
-        }
-
-        const seedProduct = cart[cart.length - 1];
-
-        const fetchRecommendations = async () => {
-            try {
-                const res = await api.get(`/productos/${seedProduct.id}/recomendaciones/`);
-                if (res.status === 200) {
-                    setRecommendations(res.data.recommendations || []);
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        };
-
-        fetchRecommendations();
-    }, [cart]);
-
-    if (!cart || cart.length === 0 || recommendations.length === 0) return null;
-
-    return (
-        <div className="mt-4 border-t-[6px] border-gray-100 bg-gradient-to-b from-gray-50 to-white pt-6 pb-6 w-full relative">
-            <div className="flex items-center gap-2 mb-4 px-6">
-                <span className="text-yellow-500">✨</span>
-                <h4 className="text-md font-bold text-gray-800 tracking-tight">Sugerencias para ti</h4>
-            </div>
-
-            {/* Scroll Horizontal Container */}
-            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-6 pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {/* CSS en línea para ocultar el scrollbar en Webkit, aunque idealmente se usa una clase global */}
-                <style>{`
-                    .flex.overflow-x-auto::-webkit-scrollbar { display: none; }
-                `}</style>
-
-                {recommendations.map(prod => (
-                    <div
-                        key={prod.id}
-                        className="snap-start min-w-[160px] max-w-[160px] bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 p-3 flex flex-col relative group overflow-hidden transition-all duration-300 hover:shadow-[0_8px_20px_-6px_rgba(6,81,237,0.2)] hover:-translate-y-1"
-                    >
-                        {/* Indicador de Match IA */}
-                        {prod.score !== undefined && (
-                            <div className="absolute top-2 left-2 z-10">
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-md shadow-sm">
-                                    {Math.round(prod.score * 100)}% Match
-                                </span>
-                            </div>
-                        )}
-
-                        <div className="w-full h-32 mb-3 bg-white flex items-center justify-center rounded-lg overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                            {prod.imagen_url ? (
-                                <img src={prod.imagen_url} alt={prod.nombre} className="object-cover w-full h-full" />
-                            ) : (
-                                <div className="bg-gray-50 w-full h-full flex items-center justify-center">
-                                    <span className="text-gray-300 text-[10px] uppercase font-semibold tracking-wider">Sin imagen</span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex-grow flex flex-col justify-between">
-                            <div>
-                                <p className="text-xs font-semibold text-gray-700 line-clamp-2 leading-tight mb-1" title={prod.nombre}>
-                                    {prod.nombre}
-                                </p>
-                            </div>
-                            <div className="mt-2 flex items-center justify-between">
-                                <span className="text-sm font-black text-gray-900">
-                                    Bs.{parseFloat(prod.precio).toFixed(2)}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Botón Flotante de Añadir */}
-                        <button
-                            onClick={() => addToCart(prod)}
-                            className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors duration-300 flex items-center justify-center gap-1 shadow-sm"
-                        >
-                            <span>+ Añadir</span>
-                        </button>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
 
 const PublicStorefront = () => {
     // --- Estado de Datos ---
@@ -128,6 +36,23 @@ const PublicStorefront = () => {
     // --- Carrito ---
     const { cart, addToCart, removeFromCart, updateQuantity, total, clearCart } = useCart();
     const [isCartOpen, setIsCartOpen] = useState(false);
+
+    // --- Recomendaciones ---
+    const [recommendations, setRecommendations] = useState([]);
+    const [loadingRecs, setLoadingRecs] = useState(false);
+    const lastProductId = cart.length > 0 ? cart[cart.length - 1].id : null;
+
+    useEffect(() => {
+        if (lastProductId && isCartOpen) {
+            setLoadingRecs(true);
+            api.get(`/productos/${lastProductId}/recomendaciones/`)
+                .then(res => setRecommendations(res.data.recommendations || []))
+                .catch(err => setRecommendations([]))
+                .finally(() => setLoadingRecs(false));
+        } else {
+            setRecommendations([]);
+        }
+    }, [lastProductId, isCartOpen]);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -315,7 +240,7 @@ const PublicStorefront = () => {
                             title="Ver Carrito"
                             onClick={() => setIsCartOpen(true)}
                         >
-                            <ShoppingBag size={20} />
+                            <ShoppingCart size={20} />
                             <span className={styles.cartBadge}>{cart.length}</span>
                         </button>
                         {cart.length > 0 && (
@@ -447,7 +372,7 @@ const PublicStorefront = () => {
                         <div className={viewMode === 'grid' ? styles.productGrid : styles.productList}>
                             {products.length === 0 ? (
                                 <div className={styles.emptyState}>
-                                    <ShoppingBag size={64} />
+                                    <ShoppingCart size={64} />
                                     <h3>No encontramos lo que buscas</h3>
                                     <p>Intenta ajustando los filtros o buscando otro término.</p>
                                     <Button onClick={clearFilters}>Ver todo el catálogo</Button>
@@ -489,66 +414,99 @@ const PublicStorefront = () => {
             {/* --- CART DRAWER --- */}
             {isCartOpen && (
                 <div className={styles.cartOverlay} onClick={() => setIsCartOpen(false)}>
-                    <div className={styles.cartDrawer} onClick={e => e.stopPropagation()}>
+                    <div className={`${styles.cartDrawer} ${recommendations.length > 0 ? styles.cartDrawerWide : ''}`} onClick={e => e.stopPropagation()}>
                         <div className={styles.drawerHeader}>
                             <h3>Tu Carrito</h3>
                             <button onClick={() => setIsCartOpen(false)}><X size={24} /></button>
                         </div>
 
-                        <div className={styles.drawerContent}>
-                            {cart.length === 0 ? (
+                        {cart.length === 0 ? (
+                            <div className={styles.drawerContent}>
                                 <div className={styles.emptyCart}>
-                                    <ShoppingBag size={48} />
+                                    <ShoppingCart size={48} />
                                     <p>Tu carrito está vacío</p>
                                     <Button onClick={() => setIsCartOpen(false)}>Empezar a comprar</Button>
                                 </div>
-                            ) : (
-                                <>
-                                    <div className={styles.cartItemsList}>
-                                        {cart.map(item => (
-                                            <div key={item.id} className={styles.cartItemRow}>
-                                                <div className={styles.itemImg}>
-                                                    <img src={item.imagen_url || '/placeholder.png'} alt={item.nombre} />
-                                                </div>
-                                                <div className={styles.itemInfo}>
-                                                    <h4>{item.nombre}</h4>
-                                                    <div className={styles.qtyControls}>
-                                                        <button onClick={() => updateQuantity(item.id, -1)}>-</button>
-                                                        <span>{item.quantity}</span>
-                                                        <button onClick={() => updateQuantity(item.id, 1)}>+</button>
+                            </div>
+                        ) : (
+                            <div className={styles.cartLayout}>
+                                <div className={styles.cartMain}>
+                                    <div className={styles.drawerContent}>
+                                        <div className={styles.cartItemsList}>
+                                            {cart.map(item => (
+                                                <div key={item.id} className={styles.cartItemRow}>
+                                                    <div className={styles.itemImg}>
+                                                        <img src={item.imagen_url || '/placeholder.png'} alt={item.nombre} />
+                                                    </div>
+                                                    <div className={styles.itemInfo}>
+                                                        <h4>{item.nombre}</h4>
+                                                        <div className={styles.qtyControls}>
+                                                            <button onClick={() => updateQuantity(item.id, -1)}>-</button>
+                                                            <span>{item.quantity}</span>
+                                                            <button onClick={() => updateQuantity(item.id, 1)}>+</button>
+                                                        </div>
+                                                    </div>
+                                                    <div className={styles.itemPrice}>
+                                                        <span>Bs. {(item.precio * item.quantity).toFixed(2)}</span>
+                                                        <button onClick={() => removeFromCart(item.id)} className={styles.removeBtn}>Eliminar</button>
                                                     </div>
                                                 </div>
-                                                <div className={styles.itemPrice}>
-                                                    <span>Bs. {(item.precio * item.quantity).toFixed(2)}</span>
-                                                    <button onClick={() => removeFromCart(item.id)} className={styles.removeBtn}>Eliminar</button>
-                                                </div>
-
-                                            </div>
-                                        ))}
-
-
+                                            ))}
+                                        </div>
                                     </div>
-
-                                    <Button
-                                        variant="primary"
-                                        fullWidth
-                                        loading={isCheckingOut}
-                                        onClick={handleCheckout}
-                                    >
-                                        Pagar ahora
-                                    </Button>
-
-                                    <CartRecommendations cart={cart} addToCart={addToCart} />
                                     <div className={styles.drawerFooter}>
                                         <div className={styles.totalRow}>
                                             <span>Subtotal</span>
                                             <strong>Bs. {total.toFixed(2)}</strong>
                                         </div>
-
+                                        <Button
+                                            variant="primary"
+                                            fullWidth
+                                            loading={isCheckingOut}
+                                            onClick={handleCheckout}
+                                        >
+                                            Pagar ahora
+                                        </Button>
                                     </div>
-                                </>
-                            )}
-                        </div>
+                                </div>
+
+                                {recommendations.length > 0 && (
+                                    <div className={styles.cartSidebar}>
+                                        <h4 className={styles.recommendationsTitle}>Sugerencias para completar tu compra</h4>
+                                        {loadingRecs ? (
+                                            <div className="flex justify-center p-6"><Spinner size="sm" /></div>
+                                        ) : (
+                                            <div className="grid grid-cols-2 gap-3 mt-4">
+                                                {recommendations.map(rec => (
+                                                    <div key={rec.id} className={styles.recCard}>
+                                                        <div className={styles.recImg}>
+                                                            {rec.imagen_url ? (
+                                                                <img src={rec.imagen_url} alt={rec.nombre} />
+                                                            ) : (
+                                                                <ImageOff size={24} color="#cbd5e1" />
+                                                            )}
+                                                            {rec.score > 0 && (
+                                                                <span className={styles.matchBadge}>{Math.round(rec.score * 100)}% Match</span>
+                                                            )}
+                                                        </div>
+                                                        <div className={styles.recInfo}>
+                                                            <h5 className={styles.recName}>{rec.nombre}</h5>
+                                                            <span className={styles.recPrice}>Bs. {parseFloat(rec.precio).toFixed(2)}</span>
+                                                            <button
+                                                                className={styles.recAddBtn}
+                                                                onClick={() => addToCart(rec)}
+                                                            >
+                                                                Añadir
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
