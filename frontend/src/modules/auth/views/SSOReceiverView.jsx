@@ -22,12 +22,17 @@ export default function SSOReceiverView() {
       const hostname = window.location.hostname;
       const baseDomain = getBaseDomain(hostname);
       
-      // Si estamos en un subdominio (tienda), vamos al catálogo.
-      // Si estamos en el dominio principal, vamos al dashboard.
-      if (hostname !== baseDomain && hostname !== 'localhost') {
-        navigate('/catalogo', { replace: true });
+      // Si es cliente y está en un subdominio, va al catálogo.
+      // Si es vendedor/admin, siempre va al dashboard (su panel de control).
+      if (role === 'cliente') {
+        if (hostname !== baseDomain && hostname !== 'localhost') {
+          navigate('/catalogo', { replace: true });
+        } else {
+          navigate('/mi-portal', { replace: true });
+        }
       } else {
-        navigate(role === 'cliente' ? '/mi-portal' : '/dashboard', { replace: true });
+        // Vendedor o Admin: Siempre al Dashboard
+        navigate('/dashboard', { replace: true });
       }
     } else {
       const baseDomain = getBaseDomain(window.location.hostname);
