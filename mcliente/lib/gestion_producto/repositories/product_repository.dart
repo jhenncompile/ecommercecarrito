@@ -10,8 +10,8 @@ class ProductRepository {
 
   Future<String> _getProductsUrl() async {
     final schemaName = await _storage.getSchemaName();
-    if (schemaName == null || schemaName.isEmpty) {
-      throw Exception('No hay tenant configurado.');
+    if (schemaName == null || schemaName.isEmpty || schemaName == 'public') {
+      return '${ApiConstants.mainBaseUrl}${ApiConstants.productos}';
     }
     return '${ApiConstants.tenantBaseUrl(schemaName)}${ApiConstants.productos}';
   }

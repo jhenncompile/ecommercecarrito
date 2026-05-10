@@ -11,10 +11,10 @@ class PaymentRepository {
 
   Future<String> _getPagoUrl() async {
     final schemaName = await _storage.getSchemaName();
-    if (schemaName == null || schemaName.isEmpty) {
-      throw Exception('No hay tenant configurado.');
+    if (schemaName == null || schemaName.isEmpty || schemaName == 'public') {
+      return '${ApiConstants.mainBaseUrl}/pagos/';
     }
-    return '${ApiConstants.tenantBaseUrl(schemaName)}/pago/';
+    return '${ApiConstants.tenantBaseUrl(schemaName)}/pagos/';
   }
 
   /// Crea un PaymentIntent en el backend y devuelve el client_secret

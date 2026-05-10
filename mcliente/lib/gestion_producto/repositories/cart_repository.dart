@@ -10,8 +10,8 @@ class CartRepository {
 
   Future<String> _getCartUrl() async {
     final schemaName = await _storage.getSchemaName();
-    if (schemaName == null || schemaName.isEmpty) {
-      throw Exception('No hay tenant configurado.');
+    if (schemaName == null || schemaName.isEmpty || schemaName == 'public') {
+      return '${ApiConstants.mainBaseUrl}/carritos/';
     }
     return '${ApiConstants.tenantBaseUrl(schemaName)}/carritos/';
   }

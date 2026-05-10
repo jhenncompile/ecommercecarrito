@@ -10,8 +10,8 @@ class OrderRepository {
 
   Future<String> _getOrdersUrl() async {
     final schemaName = await _storage.getSchemaName();
-    if (schemaName == null || schemaName.isEmpty) {
-      throw Exception('No hay tenant configurado.');
+    if (schemaName == null || schemaName.isEmpty || schemaName == 'public') {
+      return '${ApiConstants.mainBaseUrl}/pedidos/';
     }
     return '${ApiConstants.tenantBaseUrl(schemaName)}/pedidos/';
   }
