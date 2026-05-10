@@ -18,13 +18,11 @@ export const getBaseDomain = (hostname) => {
   }
 
   // 3. Lógica para nip.io (muy común en desarrollo/VPS)
-  // Si el hostname tiene más de 4 partes y termina en nip.io, probablemente tiene un subdominio
-  // Ej: tienda1.157.173.102.129.nip.io -> base: 157.173.102.129.nip.io
-  if (hostname.includes('.nip.io')) {
+  if (hostname.includes('nip.io')) {
     const parts = hostname.split('.');
-    // nip.io ocupa 2 partes, la IP ocupa 4 partes. Total 6 partes para la base.
-    // Si hay 7 o más, la primera es el subdominio.
-    if (parts.length > 6) {
+    // El formato estándar es [subdominio].IP.nip.io
+    // La base (IP.nip.io) siempre son las últimas 6 partes si es IPv4
+    if (parts.length >= 6) {
       return parts.slice(-6).join('.');
     }
     return hostname;

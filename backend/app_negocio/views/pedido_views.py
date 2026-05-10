@@ -68,32 +68,44 @@ class PedidoViewSet(BaseViewSet):
         self.service = PedidoService()
 
     def create(self, request, *args, **kwargs):
-        # Evitar duplicados: Si ya hay un pedido PENDIENTE para este usuario, lo reutilizamos
+        """
+        Crea un pedido desde el checkout del cliente.
+        Acepta el payload del frontend: {items: [{producto, cantidad, precio_unitario}], total}
+        También soporta la creación estándar con carrito_id.
+        """
         from customers.models import Cliente
-        try:
-            # Buscamos por el email del usuario autenticado
-            cliente = Cliente.objects.get(correo=request.user.email)
-            pedido_existente = Pedido.objects.filter(carrito__cliente=cliente, estado='PENDIENTE').first()
-            if pedido_existente:
-                serializer = self.get_serializer(pedido_existente)
-                return Response(serializer.data)
-        except Exception:
-            pass
-            
-        return super().create(request, *args, **kwargs)
-        """Sobrescribe la creación para permitir crear pedido directo con items."""
+
         items = request.data.get('items')
+
         if items and isinstance(items, list):
+            # Flujo del PublicStorefront: crear carrito + pedido directo
             try:
-                # El ID del cliente lo sacamos del usuario autenticado
-                cliente_id = request.user.id
-                pedido = self.service.crear_pedido_directo(cliente_id, items)
+                # Obtener cliente desde el token JWT de cliente
+                cliente = Cliente.objects.get(correo=request.user.email)
+
+                # Evitar duplicados: Si hay un PENDIENTE, lo devolvemos
+                pedido_existente = Pedido.objects.filter(
+                    carrito__cliente=cliente, estado='PENDIENTE'
+                ).first()
+                if pedido_existente:
+                    serializer = self.get_serializer(pedido_existente)
+                    return Response(serializer.data)
+
+                pedido = self.service.crear_pedido_directo(cliente.id, items)
                 serializer = self.get_serializer(pedido)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            except Cliente.DoesNotExist:
+                return Response(
+                    {'error': 'Cliente no encontrado. Debes iniciar sesión.'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
             except Exception as e:
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+        # Flujo estándar (admin/vendedor con carrito_id)
         return super().create(request, *args, **kwargs)
+
     
     @action(detail=False, methods=['post'])
     def crear_desde_carrito(self, request):

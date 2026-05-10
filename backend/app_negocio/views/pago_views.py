@@ -138,7 +138,8 @@ class PagoViewSet(viewsets.ViewSet):
             return Response({'error': str(e)}, status=400)
         except Exception as e:
             import traceback
-            print(f"❌ BACKEND CRITICAL ERROR: {str(e)}")
+            print(f"❌ BACKEND CRITICAL ERROR creando sesión Stripe: {str(e)}")
+            print(f"Datos recibidos: {request.data}")
             print(traceback.format_exc())
             return Response({'error': str(e)}, status=500)
 

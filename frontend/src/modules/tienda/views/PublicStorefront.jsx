@@ -159,12 +159,15 @@ const PublicStorefront = () => {
                 window.location.href = stripeRes.data.url;
             }
         } catch (err) {
-            console.error("Error en checkout", err);
+            console.error("❌ ERROR DETALLADO EN CHECKOUT:", err);
+            const errorMsg = err.response?.data?.error || err.message || 'Error desconocido';
+            console.error("Mensaje del servidor:", errorMsg);
+            
             if (pedidoId) {
-                // Revertir creación de pedido si Stripe falla (evita pedidos huérfanos)
+                console.log("Limpiando pedido huérfano...", pedidoId);
                 await api.delete(`/pedidos/${pedidoId}/`).catch(e => console.error("No se pudo limpiar pedido huérfano", e));
             }
-            setError('Error al procesar el pago. Inténtalo de nuevo.');
+            setError(`Error al procesar el pago: ${errorMsg}`);
         } finally {
             checkoutInProgress.current = false;
             setIsCheckingOut(false);
