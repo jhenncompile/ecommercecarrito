@@ -20,4 +20,18 @@ export const perfilService = {
     });
     return response.data;
   },
+
+  obtenerTiendaPerfil: async () => {
+    const response = await api.get('/tienda/perfil/');
+    return response.data;
+  },
+
+  actualizarTiendaPerfil: async (formData) => {
+    const response = await api.patch('/tienda/perfil/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 };

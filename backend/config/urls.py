@@ -18,7 +18,7 @@ from customers.views.rol_views import RolViewSet
 from customers.views.plan_views import PlanViewSet
 from voice_query.views.query_view import VoiceQueryView
 from customers.views.cliente_views import ClienteViewSet, ClienteLoginView
-from customers.views.tenant_views import TiendaPublicViewSet
+from customers.views.tenant_views import TiendaPublicViewSet, TiendaPerfilView
 from customers.views.bitacora_views import BitacoraViewSet
 
 # 1. Configuramos el enrutador de la API
@@ -62,6 +62,7 @@ urlpatterns = [
     
     # 3.5. RUTA DE PERFIL DEL USUARIO AUTENTICADO
     path('api/usuarios/perfil/', MiPerfilView.as_view(), name='mi_perfil'),
+    path('api/tienda/perfil/', TiendaPerfilView.as_view(), name='tienda_perfil'),
 
     # 3. Incluimos las rutas de nuestra API de negocio (Productos)
     path('api/', include(router.urls)),

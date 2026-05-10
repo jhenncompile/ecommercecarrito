@@ -34,8 +34,10 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 DOMAIN_MAIN = config('DOMAIN_MAIN', default='localhost')
 
 # Sufijo para subdominios (ej: .localhost o .157.173.102.129.nip.io)
-# IMPORTANTE: Debe empezar con un punto.
-TENANT_DOMAIN_SUFFIX = config('TENANT_DOMAIN_SUFFIX', default='.localhost')
+if DOMAIN_MAIN == 'localhost' or DOMAIN_MAIN == '127.0.0.1':
+    TENANT_DOMAIN_SUFFIX = '.localhost'
+else:
+    TENANT_DOMAIN_SUFFIX = f".{DOMAIN_MAIN}.nip.io"
 
 # Obtener hostname del dispositivo
 DEVICE_HOSTNAME = socket.gethostname()

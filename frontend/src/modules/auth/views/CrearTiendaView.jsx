@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Store, User, Mail, Lock, Globe, Building, CheckCircle2,
-  ArrowRight, Sparkles, ShieldCheck, Zap
+  ArrowRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, X
 } from 'lucide-react';
 import AuthLayout from 'shared/layouts/AuthLayout/AuthLayout';
 import { Button, Input, Alert } from 'shared/components';
@@ -17,8 +17,9 @@ const FEATURES = [
 export default function CrearTiendaView() {
   const [form, setForm] = useState({
     nombre_tienda: '', schema_name: '', dominio: '',
-    first_name: '', last_name: '', email: '', password: '',
+    first_name: '', last_name: '', email: '', password: '', icono: null
   });
+  const [preview,      setPreview]      = useState(null);
   const [status,       setStatus]       = useState('idle');
   const [responseData, setResponseData] = useState(null);
   const [error,        setError]        = useState(null);
@@ -29,7 +30,7 @@ export default function CrearTiendaView() {
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/\s+/g, 'x').replace(/[^a-z0-9]/g, '');
 
-    const baseDomain = process.env.REACT_APP_BASE_DOMAIN || 'localhost';
+    const baseDomain = process.env.REACT_APP_DOMAIN_MAIN || 'localhost';
     const suffix     = process.env.REACT_APP_TENANT_DOMAIN_SUFFIX;
     const dominio    = suffix
       ? `${slug}${suffix}`
@@ -45,21 +46,32 @@ export default function CrearTiendaView() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setForm(prev => ({ ...prev, icono: file }));
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus('loading');
     setError(null);
     try {
-      const apiBase = process.env.REACT_APP_API_URL
-        ? process.env.REACT_APP_API_URL.replace('/api', '')
-        : window.location.hostname === 'localhost'
-          ? 'http://localhost:8001'
-          : `${window.location.protocol}//${window.location.hostname}:8001`;
+      const backendPort = process.env.REACT_APP_DJANGO_PORT || '8001';
+      const apiBase = `${window.location.protocol}//${window.location.hostname}:${backendPort}`;
+
+      const formData = new FormData();
+      Object.keys(form).forEach(key => {
+        if (form[key]) {
+          formData.append(key, form[key]);
+        }
+      });
 
       const res  = await fetch(`${apiBase}/api/tiendas/crear/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: formData,
       });
       const data = await res.json();
       if (!res.ok) throw data;
@@ -129,6 +141,36 @@ export default function CrearTiendaView() {
           <div className={styles.twoCol}>
             <Input id="ct-slug" label={<><Zap size={14} /> Slug</>} name="schema_name" value={form.schema_name} disabled />
             <Input id="ct-dominio" label={<><Globe size={14} /> Dominio</>} name="dominio" value={form.dominio} disabled />
+          </div>
+
+          {/* Logo / Icono Upload */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 'bold', marginBottom: '8px' }}>
+              <ImageIcon size={14} /> Icono de la Tienda (Opcional)
+            </label>
+            {!preview ? (
+              <div style={{
+                border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '20px',
+                textAlign: 'center', cursor: 'pointer', backgroundColor: '#f8fafc'
+              }}>
+                <label style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <ImageIcon size={32} color="#94a3b8" />
+                  <span style={{ marginTop: '8px', color: '#64748b', fontSize: '14px' }}>Haz clic para subir un logo</span>
+                  <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+                </label>
+              </div>
+            ) : (
+              <div style={{ position: 'relative', display: 'inline-block', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                <img src={preview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover' }} />
+                <button
+                  type="button"
+                  onClick={() => { setForm(p => ({ ...p, icono: null })); setPreview(null); }}
+                  style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', padding: '4px', cursor: 'pointer' }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className={styles.sectionTitle}><User size={16} /> Datos del Dueño</div>

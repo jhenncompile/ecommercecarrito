@@ -18,7 +18,7 @@ def get_python_exe():
     venv_py = BACKEND_DIR / 'venv' / 'Scripts' / 'python.exe' if os.name == 'nt' else BACKEND_DIR / 'venv' / 'bin' / 'python'
     return str(venv_py) if venv_py.exists() else sys.executable
 
-def run_django_command(args):
+def run_django_command(args, check=True):
     """Ejecuta un comando de manage.py con el venv."""
     python_exe = get_python_exe()
     os.chdir(BACKEND_DIR)
@@ -28,41 +28,46 @@ def run_django_command(args):
     
     cmd = [python_exe, 'manage.py'] + args + ['--settings=config.settings']
     print(f"\n[Ejecutando] {' '.join(cmd)}")
-    return subprocess.run(cmd, env=env)
+    try:
+        return subprocess.run(cmd, env=env, check=check)
+    except subprocess.CalledProcessError as e:
+        print(f"\n[ERROR CRÍTICO] Falló la ejecución del comando: {' '.join(cmd)}")
+        print(f"Código de salida: {e.returncode}")
+        sys.exit(1)
 
 def run_make_migrations():
     """Crea nuevas migraciones detectando cambios recursivamente"""
-    print("\n[+] Analizando modelos en busca de cambios...")
-    run_django_command(['makemigrations'])
+    print("\n[+] Analizando modelos en busca de cambios para la mega-migración...")
+    # --noinput evita que el proceso se quede colgado en VPS esperando respuestas
+    run_django_command(['makemigrations', '--noinput'], check=False)
 
 def run_migrate():
     """Aplica migraciones al esquema público (Shared Apps)"""
-    print("\n[+] Aplicando migraciones al esquema SHARED (Público)...")
-    run_django_command(['migrate'])
+    print("\n[+] Aplicando migraciones solo a los cambios faltantes en el esquema SHARED (Público)...")
+    run_django_command(['migrate_schemas', '--shared'])
 
 def run_migrate_schemas():
     """Aplica migraciones a todos los esquemas de clientes (Tenants)"""
-    print("\n[+] Aplicando migraciones a todos los TENANTS...")
-    # django-tenants usa migrate_schemas para las TENANT_APPS
-    run_django_command(['migrate_schemas'])
+    print("\n[+] Aplicando migraciones solo a los cambios faltantes en todos los TENANTS...")
+    run_django_command(['migrate_schemas', '--tenant'])
 
 def run_full_sync():
-    """Ejecuta el ciclo completo de sincronización de base de datos"""
+    """Ejecuta el ciclo completo de sincronización de base de datos de manera robusta para VPS"""
     print("\n" + "="*60)
-    print("SINCRONIZACIÓN TOTAL DE ESTRUCTURA DE BASE DE DATOS")
+    print("SINCRONIZACIÓN TOTAL ROBUSTA DE BD (VPS READY)")
     print("="*60)
     
-    # 1. Detectar cambios
+    # 1. Detectar cambios (mega migración)
     run_make_migrations()
     
-    # 2. Aplicar a esquema compartido (Public)
+    # 2. Aplicar a esquema compartido (Public) explícitamente
     run_migrate()
     
-    # 3. Aplicar a esquemas de clientes (Tenants)
+    # 3. Aplicar a esquemas de clientes (Tenants) explícitamente
     run_migrate_schemas()
     
     print("\n" + "="*60)
-    print("[OK] Estructura sincronizada correctamente.")
+    print("[OK] Estructura sincronizada correctamente. Solo se aplicaron las migraciones faltantes.")
     print("="*60)
 
 def run_reset():

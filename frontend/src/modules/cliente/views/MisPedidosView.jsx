@@ -13,6 +13,21 @@ const MisPedidosView = () => {
     const [isGlobal, setIsGlobal] = useState(false);
 
     useEffect(() => {
+        // Manejar retorno de Stripe
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('status') === 'success') {
+            const pedidoId = params.get('pedido_id');
+            const tenant = params.get('tenant');
+            if (pedidoId) {
+                api.post('/pagos/confirm-success/', { pedido_id: pedidoId, tenant: tenant })
+                    .then(() => {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        alert("¡Pago confirmado exitosamente!");
+                    })
+                    .catch(err => console.error("Error confirmando pago:", err));
+            }
+        }
+
         const hostname = window.location.hostname;
         const isBase = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '192.168.100.244';
         setIsGlobal(isBase);
@@ -75,9 +90,16 @@ const MisPedidosView = () => {
                                             className={styles.payBtn}
                                             onClick={async (e) => {
                                                 e.stopPropagation();
+                                                const btn = e.currentTarget;
+                                                if (btn.disabled) return;
+                                                
+                                                btn.disabled = true;
+                                                const originalText = btn.innerText;
+                                                btn.innerText = "Procesando...";
+
                                                 try {
                                                     const tenantHost = isGlobal ? `${pedido.schema_name}.${getBaseDomain(window.location.hostname)}` : window.location.hostname;
-                                                    const apiPort = process.env.REACT_APP_API_PORT || '8001';
+                                                    const apiPort = process.env.REACT_APP_DJANGO_PORT || '8001';
                                                     const baseUrl = `${window.location.protocol}//${tenantHost}:${apiPort}/api`;
                                                     
                                                     const res = await api.post(`${baseUrl}/pagos/create-checkout-session/`, {
@@ -90,6 +112,8 @@ const MisPedidosView = () => {
                                                         window.location.href = res.data.url;
                                                     }
                                                 } catch (err) {
+                                                    btn.disabled = false;
+                                                    btn.innerText = originalText;
                                                     alert("No se pudo iniciar el proceso de pago.");
                                                 }
                                             }}
@@ -108,7 +132,7 @@ const MisPedidosView = () => {
                                                     const factura = res.data?.results?.[0] || res.data?.[0];
                                                     if (factura) {
                                                         const tenantHost = isGlobal ? `${pedido.schema_name}.${getBaseDomain(window.location.hostname)}` : window.location.hostname;
-                                                        const apiPort = process.env.REACT_APP_API_PORT || '8001';
+                                                        const apiPort = process.env.REACT_APP_DJANGO_PORT || '8001';
                                                         const baseUrl = `${window.location.protocol}//${tenantHost}:${apiPort}/api`;
                                                         
                                                         // Descargar con autenticación (blob) usando URL dinámica

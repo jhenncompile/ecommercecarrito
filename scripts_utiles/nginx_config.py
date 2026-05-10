@@ -567,12 +567,15 @@ def restart_service():
             print_info("🗄️ Ejecutando migraciones...")
             subprocess.run([f"{project_path}/backend/venv/bin/python", "manage.py", "migrate"], cwd=f"{project_path}/backend", check=False)
 
-        # 2. Actualizar dependencias y Build de Frontend si se reinicia Frontend o Todo
         if choice in ['2', '4']:
             print_info("📦 Actualizando Frontend (npm install)...")
             subprocess.run(["npm", "install"], cwd=f"{project_path}/frontend", check=False)
             print_info("🏗️ Generando Build de Frontend...")
-            subprocess.run(["npm", "run", "build"], cwd=f"{project_path}/frontend", check=False)
+            config = get_env_config()
+            env = os.environ.copy()
+            env['REACT_APP_DOMAIN_MAIN'] = config.get('DOMAIN_MAIN', 'localhost')
+            env['REACT_APP_DJANGO_PORT'] = config.get('DJANGO_PORT', '8001')
+            subprocess.run(["npm", "run", "build"], cwd=f"{project_path}/frontend", check=False, env=env)
 
         for svc in svcs:
             try:
@@ -666,8 +669,11 @@ WantedBy=multi-user.target
     print_info('Construyendo frontend (npm run build)...')
     npm_cmd = 'npm'
     try:
+        env = os.environ.copy()
+        env['REACT_APP_DOMAIN_MAIN'] = config.get('DOMAIN_MAIN', 'localhost')
+        env['REACT_APP_DJANGO_PORT'] = config.get('DJANGO_PORT', '8001')
         subprocess.run([npm_cmd, 'run', 'build'], cwd=f'{project_path}/frontend',
-                       check=True, shell=False)
+                       check=True, shell=False, env=env)
         print_success('Build del frontend completado')
     except Exception as e:
         print_warning(f'Error en build: {e} (continuando de todas formas...)')
@@ -793,7 +799,10 @@ WantedBy=multi-user.target
     # 4. Construir frontend
     print_info('Construyendo frontend (npm run build)...')
     try:
-        subprocess.run(['npm', 'run', 'build'], cwd=f'{project_path}/frontend', check=True)
+        env = os.environ.copy()
+        env['REACT_APP_DOMAIN_MAIN'] = config.get('DOMAIN_MAIN', 'localhost')
+        env['REACT_APP_DJANGO_PORT'] = config.get('DJANGO_PORT', '8001')
+        subprocess.run(['npm', 'run', 'build'], cwd=f'{project_path}/frontend', check=True, env=env)
         print_success('Build completado')
     except Exception as e:
         print_warning(f'Error en build: {e}')

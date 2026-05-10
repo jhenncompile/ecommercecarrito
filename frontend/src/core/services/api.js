@@ -3,7 +3,7 @@ import { getApiUrl } from 'core/utils/domain';
 
 // ── Configuración dinámica ────────────────────────────────────
 const hostname      = window.location.hostname;
-const backendPort   = process.env.REACT_APP_API_PORT || '8001';
+const backendPort   = process.env.REACT_APP_DJANGO_PORT || '8001';
 const API_BASE_URL  = getApiUrl(hostname, backendPort);
 
 // ── Instancia principal ───────────────────────────────────────
@@ -35,7 +35,7 @@ const redirectToLogin = () => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('user_full_name');
-  const baseDomain = process.env.REACT_APP_BASE_DOMAIN || window.location.hostname;
+  const baseDomain = process.env.REACT_APP_DOMAIN_MAIN || window.location.hostname;
   const port       = window.location.port ? `:${window.location.port}` : '';
   window.location.href = `${window.location.protocol}//${baseDomain}${port}/login`;
 };

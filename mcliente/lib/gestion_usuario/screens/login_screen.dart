@@ -41,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (isSuccess) {
       if (!mounted) return;
       AppToast.showSuccess(context, '¡Bienvenido de vuelta!');
-      Navigator.pushReplacementNamed(context, '/tienda'); 
+      Navigator.pushReplacementNamed(context, '/tiendas'); 
     } else {
       if (!mounted) return;
       AppToast.showError(context, 'Correo o contraseña incorrectos.');

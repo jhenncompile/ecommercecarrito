@@ -6,6 +6,14 @@ import '../../core/widgets/layout/app_dashboard_layout.dart';
 import '../../core/widgets/layout/app_sidebar.dart';
 import '../models/order_model.dart';
 import '../repositories/order_repository.dart';
+import '../../gestion_pago/repositories/payment_repository.dart';
+import '../../core/network/api_client.dart';
+import '../../core/constants/api_constants.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:open_filex/open_filex.dart';
+import 'dart:convert';
+import '../../core/widgets/feedback/app_toast.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -18,6 +26,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
   List<OrderModel> _orders = [];
   bool _isLoading = true;
   final OrderRepository _orderRepository = OrderRepository();
+  final PaymentRepository _paymentRepository = PaymentRepository();
+  final ApiClient _apiClient = ApiClient();
 
   @override
   void initState() {
@@ -46,9 +56,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
       userName: 'Cliente',
       sidebarItems: [
         AppSidebarItem(
-          icon: Icons.storefront,
-          label: 'Catálogo',
-          onTap: () => Navigator.pushReplacementNamed(context, '/tienda'),
+          icon: Icons.store,
+          label: 'Explorar Tiendas',
+          onTap: () => Navigator.pushReplacementNamed(context, '/tiendas'),
         ),
         AppSidebarItem(
           icon: Icons.shopping_bag_outlined,
@@ -139,6 +149,67 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   style: TextStyle(color: _getStatusColor(order.estado), fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
+              const SizedBox(height: 10),
+              if (order.estado.toUpperCase() == 'PENDIENTE')
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryDark,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
+                  onPressed: () async {
+                    AppToast.showInfo(context, 'Iniciando pago...');
+                    final success = await _paymentRepository.processPaymentSheet(order.id);
+                    if (success) {
+                      AppToast.showSuccess(context, '¡Pago completado!');
+                      _loadOrders();
+                    }
+                  },
+                  child: const Text('Pagar ahora'),
+                ),
+              if (order.estado.toUpperCase() == 'PAGADO')
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
+                  onPressed: () async {
+                    AppToast.showInfo(context, 'Descargando factura...');
+                    try {
+                      // Buscar factura
+                      final res = await _apiClient.get('${ApiConstants.mainBaseUrl}/facturas/?pedido=${order.id}', requiresAuth: true, includeTenantHost: true);
+                      if (res.statusCode == 200) {
+                        final data = jsonDecode(res.body);
+                        final list = data['results'] ?? data;
+                        if (list.isNotEmpty) {
+                          final factura = list[0];
+                          final nro = factura['nro'].toString();
+                          
+                          // Descargar PDF
+                          final pdfRes = await _apiClient.get('${ApiConstants.mainBaseUrl}/facturas/$nro/descargar_pdf/', requiresAuth: true, includeTenantHost: true);
+                          
+                          if (pdfRes.statusCode == 200) {
+                            final bytes = pdfRes.bodyBytes;
+                            final dir = await getApplicationDocumentsDirectory();
+                            final file = File('${dir.path}/factura_$nro.pdf');
+                            await file.writeAsBytes(bytes);
+                            
+                            AppToast.showSuccess(context, 'Factura descargada');
+                            OpenFilex.open(file.path);
+                          } else {
+                            throw Exception('Error al descargar');
+                          }
+                        } else {
+                          AppToast.showInfo(context, 'Factura en proceso. Intenta más tarde.');
+                        }
+                      }
+                    } catch (e) {
+                      AppToast.showError(context, 'Error al descargar factura');
+                    }
+                  },
+                  child: const Text('Factura'),
+                ),
             ],
           ),
         ],

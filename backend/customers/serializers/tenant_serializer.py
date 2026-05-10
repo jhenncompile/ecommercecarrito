@@ -9,6 +9,7 @@ class TenantCreateSerializer(serializers.Serializer):
     nombre_tienda = serializers.CharField(max_length=100)
     schema_name   = serializers.SlugField(max_length=50)
     dominio       = serializers.CharField(max_length=100, required=False)
+    icono         = serializers.ImageField(required=False, allow_null=True)
 
     # Datos del dueño
     email         = serializers.EmailField()
@@ -50,6 +51,7 @@ class TiendaPublicSerializer(serializers.ModelSerializer):
             'descripcion', 
             'categoria_tienda', 
             'logo_url', 
+            'icono',
             'subdominio',
             'schema_name'
         ]

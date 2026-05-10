@@ -145,17 +145,13 @@ def ask_run_mode():
         info(f"IP detectada: {C.YELLOW}{detected}{C.RESET}")
         manual = input(f"  Confirma o escribe otra (Enter = {detected}): ").strip()
         ip = manual if manual else detected
-        update_env_key('REACT_APP_BASE_DOMAIN', ip)
-        update_env_key('TENANT_DOMAIN_SUFFIX', f'.{ip}.nip.io')
-        update_env_key('REACT_APP_TENANT_DOMAIN_SUFFIX', f'.{ip}.nip.io')
-        update_env_key('REACT_APP_API_URL', f'http://{ip}:{django_port}/api')
+        update_env_key('DOMAIN_MAIN', ip)
+        update_env_key('REACT_APP_DOMAIN_MAIN', ip)
         ok(f"Modo IP directa: {ip}")
         return 'ip', ip
     else:
-        update_env_key('REACT_APP_BASE_DOMAIN', 'localhost')
-        update_env_key('TENANT_DOMAIN_SUFFIX', '.localhost')
-        update_env_key('REACT_APP_TENANT_DOMAIN_SUFFIX', '.localhost')
-        update_env_key('REACT_APP_API_URL', f'http://localhost:{django_port}/api')
+        update_env_key('DOMAIN_MAIN', 'localhost')
+        update_env_key('REACT_APP_DOMAIN_MAIN', 'localhost')
         ok("Modo Localhost")
         return 'localhost', 'localhost'
 
@@ -233,6 +229,11 @@ def start_frontend():
     env = os.environ.copy()
     env['PORT'] = port
     env['HOST'] = '0.0.0.0' if modo == 'ip' else 'localhost'
+    django_port = cfg.get('DJANGO_PORT', '8001')
+    env['REACT_APP_DOMAIN_MAIN'] = ip if modo == 'ip' else 'localhost'
+    env['REACT_APP_TENANT_DOMAIN_SUFFIX'] = f'.{ip}.nip.io' if modo == 'ip' else '.localhost'
+    env['REACT_APP_API_URL'] = f'http://{ip}:{django_port}/api' if modo == 'ip' else f'http://localhost:{django_port}/api'
+    
     info(f"Accesible en http://{ip if modo == 'ip' else 'localhost'}:{port}")
     warn("CTRL+C para detener")
     print('-' * 70)
@@ -270,6 +271,10 @@ def start_all():
     env_react = os.environ.copy()
     env_react['PORT'] = react_port
     env_react['HOST'] = '0.0.0.0' if modo == 'ip' else 'localhost'
+    env_react['REACT_APP_DOMAIN_MAIN'] = ip if modo == 'ip' else 'localhost'
+    env_react['REACT_APP_TENANT_DOMAIN_SUFFIX'] = f'.{ip}.nip.io' if modo == 'ip' else '.localhost'
+    env_react['REACT_APP_API_URL'] = f'http://{ip}:{django_port}/api' if modo == 'ip' else f'http://localhost:{django_port}/api'
+    
     host_label = ip if modo == 'ip' else 'localhost'
 
     info(f"Backend  → http://{host_label}:{django_port}")

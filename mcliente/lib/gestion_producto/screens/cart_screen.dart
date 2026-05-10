@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../core/network/api_client.dart';
+import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/layout/app_dashboard_layout.dart';
@@ -61,24 +64,43 @@ class _CartScreenState extends State<CartScreen> {
 
     try {
       AppToast.showInfo(context, 'Procesando pedido...');
-      // 1. Cerrar carrito (convertir en pedido)
-      await _cartRepository.checkout(_cart!.id);
       
-      // El backend devuelve el carrito con un ID de pedido asociado o el estado cambiado
-      // Pero usualmente necesitamos el pedidoId para Stripe.
-      // Vamos a asumir que el backend crea el pedido y podemos obtener el ID.
-      // NOTA: En la implementación real del backend, 'cerrar' debería devolver el pedido_id.
-      
-      // Por ahora, simularemos que el pedido_id es el mismo que el carrito o buscaremos el último pedido.
-      // TODO: Ajustar backend para devolver pedido_id en /cerrar/
-      
-      // Intentamos procesar el pago (usando un ID genérico por ahora si el backend no lo da)
-      // En una implementación real, recibiríamos el pedido_id aquí.
-      final success = await _paymentRepository.processPaymentSheet(_cart!.id);
+      // Construir el payload igual que en la web
+      final itemsData = _cart!.items.map((item) => {
+        'producto': item.producto.id,
+        'cantidad': item.cantidad,
+        'precio_unitario': item.producto.precio
+      }).toList();
+
+      final pedidoResponse = await ApiClient().post(
+        '${ApiConstants.mainBaseUrl}/pedidos/',
+        {
+          'items': itemsData,
+          'total': _cart!.total
+        },
+        requiresAuth: true,
+        includeTenantHost: true,
+      );
+
+      if (pedidoResponse.statusCode != 201 && pedidoResponse.statusCode != 200) {
+        throw Exception('Error al crear el pedido en el servidor');
+      }
+
+      final pedidoData = jsonDecode(pedidoResponse.body);
+      final pedidoId = pedidoData['id'];
+
+      // Vaciar carrito local
+      await _cartRepository.clearCart(_cart!.id);
+
+      // Intentamos procesar el pago nativo
+      final success = await _paymentRepository.processPaymentSheet(pedidoId);
       
       if (success) {
         AppToast.showSuccess(context, '¡Pedido realizado y pagado!');
-        Navigator.pushReplacementNamed(context, '/pedidos');
+        if (mounted) Navigator.pushReplacementNamed(context, '/pedidos');
+      } else {
+        AppToast.showInfo(context, 'Pago cancelado o fallido. Revisa Mis Pedidos.');
+        if (mounted) Navigator.pushReplacementNamed(context, '/pedidos');
       }
     } catch (e) {
       AppToast.showError(context, 'Error al procesar el pago: $e');
@@ -92,8 +114,13 @@ class _CartScreenState extends State<CartScreen> {
       userName: 'Cliente',
       sidebarItems: [
         AppSidebarItem(
+          icon: Icons.store,
+          label: 'Explorar Tiendas',
+          onTap: () => Navigator.pushReplacementNamed(context, '/tiendas'),
+        ),
+        AppSidebarItem(
           icon: Icons.storefront,
-          label: 'Catálogo',
+          label: 'Catálogo de Tienda',
           onTap: () => Navigator.pushReplacementNamed(context, '/tienda'),
         ),
         AppSidebarItem(

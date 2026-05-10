@@ -23,6 +23,8 @@ class TenantService:
         tenant = Client.objects.create(
             schema_name=datos['schema_name'],
             name=datos['nombre_tienda'],
+            icono=datos.get('icono', None),
+            nombre_comercial=datos['nombre_tienda']
         )
 
         # 3. Crear el dominio primario

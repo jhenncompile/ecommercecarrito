@@ -61,6 +61,13 @@ class Client(TenantMixin):
         null=True,
         verbose_name='URL del Logo de la Tienda'
     )
+    
+    icono = models.ImageField(
+        upload_to='tiendas/iconos/',
+        null=True,
+        blank=True,
+        verbose_name='Icono de la Tienda'
+    )
 
 class Domain(DomainMixin):
     pass

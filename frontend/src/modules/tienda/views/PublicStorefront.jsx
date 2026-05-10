@@ -32,27 +32,12 @@ const PublicStorefront = () => {
     const [viewMode, setViewMode] = useState('grid');
     const [showMobileFilters, setShowMobileFilters] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const checkoutInProgress = React.useRef(false);
 
     // --- Carrito ---
     const { cart, addToCart, removeFromCart, updateQuantity, total, clearCart } = useCart();
     const [isCartOpen, setIsCartOpen] = useState(false);
 
-    // --- Recomendaciones ---
-    const [recommendations, setRecommendations] = useState([]);
-    const [loadingRecs, setLoadingRecs] = useState(false);
-    const lastProductId = cart.length > 0 ? cart[cart.length - 1].id : null;
-
-    useEffect(() => {
-        if (lastProductId && isCartOpen) {
-            setLoadingRecs(true);
-            api.get(`/productos/${lastProductId}/recomendaciones/`)
-                .then(res => setRecommendations(res.data.recommendations || []))
-                .catch(err => setRecommendations([]))
-                .finally(() => setLoadingRecs(false));
-        } else {
-            setRecommendations([]);
-        }
-    }, [lastProductId, isCartOpen]);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -126,8 +111,11 @@ const PublicStorefront = () => {
     }, [clearCart]);
 
     const handleCheckout = async () => {
-        if (cart.length === 0) return;
+        if (cart.length === 0 || checkoutInProgress.current) return;
+        checkoutInProgress.current = true;
         setIsCheckingOut(true);
+        let pedidoId = null;
+
         try {
             // 1. Crear el pedido primero
             const pedidoRes = await api.post('/pedidos/', {
@@ -139,28 +127,31 @@ const PublicStorefront = () => {
                 total: total
             });
 
-            const pedidoId = pedidoRes.data.id;
+            pedidoId = pedidoRes.data.id;
 
-            // 2. Crear sesión de Stripe dinámica
-            const baseDomain = getBaseDomain(window.location.hostname);
-            // Si hay un puerto en la URL actual, lo mantenemos (ej. 3000 en dev)
-            const currentPort = window.location.port ? `:${window.location.port}` : '';
-            const tenantSub = window.location.hostname.split('.')[0];
-
-            const successUrl = `${window.location.protocol}//${baseDomain}${currentPort}/mi-portal?status=success&pedido_id=${pedidoId}&tenant=${tenantSub}`;
+            // La URL de retorno es la misma página del catálogo (donde el usuario ya está)
+            // Stripe agregará el status al regresar para que mostremos confirmación
+            const currentUrl = window.location.href.split('?')[0]; // URL limpia sin params anteriores
+            const successUrl = `${currentUrl}?status=success&pedido_id=${pedidoId}`;
 
             const stripeRes = await api.post('/pagos/create-checkout-session/', {
                 pedido_id: pedidoId,
                 success_url: successUrl,
-                cancel_url: `${window.location.origin}?status=cancel`
+                cancel_url: `${currentUrl}?status=cancel`
             });
 
             if (stripeRes.data.url) {
                 window.location.href = stripeRes.data.url;
             }
         } catch (err) {
+            console.error("Error en checkout", err);
+            if (pedidoId) {
+                // Revertir creación de pedido si Stripe falla (evita pedidos huérfanos)
+                await api.delete(`/pedidos/${pedidoId}/`).catch(e => console.error("No se pudo limpiar pedido huérfano", e));
+            }
             setError('Error al procesar el pago. Inténtalo de nuevo.');
         } finally {
+            checkoutInProgress.current = false;
             setIsCheckingOut(false);
         }
     };

@@ -1,28 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    ShoppingBag, 
-    Store, 
-    CreditCard, 
-    ChevronRight, 
-    ExternalLink,
-    Box,
-    Clock
-} from 'lucide-react';
+import { Store, ExternalLink, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from 'core/services/api';
 import AppView from 'shared/widgets/AppView/AppView';
-import StatCard from 'shared/widgets/StatCard/StatCard';
 import { getBaseDomain } from 'core/utils/domain';
-import styles from './ClientePortal.module.css';
 
 const ClienteDashboard = () => {
     const navigate = useNavigate();
-    const [stats, setStats] = useState({ orders: 0, spent: 0, pending: 0 });
-    const [recentOrders, setRecentOrders] = useState([]);
     const [shops, setShops] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchShops = async () => {
             try {
                 // Confirmar pago si venimos de Stripe
                 const params = new URLSearchParams(window.location.search);
@@ -31,137 +21,123 @@ const ClienteDashboard = () => {
                 
                 if (statusStr === 'success' && pedidoId) {
                     await api.post('/pagos/confirm-success/', { pedido_id: pedidoId });
-                    // Limpiar la URL para evitar re-confirmaciones
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
 
-                const hostname = window.location.hostname;
-                const baseDomain = getBaseDomain(hostname);
-                
-                // Es público si el hostname es igual al baseDomain
-                const isPublic = hostname === baseDomain;
-                
-                // Solo pedimos pedidos si estamos en un contexto de tenant
-                const requests = [api.get('/tiendas-publicas/')];
-                if (!isPublic) {
-                    requests.push(api.get('/pedidos/'));
-                }
-
-                const results = await Promise.allSettled(requests);
-                
-                const shopsRes = results[0].status === 'fulfilled' ? results[0].value : null;
-                const ordersRes = results.length > 1 && results[1].status === 'fulfilled' ? results[1].value : null;
-
-                if (shopsRes) {
-                    setShops(shopsRes.data.results || []);
-                }
-
-                if (ordersRes) {
-                    const orders = ordersRes.data || [];
-                    const recentOrders = Array.isArray(orders) ? orders.slice(0, 5) : [];
-                    setRecentOrders(recentOrders);
-                    setStats({
-                        orders: orders.length,
-                        spent: orders.reduce((acc, o) => acc + parseFloat(o.total || 0), 0),
-                        pending: orders.filter(o => o.estado === 'pendiente').length
-                    });
-                }
+                const res = await api.get('/tiendas-publicas/');
+                setShops(res.data.results || []);
             } catch (err) {
-                console.error("Error fetching client data", err);
+                console.error("Error fetching shops", err);
+            } finally {
+                setLoading(false);
             }
         };
-        fetchData();
+        fetchShops();
     }, []);
+
+    const filteredShops = shops.filter(s => 
+        (s.nombre_comercial || s.schema_name).toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <AppView 
-            title="Portal del Cliente" 
-            subtitle="Gestiona tus pedidos y explora tiendas de la red"
+            title="Explorar Tiendas" 
+            subtitle="Encuentra los mejores productos en nuestra red de negocios"
         >
-            <StatCard.Group>
-                <StatCard 
-                    label="Mis Pedidos" 
-                    value={stats.orders} 
-                    icon={<ShoppingBag size={18} />}
-                    accentColor="var(--color-primary)"
+            <div style={{ marginBottom: '30px', position: 'relative', maxWidth: '500px' }}>
+                <Search size={20} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input 
+                    type="text" 
+                    placeholder="Buscar tiendas..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{ width: '100%', padding: '12px 20px 12px 45px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '15px', outline: 'none' }}
                 />
-                <StatCard 
-                    label="Pedidos Pendientes" 
-                    value={stats.pending} 
-                    icon={<Clock size={18} />}
-                    accentColor="var(--color-warning)"
-                />
-                <StatCard 
-                    label="Inversión Total" 
-                    value={`BS. ${stats.spent.toFixed(2)}`} 
-                    icon={<CreditCard size={18} />}
-                    accentColor="var(--color-success)"
-                />
-            </StatCard.Group>
+            </div>
 
-            <div className={styles.dashboardGrid}>
-                {/* RECENT ORDERS */}
-                <div className={styles.sectionCard}>
-                    <div className={styles.sectionHeader}>
-                        <h3>Mis pedidos recientes</h3>
-                        <button onClick={() => navigate('/pedidos')} className={styles.viewAll}>Ver todo</button>
-                    </div>
-                    <div className={styles.orderList}>
-                        {recentOrders.length === 0 ? (
-                            <p className={styles.empty}>Aún no has realizado pedidos.</p>
-                        ) : (
-                            recentOrders.map(order => (
-                                <div key={order.id} className={styles.orderItem}>
-                                    <div className={styles.orderIcon}>
-                                        <Box size={18} />
-                                    </div>
-                                    <div className={styles.orderInfo}>
-                                        <span className={styles.orderId}>Pedido #{order.id}</span>
-                                        <span className={styles.orderDate}>{new Date(order.creado_en).toLocaleDateString()}</span>
-                                    </div>
-                                    <div className={styles.orderStatus}>
-                                        <span className={`${styles.statusBadge} ${styles[order.estado]}`}>
-                                            {order.estado}
-                                        </span>
-                                    </div>
-                                    <span className={styles.orderTotal}>BS. {parseFloat(order.total).toFixed(2)}</span>
-                                    <ChevronRight size={16} className={styles.chevron} />
-                                </div>
-                            ))
-                        )}
-                    </div>
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>Cargando tiendas...</div>
+            ) : filteredShops.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '50px', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '15px' }}>
+                    <Store size={48} style={{ marginBottom: '15px', opacity: 0.5 }} />
+                    <p>No se encontraron tiendas.</p>
                 </div>
-
-                {/* EXPLORE SHOPS */}
-                <div className={styles.sectionCard}>
-                    <div className={styles.sectionHeader}>
-                        <h3>Explorar Tiendas</h3>
-                    </div>
-                    <div className={styles.shopGrid}>
-                        {shops.map(shop => (
-                            <div key={shop.id} className={styles.shopCard}>
-                                <div className={styles.shopIcon}>
-                                    {shop.logo_url ? (
-                                        <img src={shop.logo_url} alt={shop.nombre_comercial} className={styles.shopLogo} />
+            ) : (
+                <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
+                    gap: '25px' 
+                }}>
+                    {filteredShops.map(shop => {
+                        const port = window.location.port ? `:${window.location.port}` : '';
+                        // Calcular sufijo dinámicamente (misma lógica que el backend)
+                        const domainMain = process.env.REACT_APP_DOMAIN_MAIN || window.location.hostname;
+                        const suffix = (domainMain === 'localhost' || domainMain === '127.0.0.1')
+                            ? '.localhost'
+                            : `.${domainMain}.nip.io`;
+                        // Pasar tokens por URL al /sso del subdominio (cross-subdomain auth)
+                        const ssoParams = new URLSearchParams({
+                            token: localStorage.getItem('access_token') || '',
+                            refresh: localStorage.getItem('refresh_token') || '',
+                            full_name: localStorage.getItem('user_full_name') || '',
+                            role: localStorage.getItem('user_role') || 'cliente',
+                        });
+                        const subdomain = shop.subdominio ? shop.subdominio.split('.')[0] : shop.schema_name;
+                        const url = `${window.location.protocol}//${subdomain}${suffix}${port}/sso?${ssoParams.toString()}`;
+                        
+                        return (
+                            <a 
+                                key={shop.id} 
+                                href={url}
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    textDecoration: 'none',
+                                    color: 'inherit',
+                                    backgroundColor: '#fff',
+                                    borderRadius: '16px',
+                                    border: '1px solid #e2e8f0',
+                                    overflow: 'hidden',
+                                    transition: 'transform 0.2s, box-shadow 0.2s',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-5px)';
+                                    e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.05)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.02)';
+                                }}
+                            >
+                                <div style={{ height: '120px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                    {shop.icono ? (
+                                        <img src={shop.icono} alt={shop.nombre_comercial} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : shop.logo_url ? (
+                                        <img src={shop.logo_url} alt={shop.nombre_comercial} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
-                                        <Store size={24} />
+                                        <Store size={40} color="#cbd5e1" />
                                     )}
                                 </div>
-                                <div className={styles.shopDetails}>
-                                    <h4>{shop.nombre_comercial}</h4>
-                                    <p>{shop.subdominio || `${shop.schema_name}.localhost`}</p>
+                                <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                    <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 'bold', color: '#0f172a' }}>
+                                        {shop.nombre_comercial || shop.schema_name}
+                                    </h3>
+                                    {shop.categoria_tienda && (
+                                        <span style={{ alignSelf: 'flex-start', padding: '4px 10px', backgroundColor: '#e0e7ff', color: '#4338ca', fontSize: '12px', borderRadius: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+                                            {shop.categoria_tienda}
+                                        </span>
+                                    )}
+                                    <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', color: '#3b82f6', fontSize: '14px', fontWeight: 'bold' }}>
+                                        Visitar Tienda <ExternalLink size={14} style={{ marginLeft: '6px' }} />
+                                    </div>
                                 </div>
-                                <a 
-                                    href={`http://${shop.subdominio || `${shop.schema_name}${process.env.REACT_APP_TENANT_DOMAIN_SUFFIX || '.localhost'}`}${window.location.port ? `:${window.location.port}` : ''}/sso?token=${localStorage.getItem('access_token')}&refresh=${localStorage.getItem('refresh_token')}&full_name=${encodeURIComponent(localStorage.getItem('user_full_name') || '')}&role=${localStorage.getItem('user_role')}`} 
-                                    className={styles.shopLink}
-                                >
-                                    <ExternalLink size={16} />
-                                </a>
-                            </div>
-                        ))}
-                    </div>
+                            </a>
+                        );
+                    })}
                 </div>
-            </div>
+            )}
         </AppView>
     );
 };

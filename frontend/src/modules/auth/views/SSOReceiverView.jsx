@@ -19,28 +19,33 @@ export default function SSOReceiverView() {
 
     if (token) {
       login(token, refresh || '', fullName ? decodeURIComponent(fullName) : '', role);
-      
-      const hostname = window.location.hostname;
+
+      const hostname   = window.location.hostname;
       const baseDomain = getBaseDomain(hostname);
-      
-      // Si es cliente y está en un subdominio, va al catálogo.
-      // Si es vendedor/admin, siempre va al dashboard (su panel de control).
+
       if (role === 'admin') {
         navigate('/su', { replace: true });
       } else if (role === 'cliente') {
-        if (hostname !== baseDomain && hostname !== 'localhost') {
+        // Detectar si estamos en un subdominio de tenant:
+        //   tienda1.localhost            → !isOnBaseDomain → /catalogo
+        //   tienda1.192.168.x.x.nip.io  → !isOnBaseDomain → /catalogo
+        //   localhost                    → /mi-portal
+        //   192.168.x.x                 → /mi-portal
+        const isOnBaseDomain = (hostname === baseDomain) || (hostname === 'localhost');
+        if (!isOnBaseDomain) {
           navigate('/catalogo', { replace: true });
         } else {
           navigate('/mi-portal', { replace: true });
         }
       } else {
-        // Vendedor: Siempre al Dashboard
+        // Vendedor: siempre al Dashboard
         navigate('/dashboard', { replace: true });
       }
     } else {
-      const baseDomain = getBaseDomain(window.location.hostname);
+      // Sin token → ir al login del dominio base
       const port = window.location.port ? `:${window.location.port}` : '';
-      window.location.href = `${window.location.protocol}//${baseDomain}${port}/login`;
+      const base = getBaseDomain(window.location.hostname);
+      window.location.href = `${window.location.protocol}//${base}${port}/login`;
     }
   }, [navigate, location, login]);
 

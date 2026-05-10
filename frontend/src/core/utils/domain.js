@@ -8,11 +8,11 @@
  */
 export const getBaseDomain = (hostname) => {
   if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')) {
-    return process.env.REACT_APP_BASE_DOMAIN === 'localhost' || !process.env.REACT_APP_BASE_DOMAIN
+    return process.env.REACT_APP_DOMAIN_MAIN === 'localhost' || !process.env.REACT_APP_DOMAIN_MAIN
       ? 'localhost'
-      : process.env.REACT_APP_BASE_DOMAIN;
+      : process.env.REACT_APP_DOMAIN_MAIN;
   }
-  return process.env.REACT_APP_BASE_DOMAIN || hostname;
+  return process.env.REACT_APP_DOMAIN_MAIN || hostname;
 };
 
 /**
@@ -20,20 +20,7 @@ export const getBaseDomain = (hostname) => {
  * que el Host header enviado coincida con el tenant en el que estamos.
  */
 export const getApiUrl = (hostname, port = '8001') => {
-  // Si estamos en Nginx (producción real), usamos proxy inverso
-  if (process.env.REACT_APP_API_URL === '/api') {
-    return '/api';
-  }
-
-  // Extraer el puerto original de REACT_APP_API_URL si existe
-  let apiPort = port;
-  if (process.env.REACT_APP_API_URL) {
-    const match = process.env.REACT_APP_API_URL.match(/:(\d+)\//);
-    if (match) {
-      apiPort = match[1];
-    }
-  }
-
+  const apiPort = process.env.REACT_APP_DJANGO_PORT || port;
   const protocol = window.location.protocol;
   return `${protocol}//${hostname}:${apiPort}/api`;
 };

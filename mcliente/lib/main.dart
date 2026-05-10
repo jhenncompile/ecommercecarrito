@@ -9,6 +9,7 @@ import 'gestion_usuario/screens/profile_screen.dart';
 import 'gestion_producto/screens/storefront_screen.dart';
 import 'gestion_producto/screens/cart_screen.dart';
 import 'gestion_producto/screens/orders_screen.dart';
+import 'gestion_producto/screens/shop_list_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/registro': (context) => const RegistrationScreen(),
+        '/tiendas': (context) => const ShopListScreen(),
         '/tienda': (context) => const StorefrontScreen(),
         '/carrito': (context) => const CartScreen(),
         '/pedidos': (context) => const OrdersScreen(),

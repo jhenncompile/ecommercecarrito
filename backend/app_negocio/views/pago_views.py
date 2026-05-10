@@ -53,8 +53,8 @@ class PagoViewSet(viewsets.ViewSet):
                 amount=monto_centavos,
                 currency='bob',
                 metadata={
-                    'pedido_id': pedido.id,
-                    'tenant': connection.schema_name
+                    'pedido_id': str(pedido.id),
+                    'tenant': str(connection.schema_name)
                 },
                 automatic_payment_methods={
                     'enabled': True,
@@ -119,8 +119,8 @@ class PagoViewSet(viewsets.ViewSet):
                 success_url=request.data.get('success_url'),
                 cancel_url=request.data.get('cancel_url'),
                 metadata={
-                    'pedido_id': pedido.id,
-                    'tenant': connection.schema_name
+                    'pedido_id': str(pedido.id),
+                    'tenant': str(connection.schema_name)
                 }
             )
             

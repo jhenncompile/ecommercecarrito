@@ -77,8 +77,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       userName: _user?.nombre ?? 'Cliente',
       sidebarItems: [
         AppSidebarItem(
+          icon: Icons.store,
+          label: 'Explorar Tiendas',
+          onTap: () => Navigator.pushReplacementNamed(context, '/tiendas'),
+        ),
+        AppSidebarItem(
           icon: Icons.storefront,
-          label: 'Catálogo',
+          label: 'Catálogo de Tienda',
           onTap: () => Navigator.pushReplacementNamed(context, '/tienda'),
         ),
         AppSidebarItem(

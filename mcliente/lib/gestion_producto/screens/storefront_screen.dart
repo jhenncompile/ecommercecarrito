@@ -128,10 +128,15 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
       ),
       sidebarItems: [
         AppSidebarItem(
-          icon: Icons.storefront,
-          label: 'Catálogo',
+          icon: Icons.store,
+          label: 'Explorar Tiendas',
+          onTap: () => Navigator.pushReplacementNamed(context, '/tiendas'),
+        ),
+        AppSidebarItem(
+          icon: Icons.shopping_basket_outlined,
+          label: 'Productos de Tienda',
           isActive: true,
-          onTap: () => Navigator.pushReplacementNamed(context, '/tienda'),
+          onTap: () {},
         ),
         AppSidebarItem(
           icon: Icons.shopping_bag_outlined,

@@ -40,8 +40,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     if (success) {
       if (!mounted) return;
-      AppToast.showSuccess(context, 'Registro exitoso');
-      Navigator.pushReplacementNamed(context, '/tienda');
+      AppToast.showSuccess(context, '¡Cuenta creada con éxito!');
+      Navigator.pushReplacementNamed(context, '/tiendas');
     } else {
       if (!mounted) return;
       AppToast.showError(context, 'Error en el registro');
