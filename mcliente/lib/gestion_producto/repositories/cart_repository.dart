@@ -18,12 +18,15 @@ class CartRepository {
 
   Future<CartModel> fetchActiveCart() async {
     final url = await _getCartUrl();
+    print('[DEBUG] Fetching cart from: $url');
     // El backend maneja obtener o crear el carrito abierto cuando se llama a POST carritos/
     final response = await _apiClient.post(url, {}, requiresAuth: true, includeTenantHost: true);
+    print('[DEBUG] FetchActiveCart Status: ${response.statusCode}');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return CartModel.fromJson(jsonDecode(response.body));
     } else {
+      print('[DEBUG] Error al obtener el carrito: ${response.statusCode} - ${response.body}');
       throw Exception('Error al obtener el carrito: ${response.body}');
     }
   }
@@ -31,6 +34,7 @@ class CartRepository {
   Future<CartModel> addItem(int cartId, int productId, {int quantity = 1}) async {
     final baseUrl = await _getCartUrl();
     final url = '$baseUrl$cartId/agregar-item/';
+    print('[DEBUG] Adding item to: $url');
     
     final response = await _apiClient.post(
       url, 
@@ -42,6 +46,7 @@ class CartRepository {
     if (response.statusCode == 200) {
       return CartModel.fromJson(jsonDecode(response.body));
     } else {
+      print('[DEBUG] Error al agregar item: ${response.statusCode} - ${response.body}');
       throw Exception('Error al agregar item: ${response.body}');
     }
   }

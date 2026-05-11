@@ -14,11 +14,26 @@ class CartItemModel {
   });
 
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
+    // Si 'producto' viene como ID (int), creamos un modelo básico
+    // Si viene como Map, usamos el fromJson normal
+    ProductModel product;
+    if (json['producto'] is int) {
+      product = ProductModel(
+        id: json['producto'],
+        nombre: json['producto_nombre'] ?? 'Producto #${json['producto']}',
+        descripcion: '',
+        precio: double.tryParse(json['producto_precio']?.toString() ?? '0') ?? 0.0,
+        stock: 0,
+      );
+    } else {
+      product = ProductModel.fromJson(json['producto'] as Map<String, dynamic>);
+    }
+
     return CartItemModel(
       id: json['id'],
-      producto: ProductModel.fromJson(json['producto']),
-      cantidad: json['cantidad'],
-      subtotal: double.parse(json['subtotal'].toString()),
+      producto: product,
+      cantidad: json['cantidad'] ?? 1,
+      subtotal: double.tryParse(json['subtotal']?.toString() ?? '0') ?? 0.0,
     );
   }
 }
@@ -37,12 +52,17 @@ class CartModel {
   });
 
   factory CartModel.fromJson(Map<String, dynamic> json) {
-    var itemsList = json['items'] as List;
+    print('[DEBUG] Parsing Cart JSON: $json');
+    var itemsList = (json['items'] as List?) ?? [];
+    
+    // El backend puede enviar total_carrito o total
+    final totalValue = json['total'] ?? json['total_carrito'] ?? 0.0;
+    
     return CartModel(
-      id: json['id'],
-      items: itemsList.map((i) => CartItemModel.fromJson(i)).toList(),
-      total: double.parse(json['total'].toString()),
-      estado: json['estado'],
+      id: json['id'] ?? 0,
+      items: itemsList.map((i) => CartItemModel.fromJson(i as Map<String, dynamic>)).toList(),
+      total: double.tryParse(totalValue.toString()) ?? 0.0,
+      estado: json['estado'] ?? 'ABIERTO',
     );
   }
 }

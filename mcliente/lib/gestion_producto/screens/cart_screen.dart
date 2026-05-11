@@ -229,7 +229,9 @@ class _CartScreenState extends State<CartScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total a pagar:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Expanded(
+                    child: Text('Total a pagar:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
                   Text('BS. ${_cart!.total}', style: AppTextStyles.h2.copyWith(color: AppColors.accentTeal)),
                 ],
               ),

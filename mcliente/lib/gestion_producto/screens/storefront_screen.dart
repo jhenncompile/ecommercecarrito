@@ -50,9 +50,12 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
   }
 
   Future<void> _addToCart(ProductModel product) async {
+    print('[DEBUG] _addToCart iniciado para: ${product.nombre} (ID: ${product.id})');
     try {
       final cart = await _cartRepository.fetchActiveCart();
+      print('[DEBUG] Carrito obtenido: ID ${cart.id}');
       await _cartRepository.addItem(cart.id, product.id);
+      print('[DEBUG] Item añadido exitosamente');
       await _loadCartCount();
       if (!mounted) return;
       AppToast.showSuccess(context, '${product.nombre} añadido al carrito');
@@ -290,10 +293,16 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                   const SizedBox(height: 4),
                   Text(product.nombre, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 8),
-                  Row(
+                    Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('BS. ${product.precio}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.primaryDark)),
+                      Expanded(
+                        child: Text(
+                          'BS. ${product.precio}', 
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.primaryDark),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       IconButton(
                         icon: const Icon(Icons.add_shopping_cart, color: AppColors.accentTeal),
                         onPressed: () => _addToCart(product),

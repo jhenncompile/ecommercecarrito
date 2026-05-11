@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from app_negocio.models import Carrito, CarritoItem, Producto
+from app_negocio.serializers.producto_serializer import ProductoSerializer
 from customers.models import Cliente
 
 
@@ -11,6 +12,7 @@ class CarritoItemSerializer(serializers.ModelSerializer):
         decimal_places=2, 
         read_only=True
     )
+    producto = ProductoSerializer(read_only=True)
     subtotal = serializers.DecimalField(read_only=True, max_digits=12, decimal_places=2)
     
     class Meta:
@@ -35,6 +37,7 @@ class CarritoSerializer(serializers.ModelSerializer):
         max_digits=12, 
         decimal_places=2
     )
+    total = serializers.ReadOnlyField(source='total_carrito')
     
     class Meta:
         model = Carrito
