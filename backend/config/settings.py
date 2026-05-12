@@ -103,6 +103,10 @@ TIME_ZONE = 'America/La_Paz'
 USE_I18N = True
 USE_TZ = True
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR.parent, 'static')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR.parent, 'media')
 
 # 10. CONFIGURACIÓN DE CAMPOS AUTO (Silencia warnings)
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
