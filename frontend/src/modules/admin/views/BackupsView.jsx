@@ -44,9 +44,20 @@ export default function BackupsView() {
 
     const [selectedBackup, setSelectedBackup] = useState(null);
     const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+    const [selectedSchema, setSelectedSchema] = useState('public');
+    const [selectedTable, setSelectedTable] = useState('');
 
     const openExplorer = (backup) => {
-        setSelectedBackup(backup);
+        const catalogo = backup.metadata?.catalogo || {};
+        const schemas = Object.keys(catalogo);
+        setSelectedBackup({ ...backup, catalogo, schemas });
+        
+        if (schemas.length > 0) {
+            const firstSchema = schemas.includes('public') ? 'public' : schemas[0];
+            setSelectedSchema(firstSchema);
+            const tables = Object.keys(catalogo[firstSchema] || {});
+            if (tables.length > 0) setSelectedTable(tables[0]);
+        }
         setIsExplorerOpen(true);
     };
 
@@ -56,7 +67,7 @@ export default function BackupsView() {
             label: 'Versión', 
             render: (v, row) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Badge variant="primary" size="lg" style={{ minWidth: '60px', textAlign: 'center' }}>{v}</Badge>
+                    <Badge variant="primary" size="lg" style={{ minWidth: '100px', textAlign: 'center' }}>{v}</Badge>
                     <Button 
                         variant="ghost" 
                         size="sm" 
@@ -64,7 +75,7 @@ export default function BackupsView() {
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)', border: '1px solid #e0e7ff' }}
                     >
                         <FileJson size={14} />
-                        <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Explorar Catálogo</span>
+                        <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Explorar</span>
                     </Button>
                 </div>
             )
@@ -81,26 +92,128 @@ export default function BackupsView() {
             )
         },
         { 
-            key: 'anterior_id', 
-            label: 'Origen', 
-            render: (v) => v ? <span style={{fontSize: '12px'}}>v. {backups.find(b => b.id === v)?.fecha_display || v}</span> : <Badge variant="outline">Raíz</Badge> 
-        },
-        { 
-            key: 'siguiente_id', 
-            label: 'Estado', 
-            render: (v) => v ? <span style={{fontSize: '12px', color: 'var(--color-text-muted)'}}>Sucedido</span> : <Badge variant="success">Actual ✨</Badge> 
-        },
-        { 
             key: 'archivo_path', 
             label: 'Ruta Servidor', 
-            render: (v) => <code style={{fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={v}>{v}</code> 
+            render: (v) => <code style={{fontSize: '10px', color: '#94a3b8', display: 'block', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={v}>{v}</code> 
         }
     ];
+
+    const renderExplorerContent = () => {
+        if (!selectedBackup || !selectedBackup.catalogo) return null;
+        
+        const currentSchemaData = selectedBackup.catalogo[selectedSchema] || {};
+        const tableInfo = currentSchemaData[selectedTable] || { columns: [], rows: [] };
+        const allTables = Object.keys(currentSchemaData);
+
+        return (
+            <div style={{ 
+                display: 'flex', 
+                height: '70vh', 
+                background: '#0f172a', 
+                borderRadius: '12px', 
+                overflow: 'hidden',
+                border: '1px solid #1e293b'
+            }}>
+                {/* Sidebar Izquierda */}
+                <div style={{ 
+                    width: '280px', 
+                    background: '#111827', 
+                    borderRight: '1px solid #1e293b',
+                    display: 'flex',
+                    flexDirection: 'column'
+                }}>
+                    <div style={{ padding: '20px', borderBottom: '1px solid #1e293b' }}>
+                        <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Esquema / Tienda</label>
+                        <select 
+                            value={selectedSchema}
+                            onChange={(e) => {
+                                const newSchema = e.target.value;
+                                setSelectedSchema(newSchema);
+                                const firstTable = Object.keys(selectedBackup.catalogo[newSchema] || {})[0];
+                                setSelectedTable(firstTable || '');
+                            }}
+                            style={{ 
+                                width: '100%', marginTop: '10px', background: '#1f2937', color: 'white', 
+                                border: '1px solid #374151', padding: '10px', borderRadius: '8px', outline: 'none' 
+                            }}
+                        >
+                            {selectedBackup.schemas.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+                        <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold', padding: '10px', display: 'block' }}>TABLAS DETECTADAS</label>
+                        {allTables.map(table => (
+                            <div 
+                                key={table}
+                                onClick={() => setSelectedTable(table)}
+                                style={{ 
+                                    padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px',
+                                    marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '10px',
+                                    background: selectedTable === table ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                    color: selectedTable === table ? '#60a5fa' : '#9ca3af',
+                                    border: `1px solid ${selectedTable === table ? '#3b82f633' : 'transparent'}`,
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                <Database size={14} />
+                                {table}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Visor de Datos Derecha */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#0f172a' }}>
+                    <div style={{ padding: '15px 25px', background: '#111827', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <span style={{ color: '#64748b', fontSize: '12px' }}>Viendo tabla: </span>
+                            <span style={{ color: 'white', fontWeight: 'bold' }}>{selectedSchema}.{selectedTable}</span>
+                        </div>
+                        <Badge variant="primary">{tableInfo.rows?.length || 0} filas en muestra</Badge>
+                    </div>
+
+                    <div style={{ flex: 1, overflow: 'auto' }}>
+                        {tableInfo.columns && tableInfo.columns.length > 0 ? (
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead style={{ position: 'sticky', top: 0, background: '#1f2937', zIndex: 10 }}>
+                                    <tr>
+                                        {tableInfo.columns.map(col => (
+                                            <th key={col} style={{ padding: '12px 15px', textAlign: 'left', color: '#9ca3af', fontSize: '11px', borderBottom: '1px solid #374151', textTransform: 'uppercase' }}>{col}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tableInfo.rows.map((row, idx) => (
+                                        <tr key={idx} style={{ borderBottom: '1px solid #1e293b', background: idx % 2 === 0 ? '#0f172a' : '#111827' }}>
+                                            {tableInfo.columns.map(col => (
+                                                <td key={col} style={{ padding: '10px 15px', color: '#d1d5db', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                                    {String(row[col])}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#4b5563', gap: '15px' }}>
+                                <History size={64} opacity={0.2} />
+                                <div style={{ textAlign: 'center' }}>
+                                    <p style={{ margin: 0, fontWeight: 'bold' }}>Sin datos disponibles</p>
+                                    <p style={{ fontSize: '12px' }}>Crea un backup nuevo para ver el contenido real de esta tabla.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <AppView 
             title="Copias de Seguridad" 
-            subtitle="Gestión de snapshots con explorador de catálogo"
+            subtitle="Gestión de snapshots con explorador de catálogo Premium"
         >
             {error && <Alert variant="danger" style={{ marginBottom: '20px' }}>{error}</Alert>}
 
@@ -116,7 +229,7 @@ export default function BackupsView() {
                     icon={<History size={18} />}
                 />
                 <StatCard 
-                    label="Estado de Almacenamiento" 
+                    label="Almacenamiento" 
                     value="Optimizado"
                     icon={<Server size={18} />}
                     accentColor="var(--color-success)"
@@ -138,58 +251,13 @@ export default function BackupsView() {
                 />
             </div>
 
-            {/* MODAL EXPLORADOR DE BACKUP */}
             <Modal
                 isOpen={isExplorerOpen}
                 onClose={() => setIsExplorerOpen(false)}
-                title={`Explorador de Snapshot: ${selectedBackup?.nombre} (v. ${selectedBackup?.fecha_display})`}
-                size="lg"
+                title={`Explorador de Datos: ${selectedBackup?.nombre}`}
+                width="95vw"
             >
-                <div style={{ minHeight: '300px' }}>
-                    {selectedBackup?.metadata?.catalogo ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '20px' }}>
-                            <div style={{ borderRight: '1px solid var(--color-border)', paddingRight: '15px' }}>
-                                <h4 style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--color-primary)' }}>Esquemas / Tiendas</h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    {Object.entries(selectedBackup.metadata.catalogo).map(([schema, info]) => (
-                                        <div key={schema} style={{ padding: '8px', borderRadius: '6px', background: '#f8fafc', fontSize: '13px' }}>
-                                            <div style={{ fontWeight: '600' }}>{schema}</div>
-                                            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{info.total_tablas} tablas registradas</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <h4 style={{ fontSize: '14px', marginBottom: '12px' }}>Vista previa de estructura</h4>
-                                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '15px' }}>
-                                    Este snapshot binario contiene la estructura completa del sistema. A continuación se muestran algunas tablas clave detectadas:
-                                </p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                    {selectedBackup.metadata.catalogo['public']?.tablas?.map(t => (
-                                        <Badge key={t} variant="outline" size="sm">{t}</Badge>
-                                    ))}
-                                    {Object.keys(selectedBackup.metadata.catalogo).length > 1 && <Badge variant="primary" size="sm">+ Datos de Tiendas</Badge>}
-                                </div>
-                                <div style={{ marginTop: '30px', padding: '20px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px' }}>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <Download size={24} style={{ color: '#d97706' }} />
-                                        <div>
-                                            <h5 style={{ margin: 0, fontSize: '14px' }}>Formato Restaurable</h5>
-                                            <p style={{ margin: '5px 0 0', fontSize: '12px' }}>
-                                                Este archivo .dump puede ser restaurado íntegramente usando la utilidad <code>pg_restore</code>.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div style={{ textAlign: 'center', padding: '40px' }}>
-                            <FileJson size={48} style={{ color: 'var(--color-text-muted)', marginBottom: '15px' }} />
-                            <p>Esta versión es antigua y no contiene un catálogo interactivo.</p>
-                        </div>
-                    )}
-                </div>
+                {renderExplorerContent()}
             </Modal>
 
             <Modal
@@ -207,7 +275,7 @@ export default function BackupsView() {
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
-                        Se generará un punto de restauración binario optimizado con compresión máxima y catálogo de metadatos.
+                        Se generará un punto de restauración binario con catálogo de datos reales (Vista Previa).
                     </p>
                     <Input 
                         label="Nombre del punto de restauración" 

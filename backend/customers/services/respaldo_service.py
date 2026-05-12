@@ -77,35 +77,54 @@ class RespaldoService:
             raise e
 
     def _generar_catalogo_actual(self):
-        """Genera un resumen de esquemas y tablas actuales para el explorador"""
+        """Genera un catálogo profundo con muestras de datos reales de cada esquema y tabla"""
         from django.db import connection
         catalogo = {}
         try:
             with connection.cursor() as cursor:
-                # Obtener todos los esquemas (tenants)
+                # 1. Obtener todos los esquemas (tenants + public)
                 cursor.execute("SELECT schema_name FROM customers_client")
                 schemas = [row[0] for row in cursor.fetchall()]
                 schemas.append('public')
 
                 for schema in schemas:
-                    # Obtener tablas y conteo de filas aproximado por esquema
-                    query = f"""
+                    # 2. Obtener lista de tablas del esquema
+                    cursor.execute(f"""
                         SELECT table_name 
                         FROM information_schema.tables 
                         WHERE table_schema = '{schema}' 
                         AND table_type = 'BASE TABLE'
-                    """
-                    cursor.execute(query)
+                    """)
                     tables = [row[0] for row in cursor.fetchall()]
                     
-                    catalogo[schema] = {
-                        'total_tablas': len(tables),
-                        'tablas': tables[:20]  # Guardamos las primeras 20 para el preview
-                    }
+                    schema_data = {}
+                    for table in tables:
+                        try:
+                            # 3. Capturar muestra de datos (Top 20 filas)
+                            cursor.execute(f'SELECT * FROM "{schema}"."{table}" LIMIT 20;')
+                            columns = [col[0] for col in cursor.description]
+                            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                            
+                            # Limpieza de tipos no serializables
+                            for row in rows:
+                                for k, v in row.items():
+                                    if hasattr(v, 'isoformat'): row[k] = v.isoformat()
+                                    elif isinstance(v, bytes): row[k] = "<Binario>"
+                                    elif v is None: row[k] = ""
+                            
+                            schema_data[table] = {
+                                'columns': columns,
+                                'rows': rows,
+                                'count': len(rows)
+                            }
+                        except Exception:
+                            continue # Si una tabla falla, seguimos con las demás
+                    
+                    catalogo[schema] = schema_data
             return catalogo
         except Exception as e:
-            logger.error(f"Error generando catálogo: {e}")
-            return {"error": "No se pudo generar el catálogo"}
+            logger.error(f"Error generando catálogo profundo: {e}")
+            return {"error": str(e)}
 
     def obtener_historial_encadenado(self):
         """Retorna todos los respaldos en orden cronológico"""

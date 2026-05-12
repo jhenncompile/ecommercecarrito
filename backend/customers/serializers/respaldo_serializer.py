@@ -14,4 +14,4 @@ class RespaldoSerializer(serializers.ModelSerializer):
         ]
 
     def get_fecha_display(self, obj):
-        return obj.timestamp.strftime('%d/%m')
+        return obj.timestamp.strftime('%d/%m %H:%M')

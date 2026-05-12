@@ -37,8 +37,11 @@ def run_django_command(args, check=True):
     return True, result.stdout
 
 def run_make_migrations():
-    """Crea nuevas migraciones detectando cambios recursivamente"""
+    """Crea nuevas migraciones detectando cambios de forma agresiva"""
     print("\n[+] Analizando modelos en busca de cambios...")
+    # Forzamos primero la detección en la app principal para evitar que Django la ignore
+    run_django_command(['makemigrations', 'customers', '--noinput'], check=False)
+    # Luego una detección general por si acaso
     run_django_command(['makemigrations', '--noinput'], check=False)
 
 def run_migrate():
