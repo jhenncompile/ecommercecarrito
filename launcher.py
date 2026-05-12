@@ -655,6 +655,7 @@ def show_vps_menu():
         print_option(f"{Colors.CYAN}4{Colors.RESET} - Limpieza del Sistema")
         print_option(f"{Colors.CYAN}7{Colors.RESET} - Limpieza Profunda Frontend (borrar build y reconstruir)")
         print_option(f"{Colors.CYAN}5{Colors.RESET} - Crear Usuario de Sistema")
+        print_option(f"{Colors.GREEN}8{Colors.RESET} - {Colors.BOLD}Sincronizar Hora (La Paz, UTC-4){Colors.RESET}")
 
         print_option(f"\n{Colors.RED}b{Colors.RESET} - Volver")
         print()
@@ -680,6 +681,12 @@ def show_vps_menu():
             user = input("Nombre de usuario: ")
             pw   = input("Contraseña: ")
             run_script('vps.py', 'user', 'CREATE', user, pw); pause()
+        elif choice == '8':
+            print_info("Sincronizando reloj con America/La_Paz...")
+            subprocess.run(['sudo', 'timedatectl', 'set-timezone', 'America/La_Paz'], check=False)
+            print_success("Hora del sistema actualizada:")
+            subprocess.run(['date'], check=False)
+            pause()
         elif choice == 'b':
             break
         else:

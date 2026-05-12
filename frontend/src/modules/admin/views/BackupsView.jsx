@@ -108,7 +108,7 @@ export default function BackupsView() {
         return (
             <div style={{ 
                 display: 'flex', 
-                height: '70vh', 
+                height: '80vh', 
                 background: '#0f172a', 
                 borderRadius: '12px', 
                 overflow: 'hidden',
@@ -255,7 +255,7 @@ export default function BackupsView() {
                 isOpen={isExplorerOpen}
                 onClose={() => setIsExplorerOpen(false)}
                 title={`Explorador de Datos: ${selectedBackup?.nombre}`}
-                width="95vw"
+                width="98vw"
             >
                 {renderExplorerContent()}
             </Modal>
