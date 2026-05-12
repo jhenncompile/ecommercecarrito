@@ -44,7 +44,19 @@ def run_make_migrations():
 def run_migrate():
     """Aplica migraciones al esquema público (Shared Apps)"""
     print("\n[+] Aplicando migraciones solo a los cambios faltantes en el esquema SHARED (Público)...")
-    run_django_command(['migrate_schemas', '--shared'])
+    try:
+        run_django_command(['migrate_schemas', '--shared'])
+    except SystemExit:
+        print("\n" + "!"*60)
+        print("[!] ERROR DE MIGRACIÓN DETECTADO")
+        print("!"*60)
+        print("Parece que algunas columnas ya existen en la base de datos.")
+        print("Esto sucede si las migraciones se desincronizaron.")
+        print("\nSOLUCIÓN:")
+        print("Ejecuta: python scripts_utiles/migrations.py fake")
+        print("O selecciona la opción 'F' en el menú principal.")
+        print("!"*60 + "\n")
+        sys.exit(1)
 
 def run_migrate_schemas():
     """Aplica migraciones a todos los esquemas de clientes (Tenants)"""
@@ -86,7 +98,7 @@ def show_migrations():
     """Muestra el estado de las migraciones"""
     run_django_command(['showmigrations'])
 
-def run_fake_migrations():
+def run_fake_migrations(app=None):
     """Aplica migraciones con el flag --fake para resolver conflictos de columnas existentes"""
     print("\n" + "="*60)
     print("MODO RECUPERACIÓN: FAKE MIGRATIONS")
@@ -94,7 +106,9 @@ def run_fake_migrations():
     print("[i] Esto marcará las migraciones como 'aplicadas' sin ejecutar el SQL.")
     print("[i] Útil si las columnas ya existen en la base de datos.")
     
-    app = input("\n¿Aplicación específica? (Enter para todas): ").strip()
+    if not app:
+        app = input("\n¿Aplicación específica? (Enter para todas): ").strip()
+        
     args = ['migrate_schemas', '--shared', '--fake']
     if app:
         args.append(app)
@@ -136,7 +150,8 @@ def main():
     elif cmd == 'show':
         show_migrations()
     elif cmd == 'fake':
-        run_fake_migrations()
+        app = sys.argv[2] if len(sys.argv) > 2 else None
+        run_fake_migrations(app)
     else:
         print(f"[ERROR] Comando desconocido: {cmd}")
         sys.exit(1)
