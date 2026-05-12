@@ -60,9 +60,17 @@ const VoiceQueryWidget = () => {
         try {
             const doc = new jsPDF();
             const tableColumn = Object.keys(result.results[0]).map(formatHeader);
-            const tableRows = result.results.map(row => Object.values(row));
+            
+            // Sanitizar datos: convertir objetos a string y manejar nulls
+            const tableRows = result.results.map(row => 
+                Object.values(row).map(val => {
+                    if (val === null || val === undefined) return '—';
+                    if (typeof val === 'object') return JSON.stringify(val);
+                    return String(val);
+                })
+            );
 
-            doc.setFontSize(20);
+            doc.setFontSize(18);
             doc.setTextColor(41, 128, 185);
             doc.text("Reporte de Consulta Inteligente", 14, 22);
             
@@ -77,16 +85,17 @@ const VoiceQueryWidget = () => {
                 head: [tableColumn],
                 body: tableRows,
                 theme: 'striped',
-                headStyles: { fillColor: [44, 62, 80], textColor: 255, fontSize: 10, halign: 'center' },
-                bodyStyles: { fontSize: 9 },
+                headStyles: { fillColor: [44, 62, 80], textColor: 255, fontSize: 9, halign: 'center' },
+                bodyStyles: { fontSize: 8 },
                 alternateRowStyles: { fillColor: [245, 247, 250] },
-                margin: { top: 50 }
+                margin: { top: 50, horizontal: 10 },
+                styles: { overflow: 'linebreak' }
             });
 
             doc.save(`reporte_ia_${Date.now()}.pdf`);
         } catch (err) {
             console.error('Error generating PDF:', err);
-            setError('Error al generar el PDF. Inténtalo de nuevo.');
+            setError('Error al generar el PDF. Verifica que los datos no sean demasiado grandes.');
         }
     };
 
@@ -98,11 +107,23 @@ const VoiceQueryWidget = () => {
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte IA");
             
-            // Ajustar anchos de columna básicos
+            // Ajustar anchos de columna
             const wscols = Object.keys(result.results[0]).map(k => ({ wch: Math.max(k.length, 15) }));
             worksheet['!cols'] = wscols;
 
-            XLSX.writeFile(workbook, `reporte_ia_${Date.now()}.xlsx`);
+            // Generar buffer
+            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            
+            // Descarga robusta (funciona mejor en móviles/webviews)
+            const url = window.URL.createObjectURL(data);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `reporte_ia_${Date.now()}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
         } catch (err) {
             console.error('Error generating Excel:', err);
             setError('Error al generar el archivo Excel.');
