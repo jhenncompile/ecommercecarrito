@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Database, Download, Plus, ArrowRight, History, Server, FileJson } from 'lucide-react';
+import { Database, Download, Plus, ArrowRight, History, Server, FileJson, X } from 'lucide-react';
 import AppView from 'shared/widgets/AppView/AppView';
 import StatCard from 'shared/widgets/StatCard/StatCard';
 import DataTable from 'shared/widgets/DataTable/DataTable';
@@ -108,11 +108,11 @@ export default function BackupsView() {
         return (
             <div style={{ 
                 display: 'flex', 
-                height: '80vh', 
+                flex: 1,
+                height: '100%', 
                 background: '#0f172a', 
-                borderRadius: '12px', 
-                overflow: 'hidden',
-                border: '1px solid #1e293b'
+                color: '#f8fafc',
+                overflow: 'hidden'
             }}>
                 {/* Sidebar Izquierda */}
                 <div style={{ 
@@ -251,14 +251,46 @@ export default function BackupsView() {
                 />
             </div>
 
-            <Modal
-                isOpen={isExplorerOpen}
-                onClose={() => setIsExplorerOpen(false)}
-                title={`Explorador de Datos: ${selectedBackup?.nombre}`}
-                width="98vw"
-            >
-                {renderExplorerContent()}
-            </Modal>
+            {/* VISOR DE DATOS GIGANTE (PANTALLA COMPLETA) */}
+            {isExplorerOpen && (
+                <div style={{ 
+                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+                    background: '#020617', zIndex: 9999, display: 'flex', flexDirection: 'column' 
+                }}>
+                    {/* Header del Visor */}
+                    <div style={{ 
+                        padding: '15px 30px', background: '#0f172a', borderBottom: '1px solid #1e293b',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                    }}>
+                        <div>
+                            <h2 style={{ margin: 0, fontSize: '18px', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Database color="#60a5fa" />
+                                Explorador de Snapshot: <span style={{ color: '#60a5fa' }}>{selectedBackup?.nombre}</span>
+                            </h2>
+                            <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>v. {selectedBackup?.fecha_display} | Modo Administrador</p>
+                        </div>
+                        <div 
+                            onClick={() => setIsExplorerOpen(false)} 
+                            style={{ 
+                                cursor: 'pointer', padding: '10px', borderRadius: '50%', 
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                background: '#1e293b', border: '1px solid #334155',
+                                transition: 'all 0.2s', color: '#94a3b8'
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = '#991b1b'; e.currentTarget.style.color = 'white'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#94a3b8'; }}
+                        >
+                            <X size={20} />
+                            <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Cerrar Visor</span>
+                        </div>
+                    </div>
+
+                    {/* Contenido Full Screen */}
+                    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                        {renderExplorerContent()}
+                    </div>
+                </div>
+            )}
 
             <Modal
                 isOpen={isModalOpen}
