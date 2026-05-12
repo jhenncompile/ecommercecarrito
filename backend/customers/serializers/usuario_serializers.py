@@ -43,8 +43,11 @@ class UsuarioCrudSerializer(serializers.ModelSerializer):
     tenant_info = serializers.SerializerMethodField()
     
     def get_roles_detalles(self, obj):
-        """Devuelve lista de roles"""
-        return [{'id': r.id, 'nombre': r.nombre} for r in obj.roles.all()]
+        """Devuelve lista de roles con manejo de errores"""
+        try:
+            return [{'id': r.id, 'nombre': r.nombre} for r in obj.roles.all()]
+        except Exception:
+            return []
     
     def get_tenant_info(self, obj):
         """Devuelve info del tenant solo si es admin/superusuario"""
@@ -60,6 +63,22 @@ class UsuarioCrudSerializer(serializers.ModelSerializer):
                 }
         return None
     
+    def validate_password(self, value):
+        """Validador de contraseña fuerte"""
+        import re
+        if value:
+            if len(value) < 8:
+                raise serializers.ValidationError("La contraseña debe tener al menos 8 caracteres.")
+            if not re.search(r"[A-Z]", value):
+                raise serializers.ValidationError("La contraseña debe incluir al menos una letra mayúscula.")
+            if not re.search(r"[a-z]", value):
+                raise serializers.ValidationError("La contraseña debe incluir al menos una letra minúscula.")
+            if not re.search(r"\d", value):
+                raise serializers.ValidationError("La contraseña debe incluir al menos un número.")
+            if not re.search(r"[@$!%*?&]", value):
+                raise serializers.ValidationError("La contraseña debe incluir al menos un carácter especial (@$!%*?&).")
+        return value
+
     class Meta:
         from customers.models.usuario import Usuario
         model = Usuario

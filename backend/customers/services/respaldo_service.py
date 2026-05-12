@@ -10,11 +10,9 @@ logger = logging.getLogger(__name__)
 class RespaldoService:
     def crear_respaldo(self, nombre_base="Manual"):
         """
-        Crea un volcado de la base de datos, lo guarda en disco y
-        actualiza la lista doblemente ligada de versiones.
+        Crea un volcado binario del sistema, genera un catálogo de tablas
+        y actualiza la lista doblemente ligada.
         """
-        # 1. Definir rutas (PROJECT_ROOT/backups)
-        # PROJECT_ROOT está definido en settings_local como el padre de BASE_DIR
         project_root = getattr(settings, 'PROJECT_ROOT', settings.BASE_DIR.parent)
         backup_dir = os.path.join(project_root, 'backups')
         
@@ -23,35 +21,37 @@ class RespaldoService:
             
         now = timezone.now()
         timestamp_str = now.strftime('%Y%m%d_%H%M%S')
-        fecha_display = now.strftime('%d/%m')
         
-        filename = f"backup_{timestamp_str}.sql"
+        # CAMBIO: Usamos formato binario (.dump) que es más eficiente y estructurado
+        filename = f"backup_{timestamp_str}.dump"
         full_path = os.path.join(backup_dir, filename)
         
-        # 2. Obtener configuración de DB
         db_config = settings.DATABASES['default']
-        # Usamos variables de entorno para evitar pasar pass en comando
         env = os.environ.copy()
         env['PGPASSWORD'] = db_config['PASSWORD']
         
         import shutil
         pg_dump_path = shutil.which('pg_dump') or '/usr/bin/pg_dump'
         
+        # CAMBIO: Flags -Fc (Custom Binary Format) y -Z9 (Compresión máxima)
         cmd = [
             pg_dump_path,
             '-h', db_config['HOST'],
             '-p', str(db_config['PORT']),
             '-U', db_config['USER'],
             '-d', db_config['NAME'],
+            '-Fc',  # Formato Custom (Binario)
+            '-Z9',  # Compresión máxima
             '-f', full_path
         ]
         
         try:
-            logger.info(f"🚀 Iniciando pg_dump en {full_path}")
+            logger.info(f"🚀 Generando snapshot binario en {full_path}")
             subprocess.run(cmd, env=env, check=True)
             
-            # 3. Lógica de Punteros (Lista Doblemente Ligada)
-            # Buscamos el respaldo que actualmente es el "último" (el que no tiene 'siguiente')
+            # GENERAR CATÁLOGO: Obtenemos info de lo que acabamos de respaldar
+            catalogo = self._generar_catalogo_actual()
+            
             ultimo_respaldo = RespaldoSistema.objects.filter(siguiente__isnull=True).order_by('-timestamp').first()
             
             nuevo_respaldo = RespaldoSistema.objects.create(
@@ -61,25 +61,51 @@ class RespaldoService:
                 metadata={
                     'size_bytes': os.path.getsize(full_path),
                     'timestamp_completo': timestamp_str,
-                    'metodo': 'pg_dump'
+                    'formato': 'PostgreSQL Custom Binary',
+                    'catalogo': catalogo
                 }
             )
             
-            # Si había uno anterior, actualizamos su puntero 'siguiente'
             if ultimo_respaldo:
                 ultimo_respaldo.siguiente = nuevo_respaldo
                 ultimo_respaldo.save()
-                logger.info(f"🔗 Enlazada versión {ultimo_respaldo.id} con la nueva {nuevo_respaldo.id}")
             
-            logger.info(f"✅ Respaldo v.{fecha_display} creado exitosamente.")
             return nuevo_respaldo
             
-        except subprocess.CalledProcessError as e:
-            logger.error(f"❌ Error en pg_dump: {e}")
-            raise Exception("No se pudo ejecutar el volcado de base de datos. Verifique permisos de pg_dump.")
         except Exception as e:
             logger.error(f"❌ Error crítico en backup: {str(e)}")
             raise e
+
+    def _generar_catalogo_actual(self):
+        """Genera un resumen de esquemas y tablas actuales para el explorador"""
+        from django.db import connection
+        catalogo = {}
+        try:
+            with connection.cursor() as cursor:
+                # Obtener todos los esquemas (tenants)
+                cursor.execute("SELECT schema_name FROM customers_client")
+                schemas = [row[0] for row in cursor.fetchall()]
+                schemas.append('public')
+
+                for schema in schemas:
+                    # Obtener tablas y conteo de filas aproximado por esquema
+                    query = f"""
+                        SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_schema = '{schema}' 
+                        AND table_type = 'BASE TABLE'
+                    """
+                    cursor.execute(query)
+                    tables = [row[0] for row in cursor.fetchall()]
+                    
+                    catalogo[schema] = {
+                        'total_tablas': len(tables),
+                        'tablas': tables[:20]  # Guardamos las primeras 20 para el preview
+                    }
+            return catalogo
+        except Exception as e:
+            logger.error(f"Error generando catálogo: {e}")
+            return {"error": "No se pudo generar el catálogo"}
 
     def obtener_historial_encadenado(self):
         """Retorna todos los respaldos en orden cronológico"""

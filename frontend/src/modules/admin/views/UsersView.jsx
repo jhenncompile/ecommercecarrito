@@ -60,12 +60,26 @@ export default function UsersView() {
     useEffect(() => { fetchData(); }, []);
 
     const handleSave = async () => {
+        // Validación de contraseña fuerte
+        if (!editingId || formData.password) {
+            const pass = formData.password;
+            const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+            
+            if (pass.length < 8) {
+                alert('La contraseña debe tener al menos 8 caracteres');
+                return;
+            }
+            if (!strongPasswordRegex.test(pass)) {
+                alert('Seguridad insuficiente: La contraseña debe incluir Mayúsculas, Minúsculas, Números y un Carácter Especial (@$!%*?&)');
+                return;
+            }
+        }
+
         try {
             const dataToSave = { ...formData };
             if (editingId && !dataToSave.password) {
                 delete dataToSave.password;
             }
-            // Si el tenant está vacío, enviamos null
             if (!dataToSave.tenant) dataToSave.tenant = null;
 
             if (editingId) {
@@ -76,7 +90,8 @@ export default function UsersView() {
             setIsModalOpen(false);
             fetchData();
         } catch (err) {
-            alert('Error al guardar el usuario');
+            const errorMsg = err.response?.data?.password?.[0] || 'Error al guardar el usuario';
+            alert(errorMsg);
         }
     };
 
