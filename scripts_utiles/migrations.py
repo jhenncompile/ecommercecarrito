@@ -19,7 +19,7 @@ def get_python_exe():
     return str(venv_py) if venv_py.exists() else sys.executable
 
 def run_django_command(args, check=True):
-    """Ejecuta un comando de manage.py con el venv."""
+    """Ejecuta un comando de manage.py y captura su salida"""
     python_exe = get_python_exe()
     os.chdir(BACKEND_DIR)
     
@@ -28,35 +28,53 @@ def run_django_command(args, check=True):
     
     cmd = [python_exe, 'manage.py'] + args + ['--settings=config.settings']
     print(f"\n[Ejecutando] {' '.join(cmd)}")
-    try:
-        return subprocess.run(cmd, env=env, check=check)
-    except subprocess.CalledProcessError as e:
-        print(f"\n[ERROR CRÍTICO] Falló la ejecución del comando: {' '.join(cmd)}")
-        print(f"Código de salida: {e.returncode}")
-        sys.exit(1)
+    
+    # Capturamos stdout y stderr para poder analizarlos
+    result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+    
+    if result.returncode != 0 and check:
+        return False, result.stdout + result.stderr
+    return True, result.stdout
 
 def run_make_migrations():
     """Crea nuevas migraciones detectando cambios recursivamente"""
-    print("\n[+] Analizando modelos en busca de cambios para la mega-migración...")
-    # --noinput evita que el proceso se quede colgado en VPS esperando respuestas
+    print("\n[+] Analizando modelos en busca de cambios...")
     run_django_command(['makemigrations', '--noinput'], check=False)
 
 def run_migrate():
-    """Aplica migraciones al esquema público (Shared Apps)"""
-    print("\n[+] Aplicando migraciones solo a los cambios faltantes en el esquema SHARED (Público)...")
-    try:
-        run_django_command(['migrate_schemas', '--shared'])
-    except SystemExit:
-        print("\n" + "!"*60)
-        print("[!] ERROR DE MIGRACIÓN DETECTADO")
-        print("!"*60)
-        print("Parece que algunas columnas ya existen en la base de datos.")
-        print("Esto sucede si las migraciones se desincronizaron.")
-        print("\nSOLUCIÓN:")
-        print("Ejecuta: python scripts_utiles/migrations.py fake")
-        print("O selecciona la opción 'F' en el menú principal.")
-        print("!"*60 + "\n")
-        sys.exit(1)
+    """Aplica migraciones al esquema público con recuperación inteligente"""
+    print("\n[+] Iniciando Sincronización Inteligente de esquema SHARED...")
+    
+    success, output = run_django_command(['migrate_schemas', '--shared'])
+    
+    retry_count = 0
+    while not success and retry_count < 5:
+        # Buscamos patrones de tablas o columnas duplicadas
+        import re
+        # Detectar el nombre de la migración: "Applying customers.0004_xxx... DuplicateTable"
+        match = re.search(r"Applying ([\w\.]+)\.\.\. .*?(DuplicateTable|DuplicateColumn|already exists)", output, re.DOTALL)
+        
+        if match:
+            migration_full = match.group(1)
+            app_label, migration_name = migration_full.split('.')
+            print(f"\n[!] CONFLICTO DETECTADO: La migración {migration_full} intenta crear algo que ya existe.")
+            print(f"[i] Aplicando FAKE quirúrgico a {migration_full} para continuar...")
+            
+            # Aplicar FAKE solo a esa migración
+            run_django_command(['migrate_schemas', '--shared', '--fake', app_label, migration_name])
+            
+            # Reintentar la migración general
+            print("[i] Reintentando sincronización general...")
+            success, output = run_django_command(['migrate_schemas', '--shared'])
+            retry_count += 1
+        else:
+            print("\n[X] ERROR CRÍTICO NO RECUPERABLE:")
+            print(output)
+            sys.exit(1)
+            
+    if success:
+        print("\n[OK] Esquema SHARED sincronizado.")
+    return success
 
 def run_migrate_schemas():
     """Aplica migraciones a todos los esquemas de clientes (Tenants)"""

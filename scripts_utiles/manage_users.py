@@ -1,402 +1,154 @@
 #!/usr/bin/env python
 # ========================================================================
-# SCRIPT DE USUARIOS
+# GESTOR DE USUARIOS, ROLES Y PERMISOS V1.0
 # ========================================================================
-# Gestión completa de usuarios (crear, editar, eliminar, listar)
-# Uso: python scripts_utiles/manage_users.py [comando]
-
 import os
 import sys
 from pathlib import Path
-import getpass
-import re
 
+# Configuración de Entorno Django
 PROJECT_ROOT = Path(__file__).parent.parent
 BACKEND_DIR = PROJECT_ROOT / 'backend'
-
+sys.path.insert(0, str(BACKEND_DIR))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 import django
 django.setup()
 
-from customers.models import Usuario, Client
-from django.contrib.auth.hashers import make_password
+from customers.models import Usuario, Rol, Permiso, Client
+from django.db import transaction
+import re
 
-def validate_email(email):
-    """Valida formato de email"""
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(pattern, email) is not None
+def validar_password_fuerte(password):
+    """Verifica si una contraseña cumple con los requisitos mínimos de seguridad"""
+    if len(password) < 8:
+        return False, "La contraseña debe tener al menos 8 caracteres."
+    if not re.search(r"[A-Z]", password):
+        return False, "Debe incluir al menos una mayúscula."
+    if not re.search(r"[a-z]", password):
+        return False, "Debe incluir al menos una minúscula."
+    if not re.search(r"\d", password):
+        return False, "Debe incluir al menos un número."
+    if not re.search(r"[@$!%*?&]", password):
+        return False, "Debe incluir al menos un carácter especial (@$!%*?&)."
+    return True, ""
+
+def init_system():
+    print("🚀 Inicializando sistema de Roles y Permisos...")
+    
+    with transaction.atomic():
+        # 1. Crear Permisos Básicos
+        permisos_data = [
+            # Módulo Productos
+            ('Ver Productos', 'VER_PRODUCTOS', 'Productos'),
+            ('Crear Productos', 'CREAR_PRODUCTOS', 'Productos'),
+            ('Editar Productos', 'EDITAR_PRODUCTOS', 'Productos'),
+            ('Eliminar Productos', 'ELIMINAR_PRODUCTOS', 'Productos'),
+            # Módulo Ventas
+            ('Ver Ventas', 'VER_VENTAS', 'Ventas'),
+            ('Gestionar Pedidos', 'GESTIONAR_PEDIDOS', 'Ventas'),
+            # Módulo Usuarios
+            ('Ver Usuarios', 'VER_USUARIOS', 'Usuarios'),
+            ('Gestionar Roles', 'GESTIONAR_ROLES', 'Usuarios'),
+            # Módulo Sistema
+            ('Ver Bitácora', 'VER_BITACORA', 'Sistema'),
+            ('Gestionar Respaldos', 'GESTIONAR_RESPALDOS', 'Sistema'),
+        ]
+
+        perms_objs = []
+        for nombre, codigo, modulo in permisos_data:
+            p, _ = Permiso.objects.get_or_create(
+                codigo=codigo, 
+                defaults={'nombre': nombre, 'modulo': modulo}
+            )
+            perms_objs.append(p)
+        print(f"  ✅ {len(perms_objs)} permisos sincronizados.")
+
+        # 2. Crear Roles Estándar
+        roles_config = [
+            ('Super Usuario', 1, 'Acceso total al sistema', perms_objs),
+            ('Vendedor', 2, 'Gestión de tienda y ventas', [p for p in perms_objs if p.modulo in ['Productos', 'Ventas']]),
+            ('Cliente', 3, 'Acceso a compras y perfil', [p for p in perms_objs if p.codigo == 'VER_PRODUCTOS']),
+        ]
+
+        for nombre, nivel, desc, perms in roles_config:
+            rol, _ = Rol.objects.get_or_create(
+                nombre=nombre,
+                defaults={'nivel': nivel, 'descripcion': desc}
+            )
+            rol.permisos.set(perms)
+            print(f"  ✅ Rol '{nombre}' configurado.")
+
+def set_user_role(email, role_name):
+    try:
+        user = Usuario.objects.get(email=email)
+        rol = Rol.objects.get(nombre__iexact=role_name)
+        
+        user.roles.add(rol)
+        
+        # Ajustes de staff según nivel
+        if rol.nivel <= 2:
+            user.is_staff = True
+        if rol.nivel == 1:
+            user.is_superuser = True
+            
+        user.save()
+        print(f"✨ ÉXITO: Usuario {email} ahora tiene el rol {rol.nombre}")
+    except Usuario.DoesNotExist:
+        print(f"❌ ERROR: No existe usuario con email {email}")
+    except Rol.DoesNotExist:
+        print(f"❌ ERROR: El rol '{role_name}' no existe. Usa --init primero.")
 
 def list_users():
-    """Lista todos los usuarios"""
-    print("\n" + "="*80)
-    print("USUARIOS DE LA PLATAFORMA")
-    print("="*80)
-    
-    users = Usuario.objects.all().order_by('-date_joined')
-    
-    if not users.exists():
-        print("No hay usuarios registrados")
-        return
-    
-    print(f"\n{'Email':<30} {'Nombre':<25} {'Roles':<15} {'Estado':<10} {'Admin':<5}")
-    print("-" * 90)
-    
-    for user in users:
-        email = user.email[:28]
-        name = f"{user.first_name} {user.last_name}"[:23]
-        roles_list = ", ".join([r.nombre for r in user.roles.all()])[:14]
-        status = "Activo" if user.is_active else "Inactivo"
-        admin = "✓" if user.is_superuser else ""
-        
-        print(f"{email:<30} {name:<25} {roles_list:<15} {status:<10} {admin:<5}")
-    
-    print("-" * 90)
-    print(f"Total: {users.count()} usuarios\n")
+    print("\n--- LISTADO DE USUARIOS ---")
+    for u in Usuario.objects.all():
+        roles = ", ".join([r.nombre for r in u.roles.all()])
+        print(f"[{u.id}] {u.email} | Staff: {u.is_staff} | Roles: {roles or 'Ninguno'}")
 
-def create_user():
-    """Crea nuevo usuario interactivamente"""
-    print("\n" + "="*60)
-    print("CREAR NUEVO USUARIO")
-    print("="*60)
-    
-    # Email
-    while True:
-        email = input("\nEmail del usuario: ").strip()
-        if not email:
-            print("[ERROR] Email requerido")
-            continue
-        if not validate_email(email):
-            print("[ERROR] Email inválido")
-            continue
+def create_user(email, password):
+    es_fuerte, error = validar_password_fuerte(password)
+    if not es_fuerte:
+        print(f"❌ ERROR DE SEGURIDAD: {error}")
+        return
+
+    try:
         if Usuario.objects.filter(email=email).exists():
-            print("[ERROR] El email ya existe")
-            continue
-        break
-    
-    # Nombre
-    first_name = input("Nombre: ").strip() or "Usuario"
-    last_name = input("Apellido: ").strip() or "NoDefinido"
-    
-    # Contraseña
-    print("\nContraseña (mínimo 8 caracteres):")
-    while True:
-        password = getpass.getpass("Contraseña: ")
-        if len(password) < 8:
-            print("[ERROR] Contraseña muy corta (mínimo 8)")
-            continue
-        
-        password_confirm = getpass.getpass("Confirmar contraseña: ")
-        if password != password_confirm:
-            print("[ERROR] Las contraseñas no coinciden")
-            continue
-        break
-    
-    # Permisos (Forzado a Superusuario por seguridad del script)
-    print("\nPermisos:")
-    print("[!] Este script ahora solo crea Super Usuarios (Admins Globales).")
-    is_staff = True
-    is_superuser = True
-    is_active = input("¿Estado activo? (s/n): ").lower() in ['s', '']  # Default: sí
-    
-    # Crear usuario
-    try:
-        user = Usuario.objects.create_user(
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            is_staff=is_staff,
-            is_superuser=is_superuser,
-            is_active=is_active
-        )
-        
-        print("\n" + "="*60)
-        print("[OK] Usuario creado exitosamente")
-        print("="*60)
-        print(f"Email:      {user.email}")
-        print(f"Nombre:     {user.first_name} {user.last_name}")
-        print(f"Admin:      {'Sí' if user.is_staff else 'No'}")
-        print(f"Super:      {'Sí' if user.is_superuser else 'No'}")
-        print(f"Activo:     {'Sí' if user.is_active else 'No'}")
-        print(f"ID:         {user.id}")
-        print("="*60 + "\n")
-        
+            print(f"❌ ERROR: El usuario {email} ya existe.")
+            return
+
+        user = Usuario.objects.create_user(email=email, password=password)
+        print(f"✅ Usuario {email} creado exitosamente.")
+        return user
     except Exception as e:
-        print(f"\n[ERROR] {e}\n")
+        print(f"❌ ERROR al crear usuario: {e}")
 
-def edit_user():
-    """Edita usuario existente"""
-    print("\n" + "="*60)
-    print("EDITAR USUARIO")
-    print("="*60)
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Gestor de Usuarios y Roles")
+    parser.add_argument('--init', action='store_true', help="Inicializa roles y permisos básicos")
+    parser.add_argument('--list', action='store_true', help="Lista todos los usuarios")
+    parser.add_argument('--create', type=str, help="Email del nuevo usuario")
+    parser.add_argument('--pass', type=str, dest='password', help="Password del nuevo usuario")
+    parser.add_argument('--set-su', type=str, help="Asigna rol Super Usuario a un email")
+    parser.add_argument('--set-vendedor', type=str, help="Asigna rol Vendedor a un email")
+    parser.add_argument('--set-cliente', type=str, help="Asigna rol Cliente a un email")
     
-    email = input("\nEmail del usuario a editar: ").strip()
-    
-    try:
-        user = Usuario.objects.get(email=email)
-    except Usuario.DoesNotExist:
-        print("[ERROR] Usuario no encontrado\n")
-        return
-    
-    print(f"\nUsuario encontrado: {user.first_name} {user.last_name}")
-    print("\nOpciones:")
-    print("  1. Cambiar contraseña")
-    print("  2. Cambiar nombre")
-    print("  3. Cambiar permisos")
-    print("  4. Activar/Desactivar")
-    
-    choice = input("\nOpciona: ").strip()
-    
-    if choice == '1':
-        password = getpass.getpass("Nueva contraseña: ")
-        user.set_password(password)
-        user.save()
-        print("[OK] Contraseña actualizada")
-    
-    elif choice == '2':
-        user.first_name = input(f"Nombre [{user.first_name}]: ") or user.first_name
-        user.last_name = input(f"Apellido [{user.last_name}]: ") or user.last_name
-        user.save()
-        print("[OK] Nombre actualizado")
-    
-    elif choice == '3':
-        user.is_staff = input(f"¿Admin? (s/n) [{('s' if user.is_staff else 'n')}]: ").lower() == 's'
-        user.is_superuser = input(f"¿Super? (s/n) [{('s' if user.is_superuser else 'n')}]: ").lower() == 's'
-        user.save()
-        print("[OK] Permisos actualizados")
-    
-    elif choice == '4':
-        user.is_active = not user.is_active
-        user.save()
-        estado = "Activado" if user.is_active else "Desactivado"
-        print(f"[OK] Usuario {estado}")
-    
-    else:
-        print("[ERROR] Opción inválida")
+    args = parser.parse_args()
 
-def delete_user():
-    """Elimina usuario"""
-    print("\n" + "="*60)
-    print("ELIMINAR USUARIO")
-    print("="*60)
-    
-    email = input("\nEmail del usuario a eliminar: ").strip()
-    
-    try:
-        user = Usuario.objects.get(email=email)
-    except Usuario.DoesNotExist:
-        print("[ERROR] Usuario no encontrado\n")
-        return
-    
-    print(f"\nUsuario: {user.first_name} {user.last_name}")
-    print(f"Email: {user.email}")
-    
-    confirm = input("\n¿Está seguro? (escriba 'ELIMINAR'): ").strip()
-    
-    if confirm == "ELIMINAR":
-        user.delete()
-        print("[OK] Usuario eliminado\n")
-    else:
-        print("[CANCELADO]\n")
-
-def reset_password():
-    """Reinicia contraseña de usuario a temporal"""
-    print("\n" + "="*60)
-    print("REINICIAR CONTRASEÑA")
-    print("="*60)
-    
-    email = input("\nEmail del usuario: ").strip()
-    
-    try:
-        user = Usuario.objects.get(email=email)
-    except Usuario.DoesNotExist:
-        print("[ERROR] Usuario no encontrado\n")
-        return
-    
-    # Generar contraseña temporal
-    temp_password = "TempPass" + ''.join([str(i % 10) for i in range(8)])
-    user.set_password(temp_password)
-    user.save()
-    
-    print("\n" + "="*60)
-    print("[OK] Contraseña reiniciada")
-    print("="*60)
-    print(f"Email: {user.email}")
-    print(f"Contraseña temporal: {temp_password}")
-    print("⚠️  El usuario debe cambiarla en el primer login")
-    print("="*60 + "\n")
-
-def bulk_create_test_users():
-    """Crea múltiples usuarios de prueba"""
-    print("\n" + "="*60)
-    print("CREAR USUARIOS DE PRUEBA (BATCH)")
-    print("="*60)
-    
-    count = input("\n¿Cuántos usuarios crear? (1-50): ").strip()
-    
-    try:
-        count = int(count)
-        if count < 1 or count > 50:
-            raise ValueError
-    except ValueError:
-        print("[ERROR] Número inválido")
-        return
-    
-    base_password = "TestUser123!"
-    created = 0
-    
-    print(f"\n[+] Creando {count} usuarios...")
-    
-    for i in range(1, count + 1):
-        email = f'testuser{i:03d}@test.local'
-        
-        if not Usuario.objects.filter(email=email).exists():
-            Usuario.objects.create_user(
-                email=email,
-                password=base_password,
-                first_name=f'Test{i}',
-                last_name='User',
-                is_active=True
-            )
-            created += 1
-        
-        # Mostrar progreso
-        if i % 10 == 0:
-            print(f"  {i}/{count}...")
-    
-    print(f"\n[OK] {created} usuarios creados")
-    print(f"[i] Contraseña para todos: {base_password}\n")
-
-def status_user():
-    """Consulta el estado del usuario """
-    print("\n" + "="*60)
-    print("CONSULTAR ESTADO DE USUARIO")
-    print("="*60)
-    email = input("\nEmail del usuario: ").strip()
-    try:
-        user = Usuario.objects.get(email=email)
-        # Usa el método status() que construimos en el modelo
-        estado = user.status()
-        print(f"\n[OK] El usuario {user.email} se encuentra: {'Activo' if estado else 'Inactivo'}\n")
-    except Usuario.DoesNotExist:
-        print("[ERROR] Usuario no encontrado\n")
-
-def activate_user():
-    """Activa el usuario"""
-    print("\n" + "="*60)
-    print("ACTIVAR USUARIO")
-    print("="*60)
-    email = input("\nEmail del usuario: ").strip()
-    try:
-        user = Usuario.objects.get(email=email)
-        # Usa el método activate() que construimos en el modelo
-        user.activate()
-        print(f"\n[OK] El usuario {user.email} ha sido activado exitosamente\n")
-    except Usuario.DoesNotExist:
-        print("[ERROR] Usuario no encontrado\n")
-
-def disable_user():
-    """Desactiva el usuario"""
-    print("\n" + "="*60)
-    print("DESACTIVAR USUARIO")
-    print("="*60)
-    email = input("\nEmail del usuario: ").strip()
-    try:
-        user = Usuario.objects.get(email=email)
-        # Usa el método disable() que construimos en el modelo
-        user.disable()
-        print(f"\n[OK] El usuario {user.email} ha sido desactivado exitosamente\n")
-    except Usuario.DoesNotExist:
-        print("[ERROR] Usuario no encontrado\n")
-
-def list_roles():
-    """Lista todos los roles disponibles"""
-    from customers.models import Rol
-    print("\n" + "="*60)
-    print("ROLES DISPONIBLES EN LA BASE DE DATOS")
-    print("="*60)
-    
-    roles = Rol.objects.all()
-    if not roles.exists():
-        print("No hay roles creados.")
-        return
-    
-    print(f"{'ID':<5} {'Nombre':<20} {'Nivel':<10}")
-    print("-" * 40)
-    for r in roles:
-        print(f"{r.id:<5} {r.nombre:<20} {r.get_nivel_display():<10}")
-    print("-" * 40 + "\n")
-
-def assign_role():
-    """Asigna un rol a un usuario"""
-    from customers.models import Rol
-    print("\n" + "="*60)
-    print("ASIGNAR ROL A USUARIO")
-    print("="*60)
-    
-    email = input("\nEmail del usuario: ").strip()
-    try:
-        user = Usuario.objects.get(email=email)
-    except Usuario.DoesNotExist:
-        print("[ERROR] Usuario no encontrado")
-        return
-
-    list_roles()
-    rol_id = input("ID del Rol a asignar: ").strip()
-    try:
-        rol = Rol.objects.get(id=rol_id)
-        user.roles.add(rol)
-        print(f"[OK] Rol '{rol.nombre}' asignado a {user.email}")
-    except Rol.DoesNotExist:
-        print("[ERROR] Rol no encontrado")
-    except Exception as e:
-        print(f"[ERROR] {e}")
-
-def main():
-    if len(sys.argv) < 2:
-        print("Uso: python manage_users.py [comando]")
-        print("\nComandos disponibles:")
-        print("  list        - Listar todos los usuarios")
-        print("  create      - Crear nuevo usuario")
-        print("  edit        - Editar usuario existente")
-        print("  delete      - Eliminar usuario")
-        print("  reset       - Reiniciar contraseña")
-        print("  bulk-create - Crear múltiples usuarios de prueba")
-        print("  status      - Ver estado (activo/inactivo)")
-        print("  activate    - Activar usuario")
-        print("  disable     - Desactivar usuario")
-        print("  roles       - Listar roles disponibles")
-        print("  assign-role - Asignar un rol a un usuario")
-        sys.exit(1)
-    
-    cmd = sys.argv[1]
-    
-    if cmd == 'list':
+    if args.init:
+        init_system()
+    elif args.list:
         list_users()
-    elif cmd == 'create':
-        create_user()
-    elif cmd == 'edit':
-        edit_user()
-    elif cmd == 'delete':
-        delete_user()
-    elif cmd == 'reset':
-        reset_password()
-    elif cmd == 'bulk-create':
-        bulk_create_test_users()
-    elif cmd == 'status':
-        status_user()
-    elif cmd == 'activate':
-        activate_user()
-    elif cmd == 'disable':
-        disable_user()
-    elif cmd == 'roles':
-        list_roles()
-    elif cmd == 'assign-role':
-        assign_role()
+    elif args.create:
+        if not args.password:
+            print("❌ ERROR: Debes proporcionar una contraseña con --pass")
+        else:
+            create_user(args.create, args.password)
+    elif args.set_su:
+        set_user_role(args.set_su, "Super Usuario")
+    elif args.set_vendedor:
+        set_user_role(args.set_vendedor, "Vendedor")
+    elif args.set_cliente:
+        set_user_role(args.set_cliente, "Cliente")
     else:
-        print(f"[ERROR] Comando desconocido: {cmd}")
-        sys.exit(1)
-
-if __name__ == '__main__':
-    main()
+        parser.print_help()
