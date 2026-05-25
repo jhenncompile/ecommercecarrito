@@ -1,6 +1,6 @@
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Frame, KeepTogether
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Frame, KeepTogether, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from io import BytesIO
@@ -98,9 +98,15 @@ def generar_pdf_factura(factura):
             tenant = Client.objects.get(schema_name=connection.schema_name)
             tienda_nombre = (tenant.nombre_comercial or tenant.name).upper()
             tienda_desc = "Tienda Oficial"
-            if tenant.logo_url:
+            logo_path = None
+            if tenant.icono and hasattr(tenant.icono, 'path'):
+                logo_path = tenant.icono.path
+            elif tenant.logo_url:
+                logo_path = tenant.logo_url
+                
+            if logo_path:
                 try:
-                    logo_element = Image(tenant.logo_url, width=4*cm, height=2*cm, kind='proportional')
+                    logo_element = Image(logo_path, width=4*cm, height=2*cm, kind='proportional')
                 except Exception as e:
                     print("Error cargando logo:", e)
         except Client.DoesNotExist:

@@ -168,3 +168,7 @@ AUDIT_LOG_RETENTION_DAYS = 90
 
 
 
+
+# FIREBASE CONFIG
+FIREBASE_CREDENTIALS_PATH = config("FIREBASE_CREDENTIALS_PATH", default=os.path.join(BASE_DIR, "firebase-adminsdk.json"))
+
