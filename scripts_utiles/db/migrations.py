@@ -160,6 +160,21 @@ def run_fake_migrations(app=None):
     run_django_command_visible(args)
     print("\n[OK] Migraciones marcadas como faked. Ahora puedes intentar 'sync' normalmente.")
 
+def run_fix_missing():
+    """Repara el error 'column does not exist' forzando la re-ejecución de migraciones recientes."""
+    print("\n" + "="*60)
+    print("MODO REPARACIÓN PROFUNDA (COLUMNA NO EXISTE)")
+    print("="*60)
+    print("[i] Esto obligará a Django a re-ejecutar las últimas migraciones de 'customers'.")
+    run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0006'])
+    
+    print("\n[+] Re-aplicando migraciones SQL reales...")
+    run_django_command_visible(['migrate_schemas', '--shared'])
+    
+    print("\n[+] Sembrando permisos básicos y premium...")
+    run_django_command_visible(['seed_permisos'])
+    print("\n[OK] Base de datos reparada. Ya puedes crear tiendas con normalidad.")
+
 def main():
     if len(sys.argv) < 2:
         print("\n" + "="*60)
@@ -175,6 +190,7 @@ def main():
         print("  tenants      - Solo aplicar cambios a los esquemas de clientes")
         print("  show         - Mostrar estado de migraciones")
         print("  fake         - Resolver error 'columna ya existe'")
+        print("  fix_missing  - Resolver error 'columna no existe'")
         print("="*60)
         sys.exit(1)
 
@@ -199,6 +215,8 @@ def main():
     elif cmd == 'fake':
         app = sys.argv[2] if len(sys.argv) > 2 else None
         run_fake_migrations(app)
+    elif cmd == 'fix_missing':
+        run_fix_missing()
     else:
         print(f"[ERROR] Comando desconocido: {cmd}")
         sys.exit(1)
