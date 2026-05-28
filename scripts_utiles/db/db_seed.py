@@ -109,7 +109,7 @@ class DatabaseSeeder:
             )
             
             # Roles globales (aunque en este sistema multi-tenant los roles se crean por tenant)
-            rol_admin, _ = Rol.objects.get_or_create(nombre='Administrador')
+            rol_admin, _ = Rol.objects.get_or_create(nombre='Administrador', tenant=None)
 
         # 1. Nuevas Tiendas
         if n_tiendas > 0:

@@ -17,7 +17,6 @@ class Rol(models.Model):
     
     nombre = models.CharField(
         max_length=60,
-        unique=True,
         verbose_name='Nombre del Rol'
     )
     descripcion = models.TextField(
@@ -54,6 +53,12 @@ class Rol(models.Model):
         verbose_name = 'Rol'
         verbose_name_plural = 'Roles'
         ordering = ['nivel']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nombre', 'tenant'],
+                name='unique_rol_nombre_per_tenant'
+            )
+        ]
     
     def __str__(self):
         return self.nombre

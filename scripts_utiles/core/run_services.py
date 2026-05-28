@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # ========================================================================
 # RUN SERVICES - Arranque de Backend y Frontend
 # ========================================================================
@@ -227,6 +227,9 @@ def start_frontend():
 
     modo, ip = ask_run_mode()
     env = os.environ.copy()
+    for k, v in cfg.items():
+        if k.startswith('REACT_APP_'):
+            env[k] = v
     env['PORT'] = port
     env['HOST'] = '0.0.0.0' if modo == 'ip' else 'localhost'
     django_port = cfg.get('DJANGO_PORT', '8001')
@@ -269,6 +272,9 @@ def start_all():
     modo, ip = ask_run_mode()
     django_bind = f'0.0.0.0:{django_port}' if modo == 'ip' else f'127.0.0.1:{django_port}'
     env_react = os.environ.copy()
+    for k, v in cfg.items():
+        if k.startswith('REACT_APP_'):
+            env_react[k] = v
     env_react['PORT'] = react_port
     env_react['HOST'] = '0.0.0.0' if modo == 'ip' else 'localhost'
     env_react['REACT_APP_DOMAIN_MAIN'] = ip if modo == 'ip' else 'localhost'
