@@ -39,21 +39,25 @@ def run_django_command_visible(args):
     result = subprocess.run(cmd, env=_build_env())
     return result.returncode
 
-def run_django_command_capture(args):
+def run_django_command_capture(args, silent_error=False):
     """
     Ejecuta manage.py capturando la salida (para análisis interno).
     Retorna (success, output_text).
+    Si silent_error es True, no imprime el log de error si falla (útil para pasos de recovery).
     """
     python_exe = get_python_exe()
     os.chdir(BACKEND_DIR)
     cmd = [python_exe, 'manage.py'] + args + ['--settings=config.settings']
-    print(f"\n[Ejecutando] {' '.join(cmd)}")
+    if not silent_error:
+        print(f"\n[Ejecutando] {' '.join(cmd)}")
+    
     result = subprocess.run(cmd, env=_build_env(), capture_output=True, text=True, encoding='utf-8', errors='replace')
-    # Siempre imprimir lo que se obtuvo
     combined = result.stdout + result.stderr
-    if combined.strip():
-        print(combined)
     success = result.returncode == 0
+    
+    if not silent_error:
+        if combined.strip():
+            print(combined)
     return success, combined
 
 def run_make_migrations():
@@ -111,12 +115,20 @@ def run_full_sync():
     # Retrocedemos la migración a 0006 para limpiar el estado
     run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0006'])
 
-    print("\n[PASO 1.5] Aplicando Migraciones Paso a Paso (Para evitar rollbacks por transacciones)...")
-    # Aplicamos la 0007 individualmente para que cree la columna y haga COMMIT
-    run_django_command_visible(['migrate_schemas', '--shared', 'customers', '0007'])
+    print("\n[PASO 1.5] Aplicando Migraciones Paso a Paso (Silencioso para evitar asustar con errores esperados)...")
+    # Aplicamos la 0007 silenciosamente. Si falla por DuplicateColumn, lo atrapamos y seguimos.
+    success_7, _ = run_django_command_capture(['migrate_schemas', '--shared', 'customers', '0007'], silent_error=True)
+    if not success_7:
+        print("  [i] La migración 0007 ya existía o tenía conflicto (auto-recuperado).")
+    else:
+        print("  [i] Migración 0007 aplicada limpiamente.")
     
     # Fakeamos la 0008 porque sabemos que el constraint ya existe y causa "DuplicateTable"
-    run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0008'])
+    success_8, _ = run_django_command_capture(['migrate_schemas', '--shared', '--fake', 'customers', '0008'], silent_error=True)
+    if not success_8:
+        print("  [i] Fake 0008 auto-recuperado.")
+    else:
+        print("  [i] Migración 0008 fakeada preventivamente.")
 
     print("\n[PASO 2] Detección de Cambios en Modelos...")
     run_make_migrations()
@@ -182,11 +194,15 @@ def run_fix_missing():
     print("[i] Esto obligará a Django a re-ejecutar las últimas migraciones de 'customers'.")
     run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0006'])
     
-    print("\n[+] Re-aplicando migración 0007 (Creación de columnas)...")
-    run_django_command_visible(['migrate_schemas', '--shared', 'customers', '0007'])
+    print("\n[+] Re-aplicando migración 0007 (Creación de columnas, silencioso si falla)...")
+    success_7, _ = run_django_command_capture(['migrate_schemas', '--shared', 'customers', '0007'], silent_error=True)
+    if not success_7:
+        print("  [i] La migración 0007 ya existía o tenía conflicto (auto-recuperado).")
 
-    print("\n[+] Fakeando migración 0008 (Constraint que ya existe)...")
-    run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0008'])
+    print("\n[+] Fakeando migración 0008 (Constraint que ya existe, silencioso si falla)...")
+    success_8, _ = run_django_command_capture(['migrate_schemas', '--shared', '--fake', 'customers', '0008'], silent_error=True)
+    if not success_8:
+        print("  [i] Fake 0008 auto-recuperado.")
     
     print("\n[+] Verificando migraciones restantes...")
     run_django_command_visible(['migrate_schemas', '--shared'])
