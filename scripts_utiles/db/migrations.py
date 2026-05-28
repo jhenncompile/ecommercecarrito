@@ -104,7 +104,7 @@ def run_migrate_schemas():
 def run_full_sync():
     """Ejecuta el ciclo completo de sincronización de base de datos con reparación ultra robusta."""
     print("\n" + "="*60)
-    print("SINCRONIZACIÓN ULTRA ROBUSTA DE BD (VPS READY)")
+    print("SINCRONIZACIÓN DE BD (VPS READY)")
     print("="*60)
 
     print("\n[PASO 1] Reparación Profunda (Fake-Reverse preventivo)...")
