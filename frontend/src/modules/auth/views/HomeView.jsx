@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { ShoppingCart, BrainCircuit, Box, CreditCard, BarChart3, Package, Layers3, Check } from 'lucide-react';
+import { useState } from 'react';
+import { ShoppingCart, BrainCircuit, Box, CreditCard, BarChart3, Package, Layers3, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import styles from './HomeView.module.css';
 
 const features = [
@@ -11,7 +12,46 @@ const features = [
   { icon: Layers3,      color: '#ef4444', title: 'Arquitectura Headless', text: 'Rápido y adaptable. Tu tienda perfecta en cualquier dispositivo.' },
 ];
 
+const plans = [
+  {
+    id: 'basico',
+    name: 'Gratuito',
+    desc: 'La forma más fácil de empezar. Sin riesgos.',
+    price: '0',
+    period: 'siempre',
+    features: ['Hasta 50 productos', '1 Usuario (Dueño)', 'Punto de venta básico', 'Reportes mensuales'],
+    level: 'minimal',
+    buttonText: 'Empezar Gratis'
+  },
+  {
+    id: 'profesional',
+    name: 'Profesional',
+    desc: 'El ecosistema completo para negocios en crecimiento.',
+    price: '29',
+    period: 'mes',
+    features: ['Productos ilimitados', 'Módulo de Inteligencia Artificial', 'Facturación SIN y Pagos QR', 'Reportes en tiempo real', 'Gestión de roles'],
+    level: 'pro',
+    popular: true,
+    buttonText: 'Comenzar Prueba'
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    desc: 'Potencia absoluta y herramientas exclusivas para dominar el mercado.',
+    price: '99',
+    period: 'mes',
+    features: ['Todo lo Profesional', 'Soporte prioritario 24/7', 'Multi-sucursales', 'Auditoría avanzada de acciones', 'SLA garantizado'],
+    level: 'premium',
+    buttonText: 'Obtener Premium'
+  }
+];
+
 export default function HomeView() {
+  const [activePlanIdx, setActivePlanIdx] = useState(1);
+
+  const nextPlan = () => setActivePlanIdx((p) => (p + 1) % plans.length);
+  const prevPlan = () => setActivePlanIdx((p) => (p - 1 + plans.length) % plans.length);
+
   return (
     <div className={styles.page}>
       {/* NAVBAR */}
@@ -63,48 +103,70 @@ export default function HomeView() {
         </div>
       </section>
 
-      {/* PRICING */}
+      {/* PRICING CAROUSEL */}
       <section id="pricing" className={styles.pricing}>
         <div className={styles.sectionHeader}>
-          <h2>Planes para hacer crecer tu negocio</h2>
-          <p>Sin costos ocultos. Cancela cuando quieras.</p>
+          <h2>Planes que crecen contigo</h2>
+          <p>Comienza gratis y mejora cuando lo necesites. Pagos seguros mediante Stripe.</p>
         </div>
-        <div className={styles.pricingGrid}>
-          <div className={styles.priceCard}>
-            <h3>Básico</h3>
-            <p>Para emprendedores que están comenzando.</p>
-            <div className={styles.price}>BS. — <span>/mes</span></div>
-            <ul className={styles.featList}>
-              <li><Check size={14} /> Hasta 50 productos</li>
-              <li><Check size={14} /> Panel de administración</li>
-              <li><Check size={14} /> Subdominio propio</li>
-            </ul>
-            <Link to="/crear-tienda" className={styles.btnCardSecondary}>Empezar</Link>
+        
+        <div className={styles.carouselContainer}>
+          <button className={styles.carouselBtn} onClick={prevPlan}>
+            <ChevronLeft size={24} />
+          </button>
+          
+          <div className={styles.carouselTrack}>
+            {plans.map((plan, idx) => {
+              const isActive = idx === activePlanIdx;
+              const isPrev = idx === (activePlanIdx - 1 + plans.length) % plans.length;
+              const isNext = idx === (activePlanIdx + 1) % plans.length;
+              
+              let cardClass = styles.priceCard;
+              if (isActive) cardClass += ` ${styles.activeCard} ${styles[plan.level]}`;
+              else if (isPrev) cardClass += ` ${styles.prevCard} ${styles[plan.level]}`;
+              else if (isNext) cardClass += ` ${styles.nextCard} ${styles[plan.level]}`;
+
+              return (
+                <div key={plan.id} className={cardClass} onClick={() => setActivePlanIdx(idx)}>
+                  {plan.popular && isActive && <div className={styles.popularBadge}>Más Popular</div>}
+                  {plan.level === 'premium' && isActive && <div className={styles.premiumBadge}>Máxima Potencia</div>}
+                  
+                  <h3>{plan.name}</h3>
+                  <p>{plan.desc}</p>
+                  
+                  <div className={styles.price}>
+                    ${plan.price} <span>/{plan.period}</span>
+                  </div>
+                  
+                  <ul className={styles.featList}>
+                    {plan.features.map((f, i) => (
+                      <li key={i}>
+                        <Check size={16} className={styles.checkIcon} />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  <Link to={`/crear-tienda?plan=${plan.id}`} className={isActive ? styles.btnCardPrimary : styles.btnCardSecondary}>
+                    {plan.buttonText}
+                  </Link>
+                </div>
+              );
+            })}
           </div>
-          <div className={`${styles.priceCard} ${styles.featured}`}>
-            <div className={styles.popularBadge}>Más Popular</div>
-            <h3>Profesional</h3>
-            <p>El ecosistema completo para negocios en crecimiento.</p>
-            <div className={styles.price}>BS. — <span>/mes</span></div>
-            <ul className={styles.featList}>
-              <li><Check size={14} /> Productos ilimitados</li>
-              <li><Check size={14} /> IA para predicciones</li>
-              <li><Check size={14} /> Facturación SIN/QR</li>
-              <li><Check size={14} /> Reportes avanzados</li>
-            </ul>
-            <Link to="/crear-tienda" className={styles.btnCardPrimary}>Empezar Gratis</Link>
-          </div>
-          <div className={styles.priceCard}>
-            <h3>Enterprise</h3>
-            <p>Para grandes volúmenes y múltiples tiendas.</p>
-            <div className={styles.price}>Personalizado</div>
-            <ul className={styles.featList}>
-              <li><Check size={14} /> Multi-tienda</li>
-              <li><Check size={14} /> SLA garantizado</li>
-              <li><Check size={14} /> Onboarding dedicado</li>
-            </ul>
-            <a href="mailto:contacto@miqhatu.com" className={styles.btnCardSecondary}>Contáctanos</a>
-          </div>
+
+          <button className={styles.carouselBtn} onClick={nextPlan}>
+            <ChevronRight size={24} />
+          </button>
+        </div>
+        <div className={styles.carouselIndicators}>
+          {plans.map((_, idx) => (
+            <div 
+              key={idx} 
+              className={`${styles.indicator} ${idx === activePlanIdx ? styles.indicatorActive : ''}`}
+              onClick={() => setActivePlanIdx(idx)}
+            />
+          ))}
         </div>
       </section>
 

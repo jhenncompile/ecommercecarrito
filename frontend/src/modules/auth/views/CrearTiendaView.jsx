@@ -1,12 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import {
   Store, User, Mail, Lock, Globe, Building, CheckCircle2,
-  ArrowRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, X
+  ArrowRight, Sparkles, ShieldCheck, Zap, Image as ImageIcon, X, CreditCard
 } from 'lucide-react';
 import AuthLayout from 'shared/layouts/AuthLayout/AuthLayout';
 import { Button, Input, Alert } from 'shared/components';
+import StripePaymentModal from './StripePaymentModal';
 import styles from './AuthView.module.css';
+
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY || 'pk_test_dummy');
+
+const PLANS = [
+  { id: 'basico', name: 'Gratuito', price: 0 },
+  { id: 'profesional', name: 'Profesional', price: 29 },
+  { id: 'premium', name: 'Premium', price: 99 },
+];
 
 const FEATURES = [
   { icon: <Sparkles size={18} />, title: 'Inteligencia Artificial', description: 'Predice tus ventas y optimiza tu inventario automáticamente.' },
@@ -15,14 +26,22 @@ const FEATURES = [
 ];
 
 export default function CrearTiendaView() {
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const initialPlan = query.get('plan') || 'basico';
+
   const [form, setForm] = useState({
     nombre_tienda: '', schema_name: '', dominio: '',
-    first_name: '', last_name: '', email: '', password: '', icono: null
+    first_name: '', last_name: '', email: '', password: '', icono: null, plan: initialPlan
   });
   const [preview,      setPreview]      = useState(null);
   const [status,       setStatus]       = useState('idle');
   const [responseData, setResponseData] = useState(null);
   const [error,        setError]        = useState(null);
+
+  // Stripe Modal State
+  const [showStripe, setShowStripe] = useState(false);
+  const [clientSecret, setClientSecret] = useState('');
 
   useEffect(() => {
     if (!form.nombre_tienda) return;
@@ -64,12 +83,52 @@ export default function CrearTiendaView() {
 
       const formData = new FormData();
       Object.keys(form).forEach(key => {
-        if (form[key]) {
-          formData.append(key, form[key]);
-        }
+        if (form[key]) formData.append(key, form[key]);
       });
 
-      const res  = await fetch(`${apiBase}/api/tiendas/crear/`, {
+      // Si es gratuito, creamos directo
+      if (form.plan === 'basico') {
+        const res  = await fetch(`${apiBase}/api/tiendas/crear/`, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) throw data;
+        setResponseData(data);
+        setStatus('success');
+      } else {
+        // Si es pago, inicializamos el PaymentIntent
+        const res = await fetch(`${apiBase}/api/tiendas/checkout-suscripcion/`, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) throw data;
+        
+        setClientSecret(data.clientSecret);
+        setShowStripe(true);
+        setStatus('idle');
+      }
+    } catch (err) {
+      setError(err);
+      setStatus('error');
+    }
+  };
+
+  const handlePaymentSuccess = async (paymentIntent) => {
+    setShowStripe(false);
+    setStatus('loading');
+    try {
+      const backendPort = process.env.REACT_APP_DJANGO_PORT || '8001';
+      const apiBase = `${window.location.protocol}//${window.location.hostname}:${backendPort}`;
+      
+      const formData = new FormData();
+      Object.keys(form).forEach(key => {
+        if (form[key]) formData.append(key, form[key]);
+      });
+      formData.append('payment_intent', paymentIntent.id);
+
+      const res = await fetch(`${apiBase}/api/tiendas/crear-con-pago/`, {
         method: 'POST',
         body: formData,
       });
@@ -78,7 +137,7 @@ export default function CrearTiendaView() {
       setResponseData(data);
       setStatus('success');
     } catch (err) {
-      setError(err);
+      setError("El pago fue exitoso pero hubo un error al crear la tienda. Contacta a soporte.");
       setStatus('error');
     }
   };
@@ -104,7 +163,7 @@ export default function CrearTiendaView() {
             Inicia sesión con <strong>{responseData.admin_email}</strong>
           </p>
           <Button as="a" href="/login" rightIcon={<ArrowRight size={16} />} fullWidth>
-            Ir a mi tienda
+            Continuar
           </Button>
         </div>
       </AuthLayout>
@@ -127,6 +186,28 @@ export default function CrearTiendaView() {
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.sectionTitle}><Store size={16} /> Datos de la Tienda</div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '8px' }}>
+              <CreditCard size={14} style={{ display: 'inline', marginRight: '4px' }} /> 
+              Plan de Suscripción
+            </label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {PLANS.map(p => (
+                <div 
+                  key={p.id}
+                  onClick={() => setForm({...form, plan: p.id})}
+                  style={{
+                    flex: 1, padding: '12px', border: `2px solid ${form.plan === p.id ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                    borderRadius: '8px', cursor: 'pointer', textAlign: 'center', background: form.plan === p.id ? 'var(--color-primary-ghost)' : 'transparent'
+                  }}
+                >
+                  <div style={{ fontWeight: 'bold', fontSize: '14px', color: form.plan === p.id ? 'var(--color-primary)' : 'var(--color-text)' }}>{p.name}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>${p.price}/mes</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <Input
             id="ct-nombre"
@@ -192,6 +273,18 @@ export default function CrearTiendaView() {
           ¿Ya tienes cuenta? <Link to="/login">Iniciar sesión</Link>
         </p>
       </div>
+
+      {showStripe && clientSecret && (
+        <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+          <StripePaymentModal
+            clientSecret={clientSecret}
+            amount={PLANS.find(p => p.id === form.plan)?.price}
+            planName={PLANS.find(p => p.id === form.plan)?.name}
+            onClose={() => setShowStripe(false)}
+            onSuccess={handlePaymentSuccess}
+          />
+        </Elements>
+      )}
     </AuthLayout>
   );
 }

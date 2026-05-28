@@ -15,13 +15,14 @@ from apps.negocio.billing.api.pago_views import PagoViewSet
 from apps.customers.users.api.views import (
     MyTokenObtainPairView, LogoutView, UsuarioCrudViewSet,
     PasswordResetRequestView, PasswordResetConfirmView,
-    TenantListView, TenantCreateView, MiPerfilView
+    TenantListView, TenantCreateView, MiPerfilView,
+    CheckoutSuscripcionView, CrearTiendaConPagoView
 )
 from apps.customers.users.api.rol_views import RolViewSet
 from apps.customers.users.api.permiso_views import PermisoViewSet
 from apps.customers.tenants.api.plan_views import PlanViewSet
 from apps.customers.clientes.api.views import ClienteViewSet, ClienteLoginView
-from apps.customers.tenants.api.views import TiendaPublicViewSet, TiendaPerfilView
+from apps.customers.tenants.api.views import TiendaPublicViewSet, TiendaPerfilView, UpgradeSuscripcionView
 from apps.customers.audit.api.bitacora_views import BitacoraViewSet
 from apps.customers.audit.api.respaldo_views import RespaldoViewSet
 from apps.customers.users.api.device_token_views import DeviceTokenRegisterView
@@ -70,9 +71,12 @@ urlpatterns = [
 
     path('api/tiendas/', TenantListView.as_view()),
     path('api/tiendas/crear/', TenantCreateView.as_view()),
+    path('api/tiendas/checkout-suscripcion/', CheckoutSuscripcionView.as_view()),
+    path('api/tiendas/crear-con-pago/', CrearTiendaConPagoView.as_view()),
     
     path('api/usuarios/perfil/', MiPerfilView.as_view(), name='mi_perfil'),
     path('api/tienda/perfil/', TiendaPerfilView.as_view(), name='tienda_perfil'),
+    path('api/tienda/suscripcion/upgrade/', UpgradeSuscripcionView.as_view(), name='suscripcion_upgrade'),
 
     path('api/', include(router.urls)),
 

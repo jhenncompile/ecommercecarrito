@@ -26,7 +26,7 @@ const AppShell = () => {
   const tenant = useTenant();
   const navigate = useNavigate();
 
-  const sidebarGroups = getSidebarGroups(user?.role);
+  const sidebarGroups = getSidebarGroups(user);
 
   const fullName = user?.fullName || 'Usuario';
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=18aea4&color=fff&bold=true`;

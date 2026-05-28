@@ -46,11 +46,12 @@ export default function LoginView() {
       const { access, refresh } = res.data;
 
       if (loginType === 'vendedor') {
-        const { store_url, full_name, is_superuser } = res.data;
+        const { store_url, full_name, is_superuser, is_staff, role } = res.data;
         if (is_superuser) {
-          window.location.href = '/admin-dashboard';
+          login(access, refresh, full_name, 'admin', is_superuser, is_staff);
+          navigate('/su', { replace: true });
         } else if (store_url) {
-          window.location.href = `${store_url}/sso?token=${access}&refresh=${refresh}&full_name=${encodeURIComponent(full_name || '')}&is_superuser=${is_superuser || false}`;
+          window.location.href = `${store_url}/sso?token=${access}&refresh=${refresh}&full_name=${encodeURIComponent(full_name || '')}&is_superuser=${is_superuser || false}&is_staff=${is_staff || false}&role=${role || 'vendedor'}`;
         } else {
           setError('No tienes una tienda asignada.');
         }

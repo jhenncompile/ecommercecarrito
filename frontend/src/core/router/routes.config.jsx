@@ -106,17 +106,7 @@ export const APP_MODULES = [
     inSidebar: true,
     group: 'negocio',
     roles: ['vendedor'],
-  },
-  {
-    id: 'negocio_roles',
-    path: '/usuarios/roles',
-    label: 'Roles de Personal',
-    icon: Shield,
-    component: lazy(() => import('modules/admin/views/RolesView')),
-    protected: true,
-    inSidebar: true,
-    group: 'negocio',
-    roles: ['vendedor'],
+    requireOwner: true,
   },
   {
     id: 'productos',
@@ -278,9 +268,18 @@ export const AUTH_ROUTES = [
 ];
 
 // ─── Helper: agrupar módulos del sidebar por grupo ──────────
-export const getSidebarGroups = (userRole) => {
+export const getSidebarGroups = (user) => {
+  if (!user) return {};
+  const userRole = user.role;
+  const isOwner = user.is_staff || user.is_superuser;
+
   const sidebarItems = APP_MODULES.filter(
-    (m) => m.inSidebar && m.roles?.includes(userRole)
+    (m) => {
+      if (!m.inSidebar) return false;
+      if (!m.roles?.includes(userRole)) return false;
+      if (m.requireOwner && !isOwner) return false;
+      return true;
+    }
   );
   const groups = {};
   sidebarItems.forEach((item) => {

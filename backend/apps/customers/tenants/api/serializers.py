@@ -1,4 +1,4 @@
-﻿from rest_framework import serializers
+from rest_framework import serializers
 from apps.customers.users.models.rol import Rol
 from apps.customers.tenants.models.tenant import Client, Domain
 from ..services.tenant_service import TenantService # âœ… ImportaciÃ³n del servicio
@@ -103,6 +103,57 @@ class TiendaPublicSerializer(serializers.ModelSerializer):
             
         return f"{protocol}://{subdomain_str}{suffix}{port_str}"
 
+class TiendaPrivadaSerializer(serializers.ModelSerializer):
+    """
+    Serializador privado para el dueño de la tienda.
+    Incluye información de suscripción, plan y métricas de uso (límites).
+    """
+    subdominio = serializers.SerializerMethodField()
+    plan_detalle = serializers.SerializerMethodField()
+    uso = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Client
+        fields = [
+            'id', 'nombre_comercial', 'descripcion', 'categoria_tienda', 
+            'logo_url', 'icono', 'subdominio', 'schema_name', 
+            'plan', 'plan_detalle', 'fecha_inicio_suscripcion', 'fecha_fin_suscripcion', 'uso'
+        ]
+        read_only_fields = fields
+
+    def get_subdominio(self, obj):
+        dominio = obj.domains.first()
+        return dominio.domain if dominio else None
+
+    def get_plan_detalle(self, obj):
+        if not obj.plan:
+            return None
+        return {
+            'id': obj.plan.id,
+            'nombre': obj.plan.nombre,
+            'precio_mensual': obj.plan.precio_mensual,
+            'max_productos': obj.plan.max_productos,
+            'max_usuarios': obj.plan.max_usuarios,
+        }
+
+    def get_uso(self, obj):
+        from django.db import connection
+        
+        productos_actuales = 0
+        usuarios_actuales = 0
+        
+        # Validar que estemos en el schema correcto
+        if connection.schema_name == obj.schema_name:
+            from apps.negocio.catalogo.models.producto import Producto
+            from apps.customers.users.models.usuario import Usuario
+            productos_actuales = Producto.objects.count()
+            usuarios_actuales = Usuario.objects.count()
+            
+        return {
+            'productos': productos_actuales,
+            'usuarios': usuarios_actuales
+        }
+
 from rest_framework import serializers
 from apps.customers.tenants.models.plan import Plan
 
@@ -113,9 +164,6 @@ class PlanSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'nombre', 'descripcion', 'precio_mensual', 
             'precio_anual', 'max_usuarios', 'max_productos', 
-            'facturacion_max', 'activo'
+            'facturacion_max', 'activo', 'permisos'
         ]
         read_only_fields = ['id']
-
-
-

@@ -57,13 +57,15 @@ class TiendaPublicViewSet(viewsets.ReadOnlyModelViewSet):
 class TiendaPerfilView(APIView):
     """
     Endpoint para que el vendedor administre los datos de su propia tienda.
+    Devuelve métricas privadas como plan activo y límites.
     """
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
         tenant = request.tenant
-        serializer = TiendaPublicSerializer(tenant, context={'request': request})
+        from apps.customers.tenants.api.serializers import TiendaPrivadaSerializer
+        serializer = TiendaPrivadaSerializer(tenant, context={'request': request})
         return Response(serializer.data)
 
     def patch(self, request):
@@ -80,5 +82,68 @@ class TiendaPerfilView(APIView):
             tenant.icono = request.FILES['icono']
             
         tenant.save()
-        serializer = TiendaPublicSerializer(tenant, context={'request': request})
+        from apps.customers.tenants.api.serializers import TiendaPrivadaSerializer
+        serializer = TiendaPrivadaSerializer(tenant, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UpgradeSuscripcionView(APIView):
+    """
+    Endpoint para que un tenant existente inicie o pague un upgrade de suscripción.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        plan_id = request.data.get('plan_id')
+        payment_intent_id = request.data.get('payment_intent')
+        tenant = request.tenant
+
+        from apps.customers.tenants.models.plan import Plan
+        try:
+            nuevo_plan = Plan.objects.get(id=plan_id)
+        except Plan.DoesNotExist:
+            return Response({'error': 'Plan no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+        import stripe
+        from django.conf import settings
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+
+        # Caso 1: Inicializar el intento de pago (devuelve clientSecret)
+        if not payment_intent_id:
+            try:
+                # Precio en centavos
+                amount = int(nuevo_plan.precio_mensual * 100)
+                
+                # Si el plan es gratuito, no cobramos
+                if amount == 0:
+                    tenant.plan = nuevo_plan
+                    tenant.save()
+                    return Response({'success': True, 'message': 'Plan actualizado a Gratuito.'}, status=status.HTTP_200_OK)
+
+                intent = stripe.PaymentIntent.create(
+                    amount=amount,
+                    currency='usd',
+                    automatic_payment_methods={'enabled': True},
+                    metadata={'tenant_schema': tenant.schema_name, 'nuevo_plan_id': nuevo_plan.id}
+                )
+                return Response({'clientSecret': intent.client_secret}, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Caso 2: Confirmar el pago exitoso y aplicar el plan
+        try:
+            intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            if intent.status != 'succeeded':
+                return Response({'error': 'El pago no fue exitoso.'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            tenant.plan = nuevo_plan
+            from apps.customers.tenants.services.billing_helper import BillingDateHelper
+            fecha_inicio, fecha_fin = BillingDateHelper.calcular_fechas_mensuales()
+            
+            tenant.fecha_inicio_suscripcion = fecha_inicio
+            tenant.fecha_fin_suscripcion = fecha_fin
+            tenant.save()
+            
+            return Response({'success': True, 'message': f'Plan actualizado a {nuevo_plan.nombre}'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

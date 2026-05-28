@@ -1,4 +1,4 @@
-﻿def get_auth_extra_data(user, request=None):
+def get_auth_extra_data(user, request=None):
     """
     Obtiene la informaci\u00f3n adicional necesaria tras un login exitoso.
     IMPORTANTE: El subdomain SIEMPRE se construye con TENANT_DOMAIN_SUFFIX del .env
@@ -10,8 +10,19 @@
         'tenant_id':   None,
         'schema_name': None,
         'subdomain':   None,
-        'is_superuser': user.is_superuser
+        'is_superuser': user.is_superuser,
+        'is_staff':    user.is_staff,
+        'role':        'cliente'
     }
+
+    # Determinar rol de forma compatible con las rutas del frontend
+    if user.is_superuser:
+        extra_data['role'] = 'admin'
+    else:
+        # Todo usuario (modelo Usuario) de una tienda usa el rol 'vendedor' en el frontend
+        # independientemente de si es dueño (is_staff=True) o empleado normal (is_staff=False)
+        extra_data['role'] = 'vendedor'
+
 
     if user.tenant:
         extra_data['tenant_id']   = user.tenant.id

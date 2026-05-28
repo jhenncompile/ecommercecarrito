@@ -25,6 +25,11 @@ class Permiso(models.Model):
         verbose_name='Módulo al que pertenece',
         help_text='Ej: Productos, Ventas, Usuarios'
     )
+    es_basico = models.BooleanField(
+        default=False,
+        verbose_name='Permiso Básico (Todos los planes)',
+        help_text='Indica si este permiso está disponible para todas las tiendas sin importar su plan.'
+    )
     activo = models.BooleanField(
         default=True,
         verbose_name='Activo'

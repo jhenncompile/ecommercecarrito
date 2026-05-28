@@ -51,12 +51,33 @@ class ProductoViewSet(BaseViewSet):
 
     def get_permissions(self):
         """
-        Permite lectura pÃºblica (AllowAny para GET)
-        Pero requiere autenticaciÃ³n para crear/editar/eliminar
+        Permite lectura pública (AllowAny para GET)
+        Pero requiere autenticación para crear/editar/eliminar
         """
         if self.request.method == 'GET':
             return [AllowAny()]
         return [IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        from django.db import connection
+        schema_name = connection.schema_name
+        
+        if schema_name != 'public':
+            from apps.customers.tenants.models.tenant import Client
+            try:
+                tenant = Client.objects.get(schema_name=schema_name)
+                if tenant.plan:
+                    max_productos = tenant.plan.max_productos
+                    # max_productos == 0 puede significar "ilimitado", validamos si es mayor a 0
+                    if max_productos > 0:
+                        current_count = Producto.objects.count()
+                        if current_count >= max_productos:
+                            from rest_framework.exceptions import ValidationError
+                            raise ValidationError({"limite_alcanzado": f"Tu plan ({tenant.plan.nombre}) permite un máximo de {max_productos} productos. Mejora tu plan para añadir más."})
+            except Client.DoesNotExist:
+                pass
+                
+        super().perform_create(serializer)
     
     @action(detail=True, methods=['get'], url_path='recomendaciones')
     def recomendaciones(self, request, pk=None):

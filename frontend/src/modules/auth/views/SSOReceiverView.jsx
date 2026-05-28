@@ -15,10 +15,11 @@ export default function SSOReceiverView() {
     const refresh  = params.get('refresh');
     const fullName = params.get('full_name');
     const isSuper  = params.get('is_superuser') === 'true';
+    const isStaff  = params.get('is_staff') === 'true';
     const role     = isSuper ? 'admin' : (params.get('role') || 'vendedor');
 
     if (token) {
-      login(token, refresh || '', fullName ? decodeURIComponent(fullName) : '', role);
+      login(token, refresh || '', fullName ? decodeURIComponent(fullName) : '', role, isSuper, isStaff);
 
       const hostname   = window.location.hostname;
       const baseDomain = getBaseDomain(hostname);

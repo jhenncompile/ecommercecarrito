@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, User as UserIcon, Store } from 'lucide-react';
 import AppView from 'shared/widgets/AppView/AppView';
 import PerfilHeader from '../components/PerfilHeader';
 import PerfilForm from '../components/PerfilForm';
 import TiendaPerfilForm from '../components/TiendaPerfilForm';
+import TiendaSuscripcionForm from '../components/TiendaSuscripcionForm';
 import { usePerfil } from '../hooks/usePerfil';
 import { useTiendaPerfil } from '../hooks/useTiendaPerfil';
 import './PerfilView.css';
@@ -17,7 +18,16 @@ export default function PerfilView() {
   const { tiendaPerfil, loadingTienda, errorTienda, actualizarTienda } = useTiendaPerfil();
   
   const [mensaje, setMensaje] = useState(null);
-  const [activeTab, setActiveTab] = useState('personal'); // 'personal' o 'tienda'
+  const [activeTab, setActiveTab] = useState('personal'); // 'personal', 'tienda', 'suscripcion'
+
+  // Opcional: Leer tab de URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    if (tab && ['personal', 'tienda', 'suscripcion'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, []);
 
   const handleGuardarPerfil = async (datos) => {
     const resultado = await actualizar(datos);
@@ -84,6 +94,13 @@ export default function PerfilView() {
             <Store size={18} />
             Mi Tienda
           </button>
+          <button 
+            className={`tab-btn ${activeTab === 'suscripcion' ? 'active' : ''}`}
+            onClick={() => setActiveTab('suscripcion')}
+          >
+            <CheckCircle size={18} />
+            Suscripción
+          </button>
         </div>
       )}
 
@@ -102,6 +119,13 @@ export default function PerfilView() {
             perfil={tiendaPerfil}
             onGuardar={handleGuardarTienda}
             loading={loadingTienda}
+          />
+        )}
+
+        {activeTab === 'suscripcion' && !isCliente && tiendaPerfil && (
+          <TiendaSuscripcionForm
+            perfil={tiendaPerfil}
+            onGuardar={() => window.location.reload()}
           />
         )}
       </div>

@@ -14,6 +14,8 @@ export default function UsersView() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [isPublic, setIsPublic] = useState(false);
+    const [currentUserEmail, setCurrentUserEmail] = useState(null);
+    const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
 
     const [formData, setFormData] = useState({
         email: '',
@@ -37,17 +39,20 @@ export default function UsersView() {
 
             const requests = [
                 api.get('/usuarios/'),
-                api.get('/roles/')
+                api.get('/roles/'),
+                api.get('/usuarios/perfil/') // Para saber quién soy yo
             ];
 
             if (publicMode) {
                 requests.push(api.get('/tiendas/'));
             }
 
-            const [usersRes, rolesRes, tenantsRes] = await Promise.all(requests);
+            const [usersRes, rolesRes, profileRes, tenantsRes] = await Promise.all(requests);
             
             setUsers(usersRes.data.results || usersRes.data);
             setRoles(rolesRes.data.results || rolesRes.data);
+            setCurrentUserEmail(profileRes.data.email);
+            setCurrentUserIsAdmin(profileRes.data.is_staff || profileRes.data.is_superuser);
             if (tenantsRes) {
                 setTenants(tenantsRes.data.results || tenantsRes.data);
             }
@@ -155,30 +160,44 @@ export default function UsersView() {
         },
         {
             key: 'id', label: 'Acciones', align: 'right',
-            render: (id, row) => (
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <Button variant="ghost" size="sm" onClick={() => {
-                        setEditingId(id);
-                        setFormData({
-                            email: row.email,
-                            first_name: row.first_name || '',
-                            last_name: row.last_name || '',
-                            password: '',
-                            is_active: row.is_active,
-                            is_staff: row.is_staff,
-                            is_superuser: row.is_superuser,
-                            tenant: row.tenant || '',
-                            roles: row.roles || []
-                        });
-                        setIsModalOpen(true);
-                    }}>
-                        <Edit size={14} />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(id)}>
-                        <Trash2 size={14} color="var(--color-danger)" />
-                    </Button>
-                </div>
-            )
+            render: (id, row) => {
+                const isMe = row.email === currentUserEmail;
+                const targetIsAdmin = row.is_staff || row.is_superuser;
+                const canEdit = isMe || currentUserIsAdmin || !targetIsAdmin;
+                
+                return (
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        {isMe ? (
+                            <span style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', padding: '6px' }}>Es tu cuenta</span>
+                        ) : !canEdit ? (
+                            <span style={{ fontSize: '12px', color: '#ef4444', fontStyle: 'italic', padding: '6px' }}>No editable</span>
+                        ) : (
+                            <>
+                                <Button variant="ghost" size="sm" onClick={() => {
+                                    setEditingId(id);
+                                    setFormData({
+                                        email: row.email,
+                                        first_name: row.first_name || '',
+                                        last_name: row.last_name || '',
+                                        password: '',
+                                        is_active: row.is_active,
+                                        is_staff: row.is_staff,
+                                        is_superuser: row.is_superuser,
+                                        tenant: row.tenant || '',
+                                        roles: row.roles || []
+                                    });
+                                    setIsModalOpen(true);
+                                }}>
+                                    <Edit size={14} />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleDelete(id)}>
+                                    <Trash2 size={14} color="var(--color-danger)" />
+                                </Button>
+                            </>
+                        )}
+                    </div>
+                );
+            }
         }
     ];
 
@@ -256,21 +275,25 @@ export default function UsersView() {
                                 <input type="checkbox" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} />
                                 Cuenta Activa
                             </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                                <input type="checkbox" checked={formData.is_staff} onChange={e => setFormData({...formData, is_staff: e.target.checked})} />
-                                Staff de Tienda
-                            </label>
                             {isPublic && (
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                                    <input type="checkbox" checked={formData.is_superuser} onChange={e => setFormData({...formData, is_superuser: e.target.checked})} />
-                                    Super Usuario
-                                </label>
+                                <>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                                        <input type="checkbox" checked={formData.is_staff} onChange={e => setFormData({...formData, is_staff: e.target.checked})} />
+                                        Staff de Tienda (Dueño)
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                                        <input type="checkbox" checked={formData.is_superuser} onChange={e => setFormData({...formData, is_superuser: e.target.checked})} />
+                                        Super Usuario (Global)
+                                    </label>
+                                </>
                             )}
                         </div>
 
                         <label style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', display: 'block' }}>ROLES ASIGNADOS:</label>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {roles.map(r => (
+                            {roles
+                                .filter(r => isPublic || !['super usuario', 'administrador'].includes(r.nombre.toLowerCase()))
+                                .map(r => (
                                 <div 
                                     key={r.id}
                                     onClick={() => toggleRole(r.id)}

@@ -10,6 +10,7 @@ const NotificationsDropdown = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const dropdownRef = useRef(null);
+    const intervalRef = useRef(null);
 
     // En dominio base (localhost / public schema) no hay notificaciones de tenant
     const isBase = isBaseDomain(window.location.hostname);
@@ -18,7 +19,10 @@ const NotificationsDropdown = () => {
         // Solo buscar notificaciones en contexto de tenant y si hay token
         if (isBase) return;
         const token = localStorage.getItem('access_token');
-        if (!token) return;
+        if (!token) {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            return;
+        }
 
         try {
             setLoading(true);
@@ -27,8 +31,14 @@ const NotificationsDropdown = () => {
             setNotifications(data);
             setUnreadCount(data.filter(n => !n.leido).length);
         } catch (error) {
-            // Silenciar 401 — es normal si el token expiró o el esquema es public
-            if (error.response?.status !== 401) {
+            // Si es 401 o error de red, el token es inválido o el backend no responde, detenemos el polling
+            if (error.response?.status === 401 || error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                    intervalRef.current = null;
+                }
+            } else {
+                // Solo logueamos otros errores si no son de red puros para no inundar la consola
                 console.error('Error fetching notifications', error);
             }
         } finally {
@@ -39,8 +49,10 @@ const NotificationsDropdown = () => {
     useEffect(() => {
         if (isBase) return; // no montar polling en dominio base
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(interval);
+        intervalRef.current = setInterval(fetchNotifications, 30000);
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

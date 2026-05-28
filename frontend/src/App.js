@@ -53,12 +53,12 @@ function App() {
                   </PrivateRoute>
                 }
               >
-                {APP_MODULES.filter((m) => m.protected).map(({ id, path, roles, component: Component }) => (
+                {APP_MODULES.filter((m) => m.protected).map(({ id, path, roles, requireOwner, component: Component }) => (
                   <Route 
                     key={id} 
                     path={path} 
                     element={
-                      <PrivateRoute allowedRoles={roles}>
+                      <PrivateRoute allowedRoles={roles} requireOwner={requireOwner}>
                         <Component />
                       </PrivateRoute>
                     } 

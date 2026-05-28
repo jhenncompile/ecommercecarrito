@@ -1,4 +1,4 @@
-﻿from django.conf import settings
+from django.conf import settings
 from django_tenants.utils import tenant_context
 from rest_framework import serializers
 from ..models.tenant import Client, Domain
@@ -24,7 +24,10 @@ class TenantService:
             schema_name=datos['schema_name'],
             name=datos['nombre_tienda'],
             icono=datos.get('icono', None),
-            nombre_comercial=datos['nombre_tienda']
+            nombre_comercial=datos['nombre_tienda'],
+            plan=datos.get('plan'),
+            fecha_inicio_suscripcion=datos.get('fecha_inicio_suscripcion'),
+            fecha_fin_suscripcion=datos.get('fecha_fin_suscripcion')
         )
 
         # 3. Crear el dominio primario
@@ -49,6 +52,26 @@ class TenantService:
                 is_active=True,
                 tenant=tenant,
             )
+
+            # Asignar automáticamente el rol de Administrador al dueño
+            from apps.customers.users.models.rol import Rol
+            
+            # Crear roles básicos si no existen en este tenant
+            roles_basicos = [
+                {'nombre': 'Administrador', 'nivel': 1, 'descripcion': 'Dueño o administrador general'},
+                {'nombre': 'Vendedor', 'nivel': 2, 'descripcion': 'Personal de ventas o empleados'},
+                {'nombre': 'Cliente', 'nivel': 3, 'descripcion': 'Comprador recurrente'}
+            ]
+            for rb in roles_basicos:
+                Rol.objects.get_or_create(
+                    nombre__iexact=rb['nombre'],
+                    tenant=tenant,
+                    defaults={'nombre': rb['nombre'], 'nivel': rb['nivel'], 'descripcion': rb['descripcion']}
+                )
+
+            rol_admin = Rol.objects.filter(nombre__iexact='administrador', tenant=tenant).first()
+            if rol_admin:
+                admin.roles.add(rol_admin)
 
         return {
             'tienda': tenant.name,

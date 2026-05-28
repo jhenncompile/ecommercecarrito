@@ -11,15 +11,19 @@ export const AuthProvider = ({ children }) => {
     const fullName = localStorage.getItem('user_full_name');
     const token    = localStorage.getItem('access_token');
     const role     = localStorage.getItem('user_role');
-    return token ? { fullName: fullName || 'Usuario', token, role } : null;
+    const is_superuser = localStorage.getItem('user_is_superuser') === 'true';
+    const is_staff     = localStorage.getItem('user_is_staff') === 'true';
+    return token ? { fullName: fullName || 'Usuario', token, role, is_superuser, is_staff } : null;
   });
 
-  const login = useCallback((accessToken, refreshToken, fullName, role = 'vendedor') => {
+  const login = useCallback((accessToken, refreshToken, fullName, role = 'vendedor', is_superuser = false, is_staff = false) => {
     localStorage.setItem('access_token',  accessToken);
     localStorage.setItem('refresh_token', refreshToken);
     localStorage.setItem('user_full_name', fullName || '');
     localStorage.setItem('user_role', role);
-    setUser({ fullName: fullName || 'Usuario', token: accessToken, role });
+    localStorage.setItem('user_is_superuser', is_superuser);
+    localStorage.setItem('user_is_staff', is_staff);
+    setUser({ fullName: fullName || 'Usuario', token: accessToken, role, is_superuser, is_staff });
   }, []);
 
   const logout = useCallback(async () => {
@@ -37,6 +41,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user_full_name');
       localStorage.removeItem('user_role');
+      localStorage.removeItem('user_is_superuser');
+      localStorage.removeItem('user_is_staff');
       setUser(null);
       const baseDomain = getBaseDomain(window.location.hostname);
       const port = window.location.port ? `:${window.location.port}` : '';

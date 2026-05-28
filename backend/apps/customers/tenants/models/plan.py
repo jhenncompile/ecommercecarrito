@@ -42,6 +42,13 @@ class Plan(models.Model):
         null=True,
         verbose_name='Límite de Facturación Mensual'
     )
+    permisos = models.ManyToManyField(
+        'customers.Permiso',
+        blank=True,
+        related_name='planes',
+        verbose_name='Permisos Incluidos',
+        help_text='Funcionalidades (permisos premium) que desbloquea este plan.'
+    )
     activo = models.BooleanField(
         default=True,
         verbose_name='Activo'

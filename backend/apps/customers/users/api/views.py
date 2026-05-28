@@ -101,7 +101,24 @@ class UsuarioCrudViewSet(BaseViewSet):
         return self.service.crear_usuario(datos)
 
     def perform_update(self, serializer):
-        return self.service.actualizar_usuario(self.get_object(), serializer.validated_data)
+        target_user = self.get_object()
+        request_user = self.request.user
+        
+        # Proteger a los administradores/dueños
+        if target_user.is_staff or target_user.is_superuser:
+            if not (request_user.is_staff or request_user.is_superuser) and target_user != request_user:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("No tienes permisos para modificar a un administrador o dueño de la tienda.")
+                
+        return self.service.actualizar_usuario(target_user, serializer.validated_data)
+
+    def perform_destroy(self, instance):
+        request_user = self.request.user
+        if instance.is_staff or instance.is_superuser:
+            if not (request_user.is_staff or request_user.is_superuser) and instance != request_user:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("No tienes permisos para eliminar a un administrador o dueño de la tienda.")
+        super().perform_destroy(instance)
 
     @action(detail=True, methods=['get'])
     def status(self, request, pk=None):
@@ -156,23 +173,44 @@ class MiPerfilView(APIView):
             serializer = UsuarioCrudSerializer(usuario)
             data = serializer.data
             
-            # Determinar rol dinÃ¡mico para el frontend (prioridad jerÃ¡rquica)
+            # --- INCORPORACIÓN DE PERMISOS EFECTIVOS ---
+            from django.db import connection
+            from apps.customers.users.models.permiso import Permiso
+            from apps.customers.tenants.models.tenant import Client
+            
+            if usuario.is_superuser:
+                permisos_premium = set(Permiso.objects.filter(es_basico=False, activo=True).values_list('codigo', flat=True))
+                user_permisos_basicos = set(Permiso.objects.filter(es_basico=True, activo=True).values_list('codigo', flat=True))
+            else:
+                user_permisos = Permiso.objects.filter(roles__usuarios=usuario, roles__activo=True, activo=True)
+                permisos_premium = set(user_permisos.filter(es_basico=False).values_list('codigo', flat=True))
+                user_permisos_basicos = set(user_permisos.filter(es_basico=True).values_list('codigo', flat=True))
+            
+            schema_name = connection.schema_name
+            if schema_name != 'public':
+                try:
+                    tenant = Client.objects.get(schema_name=schema_name)
+                    if tenant.plan and tenant.plan.activo:
+                        plan_permisos = set(tenant.plan.permisos.filter(activo=True).values_list('codigo', flat=True))
+                        if usuario.is_superuser:
+                            permisos_efectivos_premium = permisos_premium
+                        else:
+                            permisos_efectivos_premium = permisos_premium & plan_permisos
+                    else:
+                        permisos_efectivos_premium = permisos_premium if usuario.is_superuser else set()
+                except Client.DoesNotExist:
+                    permisos_efectivos_premium = set()
+            else:
+                permisos_efectivos_premium = permisos_premium
+
+            data['permisos_efectivos'] = list(user_permisos_basicos | permisos_efectivos_premium)
+            # ---------------------------------------------
+            
+            # Determinar rol dinámico para el frontend (prioridad jerárquica)
             if usuario.is_superuser:
                 data['role'] = 'admin'
             else:
-                # Obtenemos los roles de forma segura para evitar fallos si la migraciÃ³n M2M no se ha aplicado
-                try:
-                    roles_list = list(usuario.roles.all().order_by('nivel'))
-                    if roles_list:
-                        rol_principal = roles_list[0]
-                        if rol_principal.nivel == 1: data['role'] = 'admin'
-                        elif rol_principal.nivel == 2: data['role'] = 'vendedor'
-                        else: data['role'] = 'cliente'
-                    else:
-                        data['role'] = 'vendedor' if usuario.is_staff else 'cliente'
-                except Exception:
-                    # Fallback si el campo M2M 'roles' no existe todavÃ­a en la DB
-                    data['role'] = 'admin' if usuario.is_superuser else ('vendedor' if usuario.is_staff else 'cliente')
+                data['role'] = 'vendedor'
             
             # Asegurar que el frontend sepa si es superuser
             data['is_superuser'] = usuario.is_superuser
@@ -201,23 +239,103 @@ class MiPerfilView(APIView):
 
 
 class TenantCreateView(APIView):
-    """CreaciÃ³n de nuevos esquemas (tiendas)."""
+    """Creación de nuevos esquemas (tiendas) - Plan Gratuito."""
     permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = TenantCreateSerializer(data=request.data)
         if serializer.is_valid():
-            result = serializer.save()
+            # Asignar plan básico por defecto si no viene o viene 'basico'
+            plan_code = request.data.get('plan', 'basico')
+            from apps.customers.tenants.models.plan import Plan
+            try:
+                plan = Plan.objects.get(nombre__iexact=plan_code)
+            except Plan.DoesNotExist:
+                plan = Plan.objects.filter(precio_mensual=0).first()
+            
+            result = serializer.save(plan=plan)
             return Response(result, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
+class CheckoutSuscripcionView(APIView):
+    """Inicializa un PaymentIntent de Stripe para un Plan."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        plan_code = request.data.get('plan')
+        if not plan_code or plan_code == 'basico':
+            return Response({'error': 'Plan inválido para pago'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from apps.customers.tenants.models.plan import Plan
+        try:
+            plan = Plan.objects.get(nombre__iexact=plan_code)
+        except Plan.DoesNotExist:
+            return Response({'error': 'Plan no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+        import stripe
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        
+        try:
+            # Precio en centavos
+            amount = int(plan.precio_mensual * 100)
+            
+            intent = stripe.PaymentIntent.create(
+                amount=amount,
+                currency='usd',
+                automatic_payment_methods={'enabled': True},
+                metadata={'plan_id': plan.id, 'nombre_tienda': request.data.get('nombre_tienda', '')}
+            )
+            return Response({'clientSecret': intent.client_secret}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CrearTiendaConPagoView(APIView):
+    """Crea la tienda tras validar el pago exitoso en Stripe."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        payment_intent_id = request.data.get('payment_intent')
+        if not payment_intent_id:
+            return Response({'error': 'Falta el ID del pago'}, status=status.HTTP_400_BAD_REQUEST)
+
+        import stripe
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+
+        try:
+            intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            if intent.status != 'succeeded':
+                return Response({'error': 'El pago no fue exitoso.'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Proceder a crear el tenant
+        serializer = TenantCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            plan_code = request.data.get('plan', 'profesional')
+            from apps.customers.tenants.models.plan import Plan
+            try:
+                plan = Plan.objects.get(nombre__iexact=plan_code)
+            except Plan.DoesNotExist:
+                plan = None
+
+            # Asignar fechas de suscripción si pagó
+            from apps.customers.tenants.services.billing_helper import BillingDateHelper
+            fecha_inicio, fecha_fin = BillingDateHelper.calcular_fechas_mensuales()
+
+            result = serializer.save(plan=plan, fecha_inicio_suscripcion=fecha_inicio, fecha_fin_suscripcion=fecha_fin)
+            return Response(result, status=status.HTTP_201_CREATED)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class TenantListView(APIView):
-    """Listado pÃºblico de tiendas registradas."""
+    """Listado público de tiendas registradas."""
     permission_classes = [AllowAny]
 
     def get(self, request):
-        from apps.customers.models import Client
+        from apps.customers.tenants.models.tenant import Client
         from apps.customers.tenants.api.serializers import TiendaPublicSerializer
         tenants = Client.objects.exclude(schema_name='public')
         serializer = TiendaPublicSerializer(tenants, many=True, context={'request': request})

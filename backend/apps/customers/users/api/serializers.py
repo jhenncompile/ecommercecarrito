@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+from apps.customers.models import Rol
 
 class MyTokenObtainPairSerializer(serializers.Serializer):
     username = serializers.CharField(required=False)
@@ -38,7 +39,7 @@ class MyTokenObtainPairSerializer(serializers.Serializer):
         }
 
 class UsuarioCrudSerializer(serializers.ModelSerializer):
-    roles = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Rol.objects.all(), required=False)
     roles_detalles = serializers.SerializerMethodField()
     tenant_info = serializers.SerializerMethodField()
     
@@ -51,15 +52,24 @@ class UsuarioCrudSerializer(serializers.ModelSerializer):
     
     def get_tenant_info(self, obj):
         """Devuelve info del tenant solo si es admin/superusuario"""
-        if obj.is_staff or obj.is_superuser:
-            if obj.tenant:
+        is_staff = obj.get('is_staff', False) if isinstance(obj, dict) else obj.is_staff
+        is_superuser = obj.get('is_superuser', False) if isinstance(obj, dict) else obj.is_superuser
+        
+        if is_staff or is_superuser:
+            tenant = obj.get('tenant') if isinstance(obj, dict) else obj.tenant
+            if tenant:
+                # Si el tenant es solo el ID (por validación en POST), devolvemos None,
+                # ya que no podemos acceder a tenant.name. Se mostrará correctamente en el próximo GET.
+                if isinstance(tenant, int):
+                    return None
+                    
                 from apps.customers.models import Domain
-                domain = Domain.objects.filter(tenant=obj.tenant).first()
+                domain = Domain.objects.filter(tenant=tenant).first()
                 return {
-                    'nombre_tienda': obj.tenant.name,
-                    'schema': obj.tenant.schema_name,
+                    'nombre_tienda': getattr(tenant, 'name', ''),
+                    'schema': getattr(tenant, 'schema_name', ''),
                     'dominio': domain.domain if domain else None,
-                    'url': f"http://{domain.domain if domain else obj.tenant.schema_name}.localhost:8001" if domain else None,
+                    'url': f"http://{domain.domain if domain else getattr(tenant, 'schema_name', '')}.localhost:8001" if domain else None,
                 }
         return None
     
