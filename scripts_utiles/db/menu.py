@@ -22,6 +22,7 @@ def show_data_menu():
     
             print_section("4. Reparación y Emergencia")
             print_option(f"{Colors.RED}F{Colors.RESET} - Reparar Migraciones (Error: Columna ya existe)")
+            print_option(f"{Colors.RED}C{Colors.RESET} - Corregir Migraciones (Error: Columna NO existe / es_basico)")
     
             print_section("4. Auditoría")
             print_option(f"{Colors.MAGENTA}7{Colors.RESET} - Ver Auditoría Reciente (Bitácora)")
@@ -74,6 +75,8 @@ def show_data_menu():
                 run_script('utils/fix_tenant_domains.py'); pause()
             elif choice == 'f':
                 run_script('db/migrations.py', 'fake'); pause()
+            elif choice == 'c':
+                run_script('db/migrations.py', 'fix_missing'); pause()
             elif choice == 'b':
                 break
             else:
