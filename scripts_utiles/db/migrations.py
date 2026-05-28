@@ -102,22 +102,29 @@ def run_migrate_schemas():
     run_django_command_visible(['migrate_schemas', '--tenant'])
 
 def run_full_sync():
-    """Ejecuta el ciclo completo de sincronización de base de datos"""
+    """Ejecuta el ciclo completo de sincronización de base de datos con reparación ultra robusta."""
     print("\n" + "="*60)
-    print("SINCRONIZACIÓN TOTAL ROBUSTA DE BD (VPS READY)")
+    print("SINCRONIZACIÓN ULTRA ROBUSTA DE BD (VPS READY)")
     print("="*60)
 
-    # 1. Detectar cambios (genera migraciones si el modelo cambió)
+    print("\n[PASO 1] Reparación Profunda (Fake-Reverse preventivo)...")
+    # Retrocedemos la migración para forzar a Django a re-evaluar la existencia de columnas
+    run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0006'])
+
+    print("\n[PASO 2] Detección de Cambios en Modelos...")
     run_make_migrations()
 
-    # 2. Aplicar a esquema compartido (Public)
+    print("\n[PASO 3] Sincronización Real y Auto-Reparación (Esquema Public)...")
     run_migrate()
 
-    # 3. Aplicar a esquemas de clientes (Tenants)
+    print("\n[PASO 4] Sincronización de Esquemas de Clientes (Tenants)...")
     run_migrate_schemas()
 
+    print("\n[PASO 5] Sembrando Permisos del Sistema (Roles/Características)...")
+    run_django_command_visible(['seed_permisos'])
+
     print("\n" + "="*60)
-    print("[OK] Estructura sincronizada correctamente.")
+    print("[OK] ESTRUCTURA, MIGRACIONES Y PERMISOS SINCRONIZADOS AL 100%.")
     print("="*60)
 
 def run_reset():
