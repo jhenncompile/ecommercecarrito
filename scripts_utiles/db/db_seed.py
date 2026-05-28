@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # ========================================================================
 # SCRIPT DE SEEDERS V5.4 - ESTRUCTURA DE NEGOCIO REAL
 # ========================================================================
@@ -88,10 +88,27 @@ class DatabaseSeeder:
         print(f"\n--- âš¡ Motor Especializado V5.4 ---")
 
         with schema_context('public'):
-            plan, _ = Plan.objects.get_or_create(
+            # 1. Crear o asegurar los planes oficiales de la plataforma
+            plan_basico, _ = Plan.objects.get_or_create(
+                nombre='basico', 
+                defaults={'precio_mensual': 0.0, 'precio_anual': 0.0, 'max_usuarios': 1, 'max_productos': 50}
+            )
+            plan_profesional, _ = Plan.objects.get_or_create(
+                nombre='profesional', 
+                defaults={'precio_mensual': 29.0, 'precio_anual': 290.0, 'max_usuarios': 5, 'max_productos': 1000}
+            )
+            plan_premium, _ = Plan.objects.get_or_create(
+                nombre='premium', 
+                defaults={'precio_mensual': 99.0, 'precio_anual': 990.0, 'max_usuarios': 50, 'max_productos': 5000}
+            )
+            
+            # El plan por defecto para las tiendas de prueba
+            plan_maestro, _ = Plan.objects.get_or_create(
                 nombre='Plan Maestro', 
                 defaults={'precio_mensual': 150.0, 'precio_anual': 1500.0, 'max_usuarios': 50, 'max_productos': 5000}
             )
+            
+            # Roles globales (aunque en este sistema multi-tenant los roles se crean por tenant)
             rol_admin, _ = Rol.objects.get_or_create(nombre='Administrador')
 
         # 1. Nuevas Tiendas
@@ -100,7 +117,7 @@ class DatabaseSeeder:
                 nombre = fake.company()
                 schema = f"shop_{fake.unique.user_name()}"[:20].replace('.', '_').lower()
                 with schema_context('public'):
-                    tenant, _ = Client.objects.get_or_create(schema_name=schema, defaults={'name': nombre, 'plan': plan, 'nombre_comercial': nombre, 'categoria_tienda': fake.job()})
+                    tenant, _ = Client.objects.get_or_create(schema_name=schema, defaults={'name': nombre, 'plan': plan_profesional, 'nombre_comercial': nombre, 'categoria_tienda': fake.job()})
                     Domain.objects.get_or_create(domain=f"{schema}.{self.base_domain}" if self.base_domain != 'localhost' else f"{schema}.localhost", tenant=tenant, defaults={'is_primary': True})
                     user = Usuario.objects.create_user(email=f"admin@{schema}.local", password=BusinessGenerator.PASSWORD_STANDAR, tenant=tenant, is_staff=True)
                     user.roles.add(rol_admin)
