@@ -108,8 +108,15 @@ def run_full_sync():
     print("="*60)
 
     print("\n[PASO 1] Reparación Profunda (Fake-Reverse preventivo)...")
-    # Retrocedemos la migración para forzar a Django a re-evaluar la existencia de columnas
+    # Retrocedemos la migración a 0006 para limpiar el estado
     run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0006'])
+
+    print("\n[PASO 1.5] Aplicando Migraciones Paso a Paso (Para evitar rollbacks por transacciones)...")
+    # Aplicamos la 0007 individualmente para que cree la columna y haga COMMIT
+    run_django_command_visible(['migrate_schemas', '--shared', 'customers', '0007'])
+    
+    # Fakeamos la 0008 porque sabemos que el constraint ya existe y causa "DuplicateTable"
+    run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0008'])
 
     print("\n[PASO 2] Detección de Cambios en Modelos...")
     run_make_migrations()
@@ -175,7 +182,13 @@ def run_fix_missing():
     print("[i] Esto obligará a Django a re-ejecutar las últimas migraciones de 'customers'.")
     run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0006'])
     
-    print("\n[+] Re-aplicando migraciones SQL reales...")
+    print("\n[+] Re-aplicando migración 0007 (Creación de columnas)...")
+    run_django_command_visible(['migrate_schemas', '--shared', 'customers', '0007'])
+
+    print("\n[+] Fakeando migración 0008 (Constraint que ya existe)...")
+    run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0008'])
+    
+    print("\n[+] Verificando migraciones restantes...")
     run_django_command_visible(['migrate_schemas', '--shared'])
     
     print("\n[+] Sembrando permisos básicos y premium...")
