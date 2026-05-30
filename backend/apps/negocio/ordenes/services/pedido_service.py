@@ -41,7 +41,10 @@ class PedidoService(BaseService):
             carrito = Carrito.objects.create(cliente=cliente, estado='CERRADO')
             
             for item in items:
-                producto = Producto.objects.select_for_update().get(id=item['producto'])
+                prod_id = item.get('producto_id') or item.get('producto')
+                if not prod_id:
+                    raise ValueError("El item no contiene 'producto_id'")
+                producto = Producto.objects.select_for_update().get(id=prod_id)
                 cantidad_solicitada = int(item['cantidad'])
                 
                 if producto.stock < cantidad_solicitada:
