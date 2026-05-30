@@ -10,13 +10,27 @@ def _initialize_firebase():
     Inicializa Firebase Admin SDK si aún no está inicializado.
     """
     if not firebase_admin._apps:
-        # Intenta cargar credenciales de la variable de entorno o archivo
-        cred_path = getattr(settings, 'FIREBASE_CREDENTIALS_PATH', 'firebase-adminsdk.json')
-        if os.path.exists(cred_path):
-            cred = credentials.Certificate(cred_path)
+        cred_path = getattr(settings, 'FIREBASE_CREDENTIALS_PATH', None)
+        
+        posibles_rutas = [
+            cred_path,
+            os.path.join(settings.BASE_DIR, "credenciales", "si2parcial-9e9e9-firebase-adminsdk-fbsvc-c5fcfdacf9.json"),
+            os.path.join(settings.BASE_DIR, "firebase-adminsdk.json"),
+            os.path.join(settings.BASE_DIR, "credenciales", "firebase-adminsdk.json")
+        ]
+        
+        found_path = None
+        for p in posibles_rutas:
+            if p and os.path.exists(p):
+                found_path = p
+                break
+
+        if found_path:
+            cred = credentials.Certificate(found_path)
             firebase_admin.initialize_app(cred)
+            print(f"✅ Firebase inicializado correctamente desde: {found_path}")
         else:
-            print("⚠️ ADVERTENCIA: No se encontró firebase-adminsdk.json. Las notificaciones push no se enviarán.")
+            print(f"⚠️ ADVERTENCIA: No se encontró el archivo de Firebase. Rutas buscadas: {[p for p in posibles_rutas if p]}")
 
 def send_notification(cliente=None, usuario=None, titulo="", mensaje="", tipo='SISTEMA'):
     """
