@@ -141,8 +141,8 @@ const PublicStorefront = () => {
         try {
             // 1. Crear el pedido primero
             const pedidoRes = await api.post('/pedidos/', {
-                items: cart.map(item => ({
-                    producto: item.id,
+                productos: cart.map(item => ({
+                    producto_id: item.id,
                     cantidad: item.quantity,
                     precio_unitario: item.precio
                 })),
