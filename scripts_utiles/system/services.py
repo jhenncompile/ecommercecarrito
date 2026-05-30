@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # ========================================================================
 # CONFIGURADOR DE NGINX Y SERVICIOS
 # ========================================================================
@@ -11,6 +11,9 @@ import sys
 import subprocess
 from pathlib import Path
 from dotenv import load_dotenv
+
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 ENV_FILE = PROJECT_ROOT / '.env'
@@ -58,7 +61,6 @@ def get_env_config():
     config = {
         'DJANGO_PORT': os.getenv('DJANGO_PORT', '8001'),
         'REACT_PORT': os.getenv('REACT_PORT', '3000'),
-        'NGINX_PORT': os.getenv('NGINX_PORT', '80'),
         'ENVIRONMENT': os.getenv('ENVIRONMENT', 'development'),
         'DOMAIN_MAIN': os.getenv('DOMAIN_MAIN', 'localhost'),
         'DATABASE_HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
@@ -77,7 +79,6 @@ def show_env_config():
     print(f"{Colors.BOLD}Servicios:{Colors.ENDC}")
     print(f"  Django Port:    {Colors.YELLOW}{config['DJANGO_PORT']}{Colors.ENDC}")
     print(f"  React Port:     {Colors.YELLOW}{config['REACT_PORT']}{Colors.ENDC}")
-    print(f"  Nginx Port:     {Colors.YELLOW}{config['NGINX_PORT']}{Colors.ENDC}")
     
     print(f"\n{Colors.BOLD}Ambiente:{Colors.ENDC}")
     print(f"  Environment:    {Colors.CYAN}{config['ENVIRONMENT']}{Colors.ENDC}")
@@ -325,7 +326,7 @@ def view_service_status():
     """Ver estado de los servicios"""
     print_header("ESTADO DE SERVICIOS")
     
-    services = ['django_saas', 'frontend_saas', 'nginx', 'postgresql']
+    services = ['django_saas', 'frontend_saas', 'postgresql']
     
     for service in services:
         try:
@@ -338,11 +339,11 @@ def view_service_status():
             status = result.stdout.strip()
             
             if status == 'active':
-                print(f"{Colors.GREEN}âœ“{Colors.ENDC} {service:<20} {Colors.GREEN}ACTIVO{Colors.ENDC}")
+                print(f"{Colors.GREEN}✓{Colors.ENDC} {service:<20} {Colors.GREEN}ACTIVO{Colors.ENDC}")
             else:
-                print(f"{Colors.RED}âœ—{Colors.ENDC} {service:<20} {Colors.RED}{status.upper()}{Colors.ENDC}")
+                print(f"{Colors.RED}✗{Colors.ENDC} {service:<20} {Colors.RED}{status.upper()}{Colors.ENDC}")
         except subprocess.TimeoutExpired:
-            print(f"{Colors.YELLOW}âš {Colors.ENDC} {service:<20} {Colors.YELLOW}TIMEOUT{Colors.ENDC}")
+            print(f"{Colors.YELLOW}⚠{Colors.ENDC} {service:<20} {Colors.YELLOW}TIMEOUT{Colors.ENDC}")
         except Exception as e:
             print(f"{Colors.YELLOW}?{Colors.ENDC} {service:<20} No disponible")
     
@@ -354,9 +355,7 @@ def view_logs():
     
     print("1. Django logs")
     print("2. Frontend logs")
-    print("3. Nginx error logs")
-    print("4. Nginx access logs")
-    print("5. PostgreSQL logs")
+    print("3. PostgreSQL logs")
     print()
     
     choice = input("Selecciona log a ver: ").strip()
@@ -364,16 +363,14 @@ def view_logs():
     logs = {
         '1': '/var/log/django_saas.log',
         '2': '/var/log/frontend_saas.log',
-        '3': '/var/log/nginx/error.log',
-        '4': '/var/log/nginx/access.log',
-        '5': '/var/log/postgresql/postgresql.log',
+        '3': '/var/log/postgresql/postgresql.log',
     }
     
     if choice in logs:
         log_file = logs[choice]
         
         if os.path.exists(log_file):
-            print(f"\n{Colors.CYAN}Ãšltimas 50 líneas de {log_file}:{Colors.ENDC}\n")
+            print(f"\n{Colors.CYAN}Últimas 50 líneas de {log_file}:{Colors.ENDC}\n")
             
             try:
                 result = subprocess.run(
@@ -388,149 +385,6 @@ def view_logs():
             print_warning(f"Log no existe: {log_file}")
     else:
         print_error("Opción inválida")
-
-def reload_nginx():
-    """Recarga configuración de Nginx"""
-    print_header("RECARGAR NGINX")
-    
-    if os.geteuid() != 0:
-        print_error("Debes ejecutar como root (sudo)")
-        return
-    
-    try:
-        print_info("Verificando configuración...")
-        result = subprocess.run(['nginx', '-t'], capture_output=True, text=True)
-        
-        if result.returncode == 0:
-            print_success("Configuración válida")
-            print_info("Recargando Nginx...")
-            subprocess.run(['systemctl', 'reload', 'nginx'], check=True)
-            print_success("Nginx recargado")
-        else:
-            print_error("Configuración inválida")
-            print(result.stderr)
-    except Exception as e:
-        print_error(f"Error: {str(e)}")
-
-def deploy_nginx_config():
-    """
-    Lee la IP del .env, carga el template de nginx/prod.vps.conf,
-    lo genera y lo activa en /etc/nginx/sites-enabled/
-    """
-    print_header("DESPLEGAR CONFIGURACIÓN NGINX")
-    
-    if os.geteuid() != 0:
-        print_error("Debes ejecutar como root (sudo)")
-        return
-        
-    config = get_env_config()
-    vps_ip = config.get('DOMAIN_MAIN', 'localhost')
-    
-    template_path = PROJECT_ROOT / 'nginx' / 'prod.vps.conf'
-    target_path = Path("/etc/nginx/sites-available/ecommerce.conf")
-    link_path = Path("/etc/nginx/sites-enabled/ecommerce.conf")
-    
-    if not template_path.exists():
-        print_error(f"No se encontró el template en {template_path}")
-        return
-        
-    print_info(f"Generando configuración para IP: {vps_ip}")
-    
-    try:
-        # 0. ELIMINAR CONFLICTOS (Nuke default config)
-        print_info("Eliminando configuraciones por defecto de Nginx...")
-        subprocess.run(['sudo', 'rm', '-f', '/etc/nginx/sites-enabled/default'], check=False)
-        
-        # 1. Asegurar directorios y archivos de log (con sudo)
-        log_dir = Path("/var/log/nginx")
-        access_log = log_dir / "ecommerce_access.log"
-        error_log = log_dir / "ecommerce_error.log"
-        
-        print_info("Configurando permisos de logs...")
-        if not log_dir.exists():
-            subprocess.run(['sudo', 'mkdir', '-p', str(log_dir)], check=True)
-            
-        for log_file in [access_log, error_log]:
-            if not log_file.exists():
-                subprocess.run(['sudo', 'touch', str(log_file)], check=True)
-            # Permisos: 666 permite que Nginx escriba sin importar el usuario
-            subprocess.run(['sudo', 'chmod', '666', str(log_file)], check=True)
-        
-        # 2. Limpiar procesos en puerto 80 (fuser -k 80/tcp)
-        print_info("Limpiando puerto 80 para evitar bloqueos...")
-        try:
-            subprocess.run(['sudo', 'fuser', '-k', '80/tcp'], capture_output=True)
-        except:
-            pass 
-            
-        # 3. Leer template
-        with open(template_path, 'r') as f:
-            content = f.read()
-            
-        content = content.replace("TU_IP_VPS", vps_ip)
-        
-        # 4. Dinamizar la ruta del proyecto (RUTA ABSOLUTA PARA NGINX)
-        project_abs_path = str(PROJECT_ROOT)
-        # Nota: {{PROJECT_ROOT}} ya no se usa en el template pues root es fijo en /var/www/
-        
-        # 5. MIGRACIÓN A TERRITORIO SEGURO (/var/www/ ecommerce)
-        print_info("Migrando frontend a territorio seguro (/var/www/)...")
-        secure_root = Path("/var/www/ecommerce")
-        secure_build = secure_root / "build"
-        
-        # Crear carpetas con sudo
-        subprocess.run(['sudo', 'mkdir', '-p', str(secure_build)], check=True)
-        
-        # Copiar contenido del build (si existe)
-        local_build = Path(project_abs_path) / "frontend" / "build"
-        if local_build.exists():
-            print_info(f"Copiando archivos de {local_build} a {secure_build}...")
-            # Usamos rsync si está disponible o cp -r
-            subprocess.run(['sudo', 'cp', '-rn', f"{local_build}/.", str(secure_build)], check=True)
-        else:
-            print_warning("No se encontró carpeta 'build' local. Asegúrate de ejecutar el comando build en el VPS.")
-
-        # 6. Configurar permisos AGRESIVOS en el nuevo territorio
-        print_info("Configurando permisos en /var/www/ecommerce...")
-        subprocess.run(['sudo', 'chown', '-R', 'www-data:www-data', str(secure_root)], check=True)
-        subprocess.run(['sudo', 'chmod', '-R', '755', str(secure_root)], check=True)
-        
-        # 7. Permisos de travesía en /root (para el backend)
-        print_info("Asegurando permisos de travesía en /root para API...")
-        subprocess.run(['sudo', 'chmod', 'o+x', '/root'], check=False)
-
-        # 8. Detener servicio frontend viejo si existe
-        subprocess.run(['sudo', 'systemctl', 'stop', 'frontend_saas'], check=False)
-        subprocess.run(['sudo', 'systemctl', 'disable', 'frontend_saas'], check=False)
-
-        # 9. Guardar configuración mediante archivo temporal y SUDO
-        temp_file = Path("/tmp/ecommerce_nginx.tmp")
-        with open(temp_file, 'w') as f:
-            f.write(content)
-            
-        print_info(f"Copiando configuración a {target_path}...")
-        subprocess.run(['sudo', 'mv', str(temp_file), str(target_path)], check=True)
-        
-        # 5. Activar configuración (link simbólico con sudo)
-        print_info(f"Activando configuración en {link_path}...")
-        subprocess.run(['sudo', 'ln', '-sf', str(target_path), str(link_path)], check=True)
-        
-        print_success(f"Configuración desplegada exitosamente.")
-        
-        # 6. Verificar y Reiniciar (con sudo)
-        print_info("Verificando configuración de Nginx...")
-        test_res = subprocess.run(['sudo', 'nginx', '-t'], capture_output=True, text=True)
-        if test_res.returncode == 0:
-            print_success("Configuración válida")
-            print_info("Reiniciando Nginx...")
-            subprocess.run(['sudo', 'systemctl', 'restart', 'nginx'], check=True)
-            print_success("Nginx reiniciado correctamente")
-        else:
-            print_error("Configuración INVÁLIDA:")
-            print(test_res.stderr)
-        
-    except Exception as e:
-        print_error(f"Error en despliegue: {str(e)}")
 
 def restart_service():
     """Reinicia un servicio"""
@@ -564,13 +418,13 @@ def restart_service():
         if choice in ['1', '4']:
             print_info("ðŸ“¦ Actualizando dependencias de Backend...")
             subprocess.run([f"{project_path}/backend/venv/bin/pip", "install", "-r", f"{project_path}/backend/requirements.txt"], check=False)
-            print_info("ðŸ—„ï¸ Ejecutando migraciones...")
+            print_info("ðŸ—„ï¸  Ejecutando migraciones...")
             subprocess.run([f"{project_path}/backend/venv/bin/python", "manage.py", "migrate"], cwd=f"{project_path}/backend", check=False)
 
         if choice in ['2', '4']:
             print_info("ðŸ“¦ Actualizando Frontend (npm install)...")
             subprocess.run(["npm", "install"], cwd=f"{project_path}/frontend", check=False)
-            print_info("ðŸ—ï¸ Generando Build de Frontend...")
+            print_info("ðŸ —ï¸  Generando Build de Frontend...")
             config = get_env_config()
             env = os.environ.copy()
             env['REACT_APP_DOMAIN_MAIN'] = config.get('DOMAIN_MAIN', 'localhost')
@@ -614,91 +468,6 @@ def _auto_delete_services():
 def _run_user_from_path(project_path):
     return 'root' if str(project_path).startswith('/root/') else 'www-data'
 
-def create_all_nginx():
-    """Crea django_saas + frontend_saas + despliega nginx de una sola vez."""
-    print_header('CREAR SERVICIOS CON NGINX (PRODUCCIÓN)')
-
-    if os.geteuid() != 0:
-        print_error('Debes ejecutar como root (sudo)')
-        return
-
-    config = get_env_config()
-    project_path = str(PROJECT_ROOT)
-    run_user = _run_user_from_path(project_path)
-    django_port = config['DJANGO_PORT']
-    react_port  = config['REACT_PORT']
-
-    print_info(f'Proyecto: {project_path}')
-    print_info(f'Usuario:  {run_user}')
-    print_info(f'Django:   puerto {django_port} (gunicorn)')
-    print_info(f'Frontend: /var/www/ecommerce/build (via Nginx)')
-    print()
-
-    confirm = input(f"{Colors.BOLD}Â¿Crear/reemplazar servicios con Nginx? (s/n): {Colors.ENDC}").lower()
-    if confirm != 's':
-        print_warning('Cancelado')
-        return
-
-    # 1. Eliminar existentes
-    _auto_delete_services()
-
-    # 2. Servicio Django (gunicorn)
-    gunicorn_bin = f'{project_path}/backend/venv/bin/gunicorn'
-    django_service = f"""[Unit]
-Description=Django SaaS - gunicorn
-After=network.target postgresql.service
-
-[Service]
-Type=simple
-User={run_user}
-Group={run_user}
-WorkingDirectory={project_path}/backend
-Environment="PATH={project_path}/backend/venv/bin"
-ExecStart={gunicorn_bin} config.wsgi:application --bind 127.0.0.1:{django_port} --workers 3 --access-logfile - --error-logfile -
-Restart=on-failure
-RestartSec=5s
-
-[Install]
-WantedBy=multi-user.target
-"""
-    with open('/etc/systemd/system/django_saas.service', 'w') as f:
-        f.write(django_service)
-    print_success('django_saas.service creado (gunicorn)')
-
-    # 3. Construir y migrar frontend
-    print_info('Construyendo frontend (npm run build)...')
-    npm_cmd = 'npm'
-    try:
-        env = os.environ.copy()
-        env['REACT_APP_DOMAIN_MAIN'] = config.get('DOMAIN_MAIN', 'localhost')
-        env['REACT_APP_DJANGO_PORT'] = config.get('DJANGO_PORT', '8001')
-        subprocess.run([npm_cmd, 'run', 'build'], cwd=f'{project_path}/frontend',
-                       check=True, shell=False, env=env)
-        print_success('Build del frontend completado')
-    except Exception as e:
-        print_warning(f'Error en build: {e} (continuando de todas formas...)')
-
-    # Migrar a /var/www/ecommerce/build
-    secure_build = '/var/www/ecommerce/build'
-    subprocess.run(['mkdir', '-p', secure_build], check=True)
-    local_build = f'{project_path}/frontend/build'
-    if os.path.exists(local_build):
-        subprocess.run(['cp', '-r', f'{local_build}/.', secure_build], check=False)
-        subprocess.run(['chown', '-R', 'www-data:www-data', '/var/www/ecommerce'], check=False)
-        subprocess.run(['chmod', '-R', '755', '/var/www/ecommerce'], check=False)
-        print_success('Frontend migrado a /var/www/ecommerce')
-
-    # 4. Desplegar Nginx
-    deploy_nginx_config()
-
-    # 5. Activar y arrancar
-    subprocess.run(['systemctl', 'daemon-reload'], check=True)
-    for svc in ['django_saas', 'nginx']:
-        subprocess.run(['systemctl', 'enable', svc], check=False)
-        subprocess.run(['systemctl', 'start', svc], check=False)
-        print_success(f'{svc} habilitado e iniciado')
-
-
 def create_all_ip():
     """Crea django_saas + frontend_saas para acceso directo por IP (sin Nginx)."""
     print_header('CREAR SERVICIOS CON IP DIRECTA (SIN NGINX)')
@@ -741,7 +510,7 @@ def create_all_ip():
     venv_python  = f'{project_path}/backend/venv/bin/python'
     if os.path.exists(gunicorn_bin):
         exec_start = (f'{gunicorn_bin} config.wsgi:application '
-                      f'--bind 0.0.0.0:{django_port} --workers 2 --reload '
+                      f'--bind 0.0.0.0:{django_port} --workers 2 --timeout 90 --reload '
                       f'--access-logfile - --error-logfile -')
         print_info('Usando gunicorn para Django con logs en tiempo real')
     else:
@@ -833,16 +602,14 @@ def main():
     if len(sys.argv) < 2:
         while True:
             clear_screen()
-            print_header("CONFIGURADOR DE NGINX Y SERVICIOS")
+            print_header("CONFIGURADOR DE SERVICIOS")
             
             print("1. Crear servicio Django (o reemplazar)")
             print("2. Crear servicio Frontend (o reemplazar)")
             print("3. Eliminar servicio")
             print("4. Ver estado de servicios")
             print("5. Ver logs")
-            print("6. Recargar Nginx")
-            print("7. Reiniciar servicio")
-            print("8. Desplegar Configuración Nginx (.conf)")
+            print("6. Reiniciar servicio")
             print("0. Salir")
             print()
             
@@ -859,11 +626,7 @@ def main():
             elif choice == '5':
                 view_logs()
             elif choice == '6':
-                reload_nginx()
-            elif choice == '7':
                 restart_service()
-            elif choice == '8':
-                deploy_nginx_config()
             elif choice == '0':
                 break
             else:
@@ -880,20 +643,14 @@ def main():
             delete_service()
         elif cmd == 'delete-all':
             delete_all_services()
-        elif cmd == 'create-all-nginx':
-            create_all_nginx()
         elif cmd == 'create-all-ip':
             create_all_ip()
         elif cmd == 'status':
             view_service_status()
         elif cmd == 'logs':
             view_logs()
-        elif cmd == 'reload-nginx':
-            reload_nginx()
         elif cmd == 'restart':
             restart_service()
-        elif cmd == 'deploy-nginx' or cmd == 'deploy':
-            deploy_nginx_config()
 
 if __name__ == '__main__':
     main()

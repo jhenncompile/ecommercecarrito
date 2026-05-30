@@ -39,7 +39,7 @@ def show_main_menu():
         print_section("CONFIGURACIÓN Y SISTEMA")
         print_option(f"{Colors.YELLOW}I{Colors.RESET} - Instalación Rápida (Plug & Play)")
         print_option(f"{Colors.CYAN}6{Colors.RESET} - Configuración de Entorno (.env)")
-        print_option(f"{Colors.CYAN}7{Colors.RESET} - Servicios del Sistema (Nginx / IP directa)")
+        print_option(f"{Colors.CYAN}7{Colors.RESET} - Servicios del Sistema (IP directa)")
         print_option(f"{Colors.CYAN}8{Colors.RESET} - Mantenimiento del Sistema")
 
         print_section("DESARROLLO")

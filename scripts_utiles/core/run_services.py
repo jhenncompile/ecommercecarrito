@@ -189,7 +189,7 @@ def start_backend():
             if gunicorn.exists():
                 info("Usando gunicorn...")
                 subprocess.run([str(gunicorn), 'config.wsgi:application',
-                                '--bind', bind, '--workers', '2', '--reload'])
+                                '--bind', bind, '--workers', '2', '--timeout', '90', '--reload'])
             else:
                 warn("gunicorn no encontrado, usando runserver")
                 subprocess.run([str(venv_python), 'manage.py', 'runserver', bind])
@@ -301,7 +301,7 @@ def start_all():
         gunicorn = BACKEND_DIR / 'venv' / 'bin' / 'gunicorn'
         if gunicorn.exists():
             backend_cmd = [str(gunicorn), 'config.wsgi:application',
-                           '--bind', django_bind, '--workers', '2', '--reload']
+                           '--bind', django_bind, '--workers', '2', '--timeout', '90', '--reload']
         else:
             backend_cmd = [str(venv_python), 'manage.py', 'runserver', django_bind]
     else:

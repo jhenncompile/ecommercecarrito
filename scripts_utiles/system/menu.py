@@ -8,16 +8,13 @@ def show_services_menu():
             clear_screen()
             print_header("SERVICIOS DEL SISTEMA")
     
-            print_section("Crear paquete completo de servicios")
-            print_option(f"  {Colors.GREEN}1{Colors.RESET} - {Colors.BOLD}Con Nginx{Colors.RESET} (Producción: gunicorn + build + Nginx)")
-            print_option(f"  {Colors.CYAN}2{Colors.RESET} - {Colors.BOLD}IP directa{Colors.RESET} (Sin Nginx: puertos directos)")
+            print_option(f"  {Colors.CYAN}1{Colors.RESET} - {Colors.BOLD}IP directa{Colors.RESET} (Crear servicios systemd)")
     
             print_section("Mantenimiento")
-            print_option(f"  {Colors.CYAN}3{Colors.RESET} - Ver estado servicios")
-            print_option(f"  {Colors.CYAN}4{Colors.RESET} - Ver logs")
-            print_option(f"  {Colors.CYAN}5{Colors.RESET} - Recargar Nginx")
-            print_option(f"  {Colors.CYAN}6{Colors.RESET} - Reiniciar todo")
-            print_option(f"  {Colors.CYAN}7{Colors.RESET} - Consultar Dominios / Tenants")
+            print_option(f"  {Colors.CYAN}2{Colors.RESET} - Ver estado servicios")
+            print_option(f"  {Colors.CYAN}3{Colors.RESET} - Ver logs")
+            print_option(f"  {Colors.CYAN}4{Colors.RESET} - Reiniciar todo")
+            print_option(f"  {Colors.CYAN}5{Colors.RESET} - Consultar Dominios / Tenants")
     
             print_section("Peligro")
             print_option(f"  {Colors.RED}D{Colors.RESET} - Eliminar TODOS los servicios")
@@ -28,24 +25,19 @@ def show_services_menu():
             choice = input(f"{Colors.BOLD}  ? Selecciona: {Colors.RESET}").strip().lower()
     
             if choice == '1':
-                loading_animation(1, "Preparando servicios Nginx")
-                run_script('system/nginx_config.py', 'create-all-nginx'); pause()
-            elif choice == '2':
                 loading_animation(1, "Preparando servicios IP directa")
-                run_script('system/nginx_config.py', 'create-all-ip'); pause()
+                run_script('system/services.py', 'create-all-ip'); pause()
+            elif choice == '2':
+                run_script('system/services.py', 'status'); pause()
             elif choice == '3':
-                run_script('system/nginx_config.py', 'status'); pause()
+                run_script('system/services.py', 'logs'); pause()
             elif choice == '4':
-                run_script('system/nginx_config.py', 'logs'); pause()
+                run_script('system/services.py', 'restart'); pause()
             elif choice == '5':
-                run_script('system/nginx_config.py', 'reload-nginx'); pause()
-            elif choice == '6':
-                run_script('system/nginx_config.py', 'restart'); pause()
-            elif choice == '7':
                 run_script('utils/query_domains.py'); pause()
             elif choice == 'd':
                 if input(f"{Colors.RED}  ¿Eliminar TODOS los servicios? (s/n): {Colors.RESET}").lower() == 's':
-                    run_script('system/nginx_config.py', 'delete-all')
+                    run_script('system/services.py', 'delete-all')
                 pause()
             elif choice == 'b':
                 break
@@ -143,7 +135,7 @@ def show_vps_menu():
             elif choice == 'f':
                 run_script('system/vps.py', 'security', 'FAIL2BAN'); pause()
             elif choice == 'l':
-                svc = input("¿Qué servicio? (nginx/django/syslog): ").strip().lower()
+                svc = input("¿Qué servicio? (django/syslog): ").strip().lower()
                 run_script('system/vps.py', 'logs', 'ANALYZE', svc)
             elif choice == '3':
                 run_script('system/vps.py', 'ssl', 'RENEW'); pause()

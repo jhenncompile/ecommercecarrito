@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # ========================================================================
 # GESTOR DE SISTEMA
 # ========================================================================
@@ -241,10 +241,10 @@ def safe_system_reset():
     print_warning("OPERACIÓN DESTRUCTIVA - LEE BIEN ANTES DE CONTINUAR")
     print()
     print("Esto hará:")
-    print("  - Detener todos los servicios (Django, Frontend, Nginx)")
+    print("  - Detener todos los servicios (Django, Frontend)")
     print("  - Resetear la base de datos")
     print("  - Limpiar caché y archivos temporales")
-    print("  - Pero NO afectará: Nginx config, SSL certs, system files")
+    print("  - Pero NO afectará: SSL certs, system files")
     print()
     
     confirm = input("Escribe 'RESETEAR SISTEMA CONTABO' para confirmar: ").strip()
@@ -421,13 +421,13 @@ if __name__ == '__main__':
     subprocess.run([python_exe, str(script_helper)])
 
 def setup_logrotate():
-    """Configura logrotate para Nginx y Django"""
+    """Configura logrotate para Django"""
     print_header("INSTALACIÓN DE LOGROTATE")
     if sys.platform == "win32" or os.geteuid() != 0:
         print_error("Requiere Linux y permisos de root")
         return
         
-    print_info("Creando configuración para Django/Nginx en /etc/logrotate.d/saas")
+    print_info("Creando configuración para Django en /etc/logrotate.d/saas")
     
     config = """/var/www/saas/backend/logs/*.log {
     daily
