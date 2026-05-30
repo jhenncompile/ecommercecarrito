@@ -101,13 +101,13 @@ if __name__ == '__main__':
     subprocess.run([python_exe, str(script_helper)])
 
 def setup_logrotate():
-    """Configura logrotate para Nginx y Django"""
+    """Configura logrotate para Django"""
     print_header("INSTALACIÓN DE LOGROTATE")
     if sys.platform == "win32" or os.geteuid() != 0:
         print_error("Requiere Linux y permisos de root")
         return
         
-    print_info("Creando configuración para Django/Nginx en /etc/logrotate.d/saas")
+    print_info("Creando configuración para Django en /etc/logrotate.d/saas")
     
     config = """/var/www/saas/backend/logs/*.log {
     daily

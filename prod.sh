@@ -8,10 +8,8 @@
 #
 # Este script:
 # 1. Actualiza el sistema
-# 2. Instala dependencias (PostgreSQL, Node, Python, Nginx, Certbot)
-# 3. Configura SSL con Let's Encrypt
-# 4. Configura Nginx como reverse proxy
-# 5. Levanta Django y React como servicios
+# 3. Configura .env para producción
+# 4. Levanta Django y React como servicios
 # ========================================================================
 
 set -e
@@ -90,17 +88,6 @@ if ! command -v psql &> /dev/null; then
     systemctl enable postgresql
 fi
 
-# Nginx
-if ! command -v nginx &> /dev/null; then
-    apt-get install -y -qq nginx
-    systemctl start nginx
-    systemctl enable nginx
-fi
-
-# Certbot
-if ! command -v certbot &> /dev/null; then
-    apt-get install -y -qq certbot python3-certbot-nginx
-fi
 
 # Supervisor (para mantener servicios corriendo)
 if ! command -v supervisord &> /dev/null; then
@@ -140,7 +127,6 @@ DOMAIN_ALLOWED_HOSTS=$DOMAIN,*.$DOMAIN
 
 DJANGO_PORT=8001
 REACT_PORT=3000
-NGINX_PORT=80
 
 DJANGO_SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
 DEBUG=False
@@ -213,39 +199,7 @@ cd ..
 
 log_success "Frontend compilado"
 
-# ========================================================================
-# 8. CONFIGURAR SSL CON LET'S ENCRYPT
-# ========================================================================
-log_info "Configurando SSL..."
 
-certbot certonly --standalone \
-    -d $DOMAIN \
-    -d *.$DOMAIN \
-    --agree-tos \
-    -m admin@$DOMAIN \
-    --non-interactive
-
-log_success "Certificado SSL configurado"
-
-# ========================================================================
-# 9. CONFIGURAR NGINX
-# ========================================================================
-log_info "Configurando Nginx..."
-
-# Reemplazar placeholder en archivo prod
-sed -e "s/TU_DOMINIO/$DOMAIN/g" \
-    -e "s/TU_IP_VPS/$VPS_IP/g" \
-    nginx/prod.vps.conf > /etc/nginx/sites-available/ecommerce.conf
-
-ln -sf /etc/nginx/sites-available/ecommerce.conf /etc/nginx/sites-enabled/
-
-ln -sf /var/www/ecommerce/frontend/build /var/www/ecommerce/build
-
-nginx -t && systemctl reload nginx
-
-log_success "Nginx configurado"
-
-# ========================================================================
 # 10. CREAR SERVICIOS SYSTEMD
 # ========================================================================
 log_info "Creando servicios systemd..."
@@ -263,7 +217,8 @@ Group=www-data
 WorkingDirectory=$PROJECT_DIR/backend
 ExecStart=$PROJECT_DIR/backend/venv/bin/gunicorn \
     --workers 4 \
-    --bind 127.0.0.1:8001 \
+    --timeout 90 \
+    --bind 0.0.0.0:8001 \
     config.wsgi:application
 Restart=always
 RestartSec=10
@@ -306,8 +261,8 @@ log_info "Configurando Firewall..."
 
 if command -v ufw &> /dev/null; then
     ufw allow 22/tcp
-    ufw allow 80/tcp
-    ufw allow 443/tcp
+    ufw allow 8001/tcp
+    ufw allow 3000/tcp
     ufw --force enable
 fi
 
@@ -318,9 +273,9 @@ log_success "Firewall configurado"
 # ========================================================================
 log_success "🎉 Deployment completado!"
 echo ""
-echo "tu_dominio: https://$DOMAIN"
-echo "Admin: https://$DOMAIN/admin"
-echo "API: https://$DOMAIN/api"
+echo "tu_dominio: http://$DOMAIN:3000"
+echo "Admin: http://$DOMAIN:8001/admin"
+echo "API: http://$DOMAIN:8001/api"
 echo ""
 log_warn "Próximos pasos:"
 echo "1. Verifica que Django y React están corriendo:"

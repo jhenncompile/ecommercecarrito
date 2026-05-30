@@ -54,15 +54,12 @@ maxretry = 5
 
 [sshd]
 enabled = true
-
-[nginx-http-auth]
-enabled = true
 """
     with open("/etc/fail2ban/jail.local", "w") as f:
         f.write(jail_local)
     subprocess.run("systemctl restart fail2ban", shell=True)
     subprocess.run("systemctl enable fail2ban", shell=True)
-    print("[OK] Fail2Ban configurado y activado para SSH y Nginx.")
+    print("[OK] Fail2Ban configurado y activado para SSH.")
 
 def advanced_ssl(domain, email):
     """Genera certificado SSL vía Certbot"""
@@ -70,7 +67,7 @@ def advanced_ssl(domain, email):
         print("[ERROR] Requiere Linux y permisos root.")
         return
     print(f"[+] Generando SSL para {domain}...")
-    cmd = f"certbot --nginx -d {domain} -m {email} --agree-tos --no-eff-email --redirect"
+    cmd = f"certbot certonly --standalone -d {domain} -m {email} --agree-tos --no-eff-email"
     subprocess.run(cmd, shell=True)
     print("[OK] SSL Configurado.")
 
@@ -80,7 +77,6 @@ def log_analyzer(service):
         print("[!] No disponible en Windows. Usa el visor de eventos.")
         return
     paths = {
-        'nginx': '/var/log/nginx/error.log',
         'django': '/var/www/saas/backend/logs/django.log',
         'syslog': '/var/log/syslog'
     }
@@ -99,7 +95,7 @@ parts = content.split('# =======================================================
 if len(parts) == 2:
     new_content = parts[0] + new_code + '\n# ========================================================================\n# FUNCIONES ORIGINALES (ACTUALIZADAS)' + parts[1]
     
-    new_content = new_content.replace('print("\\nADMINISTRACIÓN SAAS:")', 'print("\\nADMINISTRACIÓN SAAS:\\n  services MONITOR       - Monitor en tiempo real (CPU/RAM)\\n  security FAIL2BAN      - Instalar Fail2Ban\\n  logs ANALYZE [svc]     - Ver logs en vivo (nginx/django)\\n  ssl CREATE [dom] [em]  - Crear SSL avanzado")')
+    new_content = new_content.replace('print("\\nADMINISTRACIÓN SAAS:")', 'print("\\nADMINISTRACIÓN SAAS:\\n  services MONITOR       - Monitor en tiempo real (CPU/RAM)\\n  security FAIL2BAN      - Instalar Fail2Ban\\n  logs ANALYZE [svc]     - Ver logs en vivo (django)\\n  ssl CREATE [dom] [em]  - Crear SSL avanzado")')
     
     main_patch = '''
     elif cmd == 'services' and len(sys.argv) > 2 and sys.argv[2] == 'MONITOR':

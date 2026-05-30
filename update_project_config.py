@@ -49,7 +49,6 @@ def port_manager():
     
     print(f"  Backend actual: {os.getenv('DJANGO_PORT', '8001')}")
     print(f"  Frontend actual: {os.getenv('REACT_PORT', '3000')}")
-    print(f"  Nginx actual: {os.getenv('NGINX_PORT', '80')}")
     
     if input("\\n¿Deseas modificar los puertos? (s/N): ").lower() == 's':
         backend = input("  Nuevo puerto Backend (Intro para omitir): ")
@@ -57,9 +56,6 @@ def port_manager():
         
         frontend = input("  Nuevo puerto Frontend (Intro para omitir): ")
         if frontend: set_key(env_file, 'REACT_PORT', frontend)
-        
-        nginx = input("  Nuevo puerto Nginx (Intro para omitir): ")
-        if nginx: set_key(env_file, 'NGINX_PORT', nginx)
         
         print("[OK] Puertos actualizados.")
 '''

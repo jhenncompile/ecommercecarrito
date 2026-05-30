@@ -1,9 +1,9 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # ========================================================================
 # ASISTENTE DE INSTALACIÓN RÁPIDA (Plug & Play)
 # ========================================================================
 # Configura el entorno completo del proyecto de forma interactiva.
-# Te pregunta el modo de despliegue (Nginx o IP directa) y ajusta
+# Te pregunta el modo de despliegue (IP directa o Localhost) y ajusta
 # automáticamente todas las variables del .env relevantes.
 #
 # Lo que NO toca (configuración manual):
@@ -50,7 +50,7 @@ def header(t):
     print(f"{C.BOLD}{C.GREEN}  {t}{C.RESET}")
     print(f"{C.BOLD}{C.GREEN}{'='*62}{C.RESET}\n")
 
-# â”€â”€ Helpers .env â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Helpers .env
 
 def load_env():
     """Carga el .env actual como diccionario {clave: (valor, linea_completa)}."""
@@ -94,40 +94,31 @@ def get_local_ip():
     except Exception:
         return '127.0.0.1'
 
-# â”€â”€ PASO 0: Modo de despliegue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# PASO 0: Modo de despliegue 
+
 
 def ask_deployment_mode():
     """
     Pregunta al usuario el modo de despliegue.
     Retorna (modo, ip, django_port, react_port)
     """
-    print(f"\n{C.BOLD}Â¿Cómo quieres desplegar el proyecto?{C.RESET}")
-    print(f"  {C.GREEN}1{C.RESET} - Nginx (Producción) â€” gunicorn + build estático + Nginx")
-    print(f"  {C.CYAN}2{C.RESET} - IP directa         â€” Django runserver/gunicorn + React start")
-    print(f"  {C.BLUE}3{C.RESET} - Localhost           â€” Solo esta PC, desarrollo puro")
+    print(f"\n{C.BOLD}¿Cómo quieres desplegar el proyecto?{C.RESET}")
+    print(f"  {C.CYAN}1{C.RESET} - IP directa         — Django runserver/gunicorn + React start")
+    print(f"  {C.BLUE}2{C.RESET} - Localhost           — Solo esta PC, desarrollo puro")
     print()
 
     while True:
-        choice = input(f"  {C.BOLD}? [1/2/3]: {C.RESET}").strip()
-        if choice in ('1', '2', '3'):
+        choice = input(f"  {C.BOLD}? [1/2]: {C.RESET}").strip()
+        if choice in ('1', '2'):
             break
-        print("  Opción inválida, elige 1, 2 o 3.")
+        print("  Opción inválida, elige 1 o 2.")
 
     env = load_env()
     django_port = env.get('DJANGO_PORT', '8001')
     react_port  = env.get('REACT_PORT',  '3000')
 
     if choice == '1':
-        # â”€â”€ Nginx â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        detected = get_local_ip()
-        info(f"IP detectada: {C.YELLOW}{detected}{C.RESET}")
-        manual = input(f"  IP o dominio del VPS ({detected}): ").strip()
-        ip = manual if manual else detected
-
-        return 'nginx', ip, django_port, react_port
-
-    elif choice == '2':
-        # â”€â”€ IP directa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # IP directa 
         detected = get_local_ip()
         info(f"IP detectada: {C.YELLOW}{detected}{C.RESET}")
         manual = input(f"  Confirma o escribe otra IP ({detected}): ").strip()
@@ -136,7 +127,7 @@ def ask_deployment_mode():
         return 'ip', ip, django_port, react_port
 
     else:
-        # â”€â”€ Localhost â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # Localhost 
         return 'localhost', 'localhost', django_port, react_port
 
 
@@ -148,18 +139,7 @@ def configure_env(modo, ip, django_port, react_port):
         warn(".env no existe. Creando desde plantilla mínima...")
         _create_minimal_env()
 
-    if modo == 'nginx':
-        write_env_key('ENVIRONMENT',                   'production')
-        write_env_key('DEBUG',                         'False')
-        write_env_key('DOMAIN_MAIN',                   ip)
-        write_env_key('TENANT_DOMAIN_SUFFIX',          f'.{ip}.nip.io')
-        write_env_key('REACT_APP_BASE_DOMAIN',         ip)
-        write_env_key('REACT_APP_TENANT_DOMAIN_SUFFIX', f'.{ip}.nip.io')
-        write_env_key('REACT_APP_API_URL',             '/api')           # Nginx hace el proxy
-        ok(f"Modo Nginx â€” dominio base: {ip}")
-        ok(f"Sufijo tenants: .{ip}.nip.io")
-
-    elif modo == 'ip':
+    if modo == 'ip':
         write_env_key('ENVIRONMENT',                   'development')
         write_env_key('DEBUG',                         'True')
         write_env_key('DOMAIN_MAIN',                   ip)
@@ -189,7 +169,6 @@ DEBUG=True
 DJANGO_SECRET_KEY={sk}
 DJANGO_PORT=8001
 REACT_PORT=3000
-NGINX_PORT=80
 DOMAIN_MAIN=localhost
 TENANT_DOMAIN_SUFFIX=.localhost
 REACT_APP_BASE_DOMAIN=localhost
@@ -210,7 +189,7 @@ LOG_LEVEL=INFO
         f.write(content)
     ok(".env creado")
 
-# â”€â”€ PASO 0b: Credenciales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€ PASO 0b: Credenciales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def ask_credentials(ip):
     """
@@ -336,7 +315,7 @@ def setup_frontend(modo):
             err("Error en npm install")
             return
 
-    if modo == 'nginx':
+    if modo == 'ip':
         info("Generando build de producción (npm run build)...")
         try:
             subprocess.run([npm, 'run', 'build'], cwd=str(FRONTEND_DIR),
@@ -488,10 +467,7 @@ def run_setup():
         print(f"  IP/Host: {C.YELLOW}{ip}{C.RESET}")
     print()
     print(f"{C.BOLD}Próximos pasos:{C.RESET}")
-    if modo == 'nginx':
-        print("  1. Configura DATABASE_* y EMAIL_* en .env")
-        print("  2. Ve al menú â†’ Servicios â†’ Con Nginx para crear los servicios systemd")
-    elif modo == 'ip':
+    if modo == 'ip':
         print("  1. Configura DATABASE_* y EMAIL_* en .env")
         print(f"  2. Desde el menú â†’ Opción 1 para Backend | Opción 2 para Frontend")
         print(f"  3. Accede en http://{ip}:{react_port}")

@@ -54,13 +54,6 @@ def system_clean():
     """Limpia archivos temporales y logs masivos"""
     print("[+] Iniciando limpieza de mantenimiento...")
     
-    # Limpiar logs de nginx si son muy grandes
-    if is_linux():
-        try:
-            subprocess.run("find /var/log/nginx/ -name '*.log' -size +100M -delete", shell=True)
-            print("[OK] Logs de Nginx purgados (>100MB)")
-        except: pass
-
     # Limpiar archivos .pyc y __pycache__
     try:
         subprocess.run(f"find {PROJECT_ROOT} -type d -name '__pycache__' -exec rm -rf {{}} +", shell=True)
@@ -76,7 +69,7 @@ def system_clean():
 def auto_heal():
     """Escanea servicios y reinicia si están muertos"""
     print("[+] Ejecutando escaneo de Auto-Healing...")
-    services = ['nginx', 'postgresql', 'django_saas', 'frontend_saas']
+    services = ['postgresql', 'django_saas', 'frontend_saas']
     
     if not is_linux():
         print("[!] Auto-heal solo disponible en Linux")
@@ -299,25 +292,14 @@ maxretry = 5
 
 [sshd]
 enabled = true
-
-[nginx-http-auth]
-enabled = true
 """
     with open("/etc/fail2ban/jail.local", "w") as f:
         f.write(jail_local)
     subprocess.run("systemctl restart fail2ban", shell=True)
     subprocess.run("systemctl enable fail2ban", shell=True)
-    print("[OK] Fail2Ban configurado y activado para SSH y Nginx.")
+    print("[OK] Fail2Ban configurado y activado para SSH.")
 
-def advanced_ssl(domain, email):
-    """Genera certificado SSL vía Certbot"""
-    if not is_linux() or not is_root():
-        print("[ERROR] Requiere Linux y permisos root.")
-        return
-    print(f"[+] Generando SSL para {domain}...")
-    cmd = f"certbot --nginx -d {domain} -m {email} --agree-tos --no-eff-email --redirect"
-    subprocess.run(cmd, shell=True)
-    print("[OK] SSL Configurado.")
+
 
 def log_analyzer(service):
     """Visor de logs (tail)"""
@@ -325,7 +307,6 @@ def log_analyzer(service):
         print("[!] No disponible en Windows. Usa el visor de eventos.")
         return
     paths = {
-        'nginx': '/var/log/nginx/error.log',
         'django': '/var/www/saas/backend/logs/django.log',
         'syslog': '/var/log/syslog'
     }
@@ -359,7 +340,7 @@ def create_user(username, password, home_dir=None):
     return False
 
 def check_services():
-    services = ['nginx', 'postgresql', 'django_saas', 'frontend_saas']
+    services = ['postgresql', 'django_saas', 'frontend_saas']
     print("\n" + "="*50)
     print("ESTADO DE SERVICIOS")
     print("="*50)
@@ -375,7 +356,7 @@ def check_services():
 def main():
     if len(sys.argv) < 2:
         print("Uso: python vps.py [comando]")
-        print("\nADMINISTRACIÓN SAAS:\n  services MONITOR       - Monitor en tiempo real (CPU/RAM)\n  security FAIL2BAN      - Instalar Fail2Ban\n  logs ANALYZE [svc]     - Ver logs en vivo (nginx/django)\n  ssl CREATE [dom] [em]  - Crear SSL avanzado")
+        print("\nADMINISTRACIÓN SAAS:\n  services MONITOR       - Monitor en tiempo real (CPU/RAM)\n  security FAIL2BAN      - Instalar Fail2Ban\n  logs ANALYZE [svc]     - Ver logs en vivo (django/syslog)")
         print("  services STATUS        - Ver salud de servicios")
         print("  services AUTOHEAL      - Reanimar servicios caídos")
         print("  security FW            - Auditoría de Firewall")
@@ -385,7 +366,7 @@ def main():
         print("  backup RESTORE         - Listar y restaurar Snapshots")
         print("\nCONFIGURACIÓN VPS:")
         print("  user CREATE user pass  - Crear usuario del sistema")
-        print("  ssl RENEW              - Probar renovación SSL")
+        print("  user CREATE user pass  - Crear usuario del sistema")
         sys.exit(1)
     
     cmd = sys.argv[1]
@@ -417,14 +398,8 @@ def main():
         resource_monitor()
     elif cmd == 'security' and len(sys.argv) > 2 and sys.argv[2] == 'FAIL2BAN':
         setup_fail2ban()
-    elif cmd == 'ssl' and len(sys.argv) > 4 and sys.argv[2] == 'CREATE':
-        advanced_ssl(sys.argv[3], sys.argv[4])
     elif cmd == 'logs' and len(sys.argv) > 3 and sys.argv[2] == 'ANALYZE':
         log_analyzer(sys.argv[3])
-    elif cmd == 'ssl':
-        if sys.argv[2] == 'RENEW':
-             if is_linux(): subprocess.run("certbot renew --dry-run", shell=True)
-             else: print("[!] No disponible")
 
 if __name__ == '__main__':
     main()

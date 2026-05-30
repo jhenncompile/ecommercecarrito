@@ -1,4 +1,4 @@
-﻿import os
+import os
 from pathlib import Path
 from decouple import config
 from dotenv import load_dotenv
@@ -170,5 +170,5 @@ AUDIT_LOG_RETENTION_DAYS = 90
 
 
 # FIREBASE CONFIG
-FIREBASE_CREDENTIALS_PATH = config("FIREBASE_CREDENTIALS_PATH", default=os.path.join(BASE_DIR, "firebase-adminsdk.json"))
+FIREBASE_CREDENTIALS_PATH = config("FIREBASE_CREDENTIALS_PATH", default=os.path.join(BASE_DIR, "credenciales", "si2parcial-9e9e9-firebase-adminsdk-fbsvc-c5fcfdacf9.json"))
 
