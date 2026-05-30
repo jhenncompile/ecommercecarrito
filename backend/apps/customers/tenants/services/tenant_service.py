@@ -15,9 +15,12 @@ class TenantService:
         """
         Orquesta la creaciÃ³n del esquema, el dominio y el usuario admin.
         """
-        # 1. Obtener el sufijo de configuraciÃ³n (.localhost, .nip.io, etc.)
+        # 1. Obtener el sufijo de configuración (.localhost, .nip.io, etc.)
         suffix = getattr(settings, 'TENANT_DOMAIN_SUFFIX', '.localhost')
-        dominio_final = f"{datos['schema_name']}{suffix}"
+        
+        # Limpiar schema_name para el dominio (reemplazar _ y espacios por -)
+        clean_prefix = str(datos['schema_name']).replace('_', '-').replace(' ', '-').lower()
+        dominio_final = f"{clean_prefix}{suffix}"
 
         # 2. Crear el objeto Client (Tenant)
         tenant = Client.objects.create(

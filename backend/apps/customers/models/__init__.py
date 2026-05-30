@@ -8,3 +8,4 @@ from apps.customers.users.models.device_token import *
 from apps.customers.clientes.models.cliente import *
 from apps.customers.audit.models.bitacora import *
 from apps.customers.audit.models.respaldo import *
+from apps.customers.models.mobile_release import *

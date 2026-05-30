@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
-import { ShoppingCart, BrainCircuit, Box, CreditCard, BarChart3, Package, Layers3, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ShoppingCart, BrainCircuit, Box, CreditCard, BarChart3, Package, Layers3, Check, ChevronLeft, ChevronRight, Smartphone } from 'lucide-react';
 import styles from './HomeView.module.css';
 
 const features = [
@@ -48,6 +48,21 @@ const plans = [
 
 export default function HomeView() {
   const [activePlanIdx, setActivePlanIdx] = useState(1);
+  const [appsData, setAppsData] = useState({ cliente: null, vendedor: null });
+  const [loadingApps, setLoadingApps] = useState(true);
+
+  useEffect(() => {
+    fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8001'}/api/public/apps/latest/`)
+      .then(res => res.json())
+      .then(data => {
+        setAppsData(data);
+        setLoadingApps(false);
+      })
+      .catch(err => {
+        console.error('Error fetching latest apps', err);
+        setLoadingApps(false);
+      });
+  }, []);
 
   const nextPlan = () => setActivePlanIdx((p) => (p + 1) % plans.length);
   const prevPlan = () => setActivePlanIdx((p) => (p - 1 + plans.length) % plans.length);
@@ -100,6 +115,69 @@ export default function HomeView() {
               <p>{feat.text}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* APPS MOVILES */}
+      <section id="apps" className={styles.features} style={{ backgroundColor: 'var(--color-surface)', paddingTop: '4rem' }}>
+        <div className={styles.sectionHeader}>
+          <h2>Descarga nuestras Apps Oficiales</h2>
+          <p>La mejor experiencia móvil nativa. Descarga e instala en segundos.</p>
+        </div>
+        
+        <div style={{
+          display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center', 
+          maxWidth: '1000px', margin: '0 auto', padding: '0 2rem'
+        }}>
+          {/* Vendedor App */}
+          <div className={styles.priceCard} style={{ flex: '1 1 300px', textAlign: 'center', background: 'var(--color-bg)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏢</div>
+            <h3>App Vendedores</h3>
+            <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              Gestiona tu inventario, pedidos y métricas en tiempo real. 
+            </p>
+            {loadingApps ? (
+              <p>Cargando versión...</p>
+            ) : appsData.vendedor ? (
+              <div>
+                <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>Versión: <strong>v{appsData.vendedor.version}</strong></p>
+                <a 
+                  href={`${process.env.REACT_APP_API_URL || 'http://localhost:8001'}${appsData.vendedor.download_url}`}
+                  download
+                  className={styles.btnPrimary} style={{ width: '100%', display: 'block', padding: '12px 0' }}
+                >
+                  Descargar APK Vendedor
+                </a>
+              </div>
+            ) : (
+              <p style={{ color: 'var(--color-error)' }}>No disponible aún</p>
+            )}
+          </div>
+
+          {/* Cliente App */}
+          <div className={styles.priceCard} style={{ flex: '1 1 300px', textAlign: 'center', background: 'var(--color-bg)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛍️</div>
+            <h3>App Clientes</h3>
+            <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              Explora, compra y rastrea tus pedidos rápidamente.
+            </p>
+            {loadingApps ? (
+              <p>Cargando versión...</p>
+            ) : appsData.cliente ? (
+              <div>
+                <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>Versión: <strong>v{appsData.cliente.version}</strong></p>
+                <a 
+                  href={`${process.env.REACT_APP_API_URL || 'http://localhost:8001'}${appsData.cliente.download_url}`}
+                  download
+                  className={styles.btnSecondary} style={{ width: '100%', display: 'block', padding: '12px 0' }}
+                >
+                  Descargar APK Cliente
+                </a>
+              </div>
+            ) : (
+              <p style={{ color: 'var(--color-error)' }}>No disponible aún</p>
+            )}
+          </div>
         </div>
       </section>
 

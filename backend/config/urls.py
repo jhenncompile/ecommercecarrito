@@ -18,6 +18,10 @@ from apps.customers.users.api.views import (
     TenantListView, TenantCreateView, MiPerfilView,
     CheckoutSuscripcionView, CrearTiendaConPagoView
 )
+from apps.customers.api.mobile_views import (
+    LatestReleaseInfoView, DownloadLatestReleaseView, DownloadSpecificReleaseView,
+    UploadMobileReleaseView
+)
 from apps.customers.users.api.rol_views import RolViewSet
 from apps.customers.users.api.permiso_views import PermisoViewSet
 from apps.customers.tenants.api.plan_views import PlanViewSet
@@ -77,6 +81,12 @@ urlpatterns = [
     path('api/usuarios/perfil/', MiPerfilView.as_view(), name='mi_perfil'),
     path('api/tienda/perfil/', TiendaPerfilView.as_view(), name='tienda_perfil'),
     path('api/tienda/suscripcion/upgrade/', UpgradeSuscripcionView.as_view(), name='suscripcion_upgrade'),
+
+    # Mobile Releases (Public)
+    path('api/public/apps/latest/', LatestReleaseInfoView.as_view(), name='apps_latest'),
+    path('api/public/apps/<str:app_type>/latest/download/', DownloadLatestReleaseView.as_view(), name='apps_latest_download'),
+    path('api/public/apps/<str:app_type>/version/<str:version>/download/', DownloadSpecificReleaseView.as_view(), name='apps_version_download'),
+    path('api/public/apps/upload/', UploadMobileReleaseView.as_view(), name='apps_upload'),
 
     path('api/', include(router.urls)),
 

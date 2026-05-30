@@ -16,6 +16,7 @@ env/
 .env.local
 .env.*.local
 local_settings.py
+compile_and_upload_apps.py
 
 # Base de datos SQLite (Por si quedó algún resto)
 *.sqlite3
@@ -52,4 +53,3 @@ git_subir.bat
 # Firebase Credentials
 backend/credenciales/*.json
 !backend/credenciales/.gitkeep
-

@@ -14,3 +14,9 @@ class CustomersConfig(AppConfig):
                 start_scheduler()
             except ImportError:
                 pass
+                
+        # Registrar señales de tenants (límites de plan, etc)
+        try:
+            import apps.customers.tenants.signals
+        except ImportError:
+            pass
