@@ -217,7 +217,7 @@ Group=www-data
 WorkingDirectory=$PROJECT_DIR/backend
 ExecStart=$PROJECT_DIR/backend/venv/bin/gunicorn \
     --workers 4 \
-    --timeout 90 \
+    --timeout 600 \
     --bind 0.0.0.0:8001 \
     config.wsgi:application
 Restart=always

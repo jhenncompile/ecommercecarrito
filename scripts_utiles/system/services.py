@@ -510,7 +510,7 @@ def create_all_ip():
     venv_python  = f'{project_path}/backend/venv/bin/python'
     if os.path.exists(gunicorn_bin):
         exec_start = (f'{gunicorn_bin} config.wsgi:application '
-                      f'--bind 0.0.0.0:{django_port} --workers 2 --timeout 90 --reload '
+                      f'--bind 0.0.0.0:{django_port} --workers 2 --timeout 600 --reload '
                       f'--access-logfile - --error-logfile -')
         print_info('Usando gunicorn para Django con logs en tiempo real')
     else:
