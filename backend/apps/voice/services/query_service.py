@@ -165,7 +165,7 @@ class VoiceQueryService:
 11. SORTING (ORDER BY): NEVER return an unordered result set. Every query MUST have an ORDER BY clause. For reports, default to ordering by date descending (fecha DESC), then by primary key descending. NEVER use '.id' unless 'id' is explicitly a column in the table. For example, for 'app_negocio_factura', order by f.fecha DESC, f.nro DESC, NOT f.id DESC.
 12. DATES & TIME: For "this month", strictly use: date_column >= DATE_TRUNC('month', CURRENT_DATE) AND date_column < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'. For formatting outputs, use TO_CHAR(date_column, 'YYYY-MM-DD HH24:MI') to ensure consistent reading.
 13. SMART ANALYTICS: When requested for top items, rankings, or performance over time, utilize Window Functions (RANK(), SUM() OVER()) to provide deep insights without losing row-level context.
-14. MULTI-TENANCY: Do not use schema prefixes. Just use the table names.
+14. MULTI-TENANCY: Do not use schema prefixes. Just use the exact table names provided in the schema (e.g. use 'customers_cliente', NEVER invent 'app_negocio_cliente').
 15. SECURITY: Only SELECT queries are allowed. Never generate INSERT, UPDATE, DELETE, DROP, or ALTER.
         """
         
