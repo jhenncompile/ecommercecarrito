@@ -26,10 +26,12 @@ class NotificacionViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins
             return Notificacion.objects.none()
             
         try:
+            # Intentar buscar como cliente primero
             cliente = Cliente.objects.get(correo=email)
             return Notificacion.objects.filter(cliente=cliente)
         except Cliente.DoesNotExist:
-            return Notificacion.objects.none()
+            # Si no es cliente, buscar como usuario (vendedor)
+            return Notificacion.objects.filter(usuario=user)
 
     @action(detail=False, methods=['post'], url_path='marcar-todas-leidas')
     def marcar_todas_leidas(self, request):

@@ -97,7 +97,7 @@ class PedidoViewSet(BaseViewSet):
         """
         from apps.customers.models import Cliente
 
-        items = request.data.get('items')
+        items = request.data.get('productos') or request.data.get('items')
 
         if items and isinstance(items, list):
             # Flujo del PublicStorefront: crear carrito + pedido directo

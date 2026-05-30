@@ -18,13 +18,18 @@ def _initialize_firebase():
         else:
             print("⚠️ ADVERTENCIA: No se encontró firebase-adminsdk.json. Las notificaciones push no se enviarán.")
 
-def send_notification(cliente, titulo, mensaje, tipo='SISTEMA'):
+def send_notification(cliente=None, usuario=None, titulo="", mensaje="", tipo='SISTEMA'):
     """
     Guarda la notificación en base de datos local y envía push notification si tiene token.
     """
+    if not cliente and not usuario:
+        print("⚠️ No se puede enviar notificación sin cliente o usuario.")
+        return None
+
     # 1. Guardar en base de datos (Notificación In-App)
     notif = Notificacion.objects.create(
         cliente=cliente,
+        usuario=usuario,
         titulo=titulo,
         mensaje=mensaje,
         tipo=tipo
@@ -35,7 +40,13 @@ def send_notification(cliente, titulo, mensaje, tipo='SISTEMA'):
     if not firebase_admin._apps:
         return notif # No se configuró firebase
         
-    tokens = DeviceToken.objects.filter(cliente=cliente).values_list('token', flat=True)
+    if cliente:
+        tokens = DeviceToken.objects.filter(cliente=cliente).values_list('token', flat=True)
+    elif usuario:
+        tokens = DeviceToken.objects.filter(usuario=usuario).values_list('token', flat=True)
+    else:
+        tokens = []
+
     if not tokens:
         return notif
 

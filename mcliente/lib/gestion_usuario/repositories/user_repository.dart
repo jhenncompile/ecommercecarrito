@@ -39,12 +39,8 @@ class UserRepository {
     // Vamos a intentar obtener el ID del token primero.
     final token = await _storage.getAccessToken();
     if (token == null) throw Exception('No autenticado');
-    
-    final parts = token.split('.');
-    final payload = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
-    final int clienteId = payload['cliente_id'] ?? payload['user_id'];
 
-    final url = '${ApiConstants.mainBaseUrl}/clientes/$clienteId/';
+    final url = '${ApiConstants.mainBaseUrl}/clientes/perfil/';
     final response = await _apiClient.get(url, requiresAuth: true);
 
     if (response.statusCode == 200) {
@@ -55,8 +51,8 @@ class UserRepository {
   }
 
   Future<UserModel> updateProfile(int id, Map<String, dynamic> data) async {
-    final url = '${ApiConstants.mainBaseUrl}/clientes/$id/';
-    final response = await _apiClient.put(url, data, requiresAuth: true);
+    final url = '${ApiConstants.mainBaseUrl}/clientes/perfil/';
+    final response = await _apiClient.patch(url, data, requiresAuth: true);
 
     if (response.statusCode == 200) {
       return UserModel.fromJson(jsonDecode(response.body));

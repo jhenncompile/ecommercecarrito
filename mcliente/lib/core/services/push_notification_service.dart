@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../main.dart';
 import '../network/api_client.dart';
+import '../constants/api_constants.dart';
 
 /// Define un background handler de forma top-level como lo requiere Firebase
 @pragma('vm:entry-point')
@@ -49,7 +50,7 @@ class PushNotificationService {
   static Future<void> registerTokenWithBackend(String token) async {
     try {
       final apiClient = ApiClient();
-      await apiClient.post('/device-token/', {'token': token});
+      await apiClient.post('${ApiConstants.mainBaseUrl}/device-token/', {'token': token});
       log("Token registrado en el backend exitosamente.");
     } catch (e) {
       log("Error al registrar token en el backend: $e");

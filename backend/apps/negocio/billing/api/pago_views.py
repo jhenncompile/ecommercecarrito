@@ -166,6 +166,11 @@ class PagoViewSet(viewsets.ViewSet):
             print(traceback.format_exc())
             return Response({'error': str(e)}, status=500)
 
+    @action(detail=False, methods=['post'], url_path='confirm-payment', permission_classes=[IsAuthenticated])
+    def confirm_payment(self, request):
+        """Alias para confirm-success utilizado por la app Flutter"""
+        return self.confirm_success(request)
+
     @action(detail=False, methods=['post'], url_path='webhook', permission_classes=[AllowAny])
     def stripe_webhook(self, request):
         payload = request.body
@@ -210,7 +215,7 @@ class PagoViewSet(viewsets.ViewSet):
                     FacturaService().crear_factura_desde_pedido(pedido_id, tp.id)
                     print(f"📄 Factura generada para pedido {pedido_id}")
                     
-                    # Enviar Notificación de Compra Exitosa
+                    # Enviar Notificación de Compra Exitosa al Cliente
                     try:
                         from apps.negocio.notificaciones.services.notification_service import send_notification
                         send_notification(
@@ -220,7 +225,24 @@ class PagoViewSet(viewsets.ViewSet):
                             tipo="PAGO"
                         )
                     except Exception as en:
-                        print(f"⚠️ Error al enviar notificación de pago: {str(en)}")
+                        print(f"⚠️ Error al enviar notificación de pago al cliente: {str(en)}")
+                        
+                    # Enviar Notificación de Nueva Venta al Vendedor
+                    try:
+                        from apps.customers.users.models.usuario import Usuario
+                        from apps.negocio.notificaciones.services.notification_service import send_notification
+                        
+                        # Buscar los administradores/vendedores de este tenant
+                        vendedores = Usuario.objects.filter(tenant__schema_name=connection.schema_name)
+                        for vendedor in vendedores:
+                            send_notification(
+                                usuario=vendedor,
+                                titulo="Nueva Venta 💰",
+                                mensaje=f"{pedido.carrito.cliente.nombre} ha pagado el pedido #{pedido.id}.",
+                                tipo="PEDIDO"
+                            )
+                    except Exception as env:
+                        print(f"⚠️ Error al enviar notificación de pago al vendedor: {str(env)}")
                 except Exception as ef:
                     print(f"⚠️ Error al generar factura: {str(ef)}")
         except Exception as e:
