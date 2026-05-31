@@ -54,12 +54,15 @@ def send_notification(cliente=None, usuario=None, titulo="", mensaje="", tipo='S
     if not firebase_admin._apps:
         return notif # No se configuró firebase
         
-    if cliente:
-        tokens = DeviceToken.objects.filter(cliente=cliente).values_list('token', flat=True)
-    elif usuario:
-        tokens = DeviceToken.objects.filter(usuario=usuario).values_list('token', flat=True)
-    else:
-        tokens = []
+    # DeviceToken vive en SHARED_APPS (esquema public), hay que buscarlo allí
+    from django_tenants.utils import schema_context
+    with schema_context('public'):
+        if cliente:
+            tokens = list(DeviceToken.objects.filter(cliente=cliente).values_list('token', flat=True))
+        elif usuario:
+            tokens = list(DeviceToken.objects.filter(usuario=usuario).values_list('token', flat=True))
+        else:
+            tokens = []
 
     if not tokens:
         return notif

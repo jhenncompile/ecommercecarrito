@@ -279,7 +279,7 @@ def setup_backend():
     else:
         ok("Entorno virtual ya existe")
 
-    req = BACKEND_DIR / 'requirements.txt'
+    req = BACKEND_DIR / 'requirements' / 'local.txt'
     if req.exists():
         info("Instalando dependencias Python...")
         try:
@@ -289,7 +289,7 @@ def setup_backend():
         except subprocess.CalledProcessError:
             err("Error instalando dependencias del backend")
     else:
-        warn("requirements.txt no encontrado â€” omitiendo pip install")
+        warn("requirements/local.txt no encontrado — omitiendo pip install")
 
 # â”€â”€ PASO 2: Frontend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
