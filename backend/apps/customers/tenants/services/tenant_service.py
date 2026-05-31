@@ -65,12 +65,26 @@ class TenantService:
                 {'nombre': 'Vendedor', 'nivel': 2, 'descripcion': 'Personal de ventas o empleados'},
                 {'nombre': 'Cliente', 'nivel': 3, 'descripcion': 'Comprador recurrente'}
             ]
+            # Obtener roles maestros globales
+            from django_tenants.utils import schema_context
+            with schema_context('public'):
+                maestro_admin = Rol.objects.filter(nombre='Administrador', tenant__isnull=True).first()
+                maestro_vendedor = Rol.objects.filter(nombre='Vendedor', tenant__isnull=True).first()
+                maestro_cliente = Rol.objects.filter(nombre='Cliente', tenant__isnull=True).first()
+
             for rb in roles_basicos:
-                Rol.objects.get_or_create(
+                rol, _ = Rol.objects.get_or_create(
                     nombre__iexact=rb['nombre'],
                     tenant=tenant,
                     defaults={'nombre': rb['nombre'], 'nivel': rb['nivel'], 'descripcion': rb['descripcion']}
                 )
+                # Clonar permisos del rol maestro correspondiente
+                if rb['nombre'] == 'Administrador' and maestro_admin:
+                    rol.permisos.set(maestro_admin.permisos.all())
+                elif rb['nombre'] == 'Vendedor' and maestro_vendedor:
+                    rol.permisos.set(maestro_vendedor.permisos.all())
+                elif rb['nombre'] == 'Cliente' and maestro_cliente:
+                    rol.permisos.set(maestro_cliente.permisos.all())
 
             rol_admin = Rol.objects.filter(nombre__iexact='administrador', tenant=tenant).first()
             if rol_admin:
