@@ -88,28 +88,61 @@ class DatabaseSeeder:
         print(f"\n--- âš¡ Motor Especializado V5.4 ---")
 
         with schema_context('public'):
+            print("\n🔑 1. Configurando Permisos Maestros y de Reportes...")
+            permisos_data = [
+                ("Acceso Total Sistema", "SYS_ALL", "Sistema", True, "Acceso irrestricto"),
+                ("Gestionar Tenants", "SYS_TENANTS", "Sistema", True, "Crear y eliminar tiendas"),
+                ("Gestionar Productos", "STORE_PRODUCTS", "Inventario", True, "Gestionar productos"),
+                ("Gestionar Ventas", "STORE_SALES", "Ventas", True, "Procesar facturas"),
+                ("Ver Reportes", "STORE_REPORTS", "Análisis", True, "Ver métricas"),
+                ("Realizar Compras", "CLIENT_BUY", "Tienda", True, "Pagar"),
+                ("Ver Historial", "CLIENT_HISTORY", "Tienda", True, "Ver pedidos"),
+                ("Reportes Estáticos", "REP_ESTATICO", "Reportes", True, "Generar reportes predefinidos"),
+                ("Reportes Dinámicos", "REP_DINAMICO", "Reportes", False, "Armar reportes personalizados"),
+                ("Reportes con IA (Voz)", "REP_AUDIO", "Reportes", False, "Consultas mediante voz"),
+            ]
+            
+            from apps.customers.models import Permiso
+            permisos_obj = {}
+            for nombre, codigo, modulo, es_basico, desc in permisos_data:
+                p, _ = Permiso.objects.get_or_create(
+                    codigo=codigo,
+                    defaults={'nombre': nombre, 'modulo': modulo, 'es_basico': es_basico, 'descripcion': desc, 'activo': True}
+                )
+                permisos_obj[codigo] = p
+
+            print("👥 2. Configurando Roles y asginando Permisos...")
+            roles_data = [
+                ("Administrador", 1, ["SYS_ALL", "SYS_TENANTS", "STORE_PRODUCTS", "STORE_SALES", "STORE_REPORTS"]),
+                ("Vendedor", 2, ["STORE_PRODUCTS", "STORE_SALES", "STORE_REPORTS"]),
+                ("Cliente", 3, ["CLIENT_BUY", "CLIENT_HISTORY"]),
+            ]
+            for nombre_rol, nivel, codigos in roles_data:
+                rol, _ = Rol.objects.get_or_create(nombre=nombre_rol, defaults={'nivel': nivel, 'activo': True})
+                rol.permisos.set([permisos_obj[c] for c in codigos if c in permisos_obj])
+
+            print("💳 3. Configurando Planes SaaS y sus Reportes...")
             # 1. Crear o asegurar los planes oficiales de la plataforma
             plan_basico, _ = Plan.objects.get_or_create(
-                nombre='basico', 
-                defaults={'precio_mensual': 0.0, 'precio_anual': 0.0, 'max_usuarios': 1, 'max_productos': 50}
+                nombre='Básico', 
+                defaults={'precio_mensual': 29.0, 'precio_anual': 290.0, 'max_usuarios': 2, 'max_productos': 50}
             )
+            plan_basico.permisos.set([permisos_obj['REP_ESTATICO']])
+
             plan_profesional, _ = Plan.objects.get_or_create(
-                nombre='profesional', 
-                defaults={'precio_mensual': 29.0, 'precio_anual': 290.0, 'max_usuarios': 5, 'max_productos': 1000}
+                nombre='Profesional', 
+                defaults={'precio_mensual': 99.0, 'precio_anual': 990.0, 'max_usuarios': 20, 'max_productos': 5000}
             )
-            plan_premium, _ = Plan.objects.get_or_create(
-                nombre='premium', 
-                defaults={'precio_mensual': 99.0, 'precio_anual': 990.0, 'max_usuarios': 50, 'max_productos': 5000}
+            plan_profesional.permisos.set([permisos_obj['REP_ESTATICO'], permisos_obj['REP_DINAMICO'], permisos_obj['REP_AUDIO']])
+
+            plan_medio, _ = Plan.objects.get_or_create(
+                nombre='Medio', 
+                defaults={'precio_mensual': 59.0, 'precio_anual': 590.0, 'max_usuarios': 5, 'max_productos': 500}
             )
-            
-            # El plan por defecto para las tiendas de prueba
-            plan_maestro, _ = Plan.objects.get_or_create(
-                nombre='Plan Maestro', 
-                defaults={'precio_mensual': 150.0, 'precio_anual': 1500.0, 'max_usuarios': 50, 'max_productos': 5000}
-            )
+            plan_medio.permisos.set([permisos_obj['REP_ESTATICO'], permisos_obj['REP_DINAMICO']])
             
             # Roles globales (aunque en este sistema multi-tenant los roles se crean por tenant)
-            rol_admin, _ = Rol.objects.get_or_create(nombre='Administrador', tenant=None)
+            rol_admin = Rol.objects.get(nombre='Administrador')
 
         # 1. Nuevas Tiendas
         if n_tiendas > 0:
@@ -158,7 +191,7 @@ class DatabaseSeeder:
                         p = random.choice(prods)
                         CarritoItem.objects.create(carrito=carrito, producto=p, cantidad=1)
                         
-                        pedido = Pedido.objects.create(carrito=carrito, estado='ENTREGADO')
+                        pedido = Pedido.objects.create(carrito=carrito, estado='COMPLETADO')
                         
                         Factura.objects.create(
                             nro=f"FAC-{get_random_string(10).upper()}",

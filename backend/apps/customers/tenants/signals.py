@@ -10,8 +10,8 @@ def validate_product_limit(sender, instance, **kwargs):
     # Solo ejecutar si estamos en un schema que no es el public (es un tenant real)
     if hasattr(connection, 'tenant') and connection.schema_name != 'public':
         tenant = connection.tenant
-        # Validar solo durante la creaciÃ³n
-        if tenant.plan and not instance.pk:
+        # Validar solo durante la creación y si el tenant tiene plan (evitar FakeTenant en shell)
+        if getattr(tenant, 'plan', None) and not instance.pk:
             count = Producto.objects.count()
             if count >= tenant.plan.max_productos:
                 raise ValidationError(
@@ -22,8 +22,8 @@ def validate_product_limit(sender, instance, **kwargs):
 def validate_user_limit(sender, instance, **kwargs):
     if hasattr(connection, 'tenant') and connection.schema_name != 'public':
         tenant = connection.tenant
-        # Validar solo durante la creaciÃ³n
-        if tenant.plan and not instance.pk:
+        # Validar solo durante la creación
+        if getattr(tenant, 'plan', None) and not instance.pk:
             count = Usuario.objects.count()
             if count >= tenant.plan.max_usuarios:
                 raise ValidationError(
