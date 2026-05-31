@@ -49,23 +49,72 @@ class Command(BaseCommand):
             ]
 
             creados = 0
-            actualizados = 0
+            # Limpiar permisos existentes para evitar conflictos de constraints
+            Permiso.objects.all().delete()
 
             for p in permisos_data:
-                obj, created = Permiso.objects.update_or_create(
+                Permiso.objects.create(
                     codigo=p['codigo'],
-                    defaults={
-                        'nombre': p['nombre'],
-                        'modulo': p['modulo'],
-                        'es_basico': p['es_basico'],
-                        'descripcion': p['desc'],
-                        'activo': True
-                    }
+                    nombre=p['nombre'],
+                    modulo=p['modulo'],
+                    es_basico=p['es_basico'],
+                    descripcion=p['desc'],
+                    activo=True
                 )
-                if created:
-                    creados += 1
-                else:
-                    actualizados += 1
+                creados += 1
 
-            self.stdout.write(self.style.SUCCESS(f'✅ Completado: {creados} permisos creados, {actualizados} permisos actualizados.'))
-            self.stdout.write(self.style.WARNING('Nota: Ejecuta este comando en PRODUCCIÓN para habilitar la creación de roles en las tiendas nuevas.'))
+            self.stdout.write(self.style.SUCCESS(f'✅ Completado: {creados} permisos recreados limpiamente.'))
+
+        # Propagar permisos a los roles de todas las tiendas existentes
+        self.stdout.write(self.style.WARNING('--- Configurando roles maestros y propagando a todas las tiendas ---'))
+        from apps.customers.models import Client
+        from apps.customers.users.models.rol import Rol
+        
+        with schema_context('public'):
+            # 1. Asegurar que existan los roles maestros
+            maestro_admin, _ = Rol.objects.get_or_create(nombre='Administrador', tenant=None, defaults={'nivel': 1, 'descripcion': 'Dueño o administrador general'})
+            maestro_vendedor, _ = Rol.objects.get_or_create(nombre='Vendedor', tenant=None, defaults={'nivel': 2, 'descripcion': 'Personal de ventas'})
+            maestro_cliente, _ = Rol.objects.get_or_create(nombre='Cliente', tenant=None, defaults={'nivel': 3, 'descripcion': 'Comprador recurrente'})
+
+            # 2. Asignar los permisos oficiales a cada rol maestro
+            # Admin tiene todos los permisos básicos y premium aplicables a la gestión
+            todos_permisos = Permiso.objects.all()
+            maestro_admin.permisos.set(todos_permisos)
+
+            # Vendedor tiene permisos limitados
+            permisos_vendedor = Permiso.objects.filter(codigo__in=['VER_DASHBOARD', 'CREAR_PRODUCTO', 'EDITAR_PRODUCTO', 'VER_PEDIDOS', 'PROCESAR_PEDIDOS', 'EMITIR_FACTURA', 'VER_CLIENTES', 'REP_ESTATICO', 'REP_DINAMICO', 'REP_AUDIO'])
+            maestro_vendedor.permisos.set(permisos_vendedor)
+
+            # Cliente tiene permisos mínimos
+            permisos_cliente = Permiso.objects.filter(codigo__in=['VER_PEDIDOS'])
+            maestro_cliente.permisos.set(permisos_cliente)
+
+            # 3. Reparar los Planes
+            from apps.customers.tenants.models.plan import Plan
+            plan_basico = Plan.objects.filter(nombre__iexact='Básico').first()
+            if plan_basico:
+                plan_basico.permisos.set(Permiso.objects.filter(codigo__in=['REP_ESTATICO']))
+            
+            plan_medio = Plan.objects.filter(nombre__iexact='Medio').first()
+            if plan_medio:
+                plan_medio.permisos.set(Permiso.objects.filter(codigo__in=['REP_ESTATICO', 'REP_DINAMICO']))
+                
+            plan_profesional = Plan.objects.filter(nombre__iexact='Profesional').first()
+            if plan_profesional:
+                plan_profesional.permisos.set(Permiso.objects.filter(codigo__in=['REP_ESTATICO', 'REP_DINAMICO', 'REP_AUDIO']))
+
+        for tenant in Client.objects.exclude(schema_name='public'):
+            with schema_context(tenant.schema_name):
+                admin_rol = Rol.objects.filter(nombre__iexact='administrador', tenant=tenant).first()
+                if admin_rol:
+                    admin_rol.permisos.set(maestro_admin.permisos.all())
+                
+                vendedor_rol = Rol.objects.filter(nombre__iexact='vendedor', tenant=tenant).first()
+                if vendedor_rol:
+                    vendedor_rol.permisos.set(maestro_vendedor.permisos.all())
+                    
+                cliente_rol = Rol.objects.filter(nombre__iexact='cliente', tenant=tenant).first()
+                if cliente_rol:
+                    cliente_rol.permisos.set(maestro_cliente.permisos.all())
+
+        self.stdout.write(self.style.SUCCESS('✅ Permisos clonados correctamente en todas las tiendas.'))
