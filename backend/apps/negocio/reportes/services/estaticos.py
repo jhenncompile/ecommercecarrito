@@ -24,7 +24,7 @@ def top_productos():
 @ReportRegistry.register_estatico('nuevos_clientes', 'Nuevos Clientes por Mes')
 def nuevos_clientes():
     return Cliente.objects.annotate(
-        mes=TruncMonth('creado_en')
+        mes=TruncMonth('fecha_registro')
     ).values('mes').annotate(
         total=Count('id')
     ).order_by('-mes')[:12]
