@@ -25,7 +25,7 @@ class ApiConstants {
   // ── URL para peticiones dentro de un tenant ──
   // El subdomain viene del backend (ej: tienda1.192.168.x.x.nip.io o tienda1.miqhatu.com)
   static String tenantBaseUrl(String subdomain) {
-    return 'http://$subdomain:$djangoPort/api';
+    return 'http://$vpsIp:$djangoPort/api';
   }
 
   // ── Header Host para django-tenants ──

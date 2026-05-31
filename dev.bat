@@ -113,7 +113,7 @@ echo.
 echo Terminal 1 - BACKEND:
 echo   cd backend
 echo   venv\Scripts\activate.bat
-echo   python manage.py runserver 127.0.0.1:8001
+echo   python manage.py runserver 0.0.0.0:8001
 echo.
 echo Terminal 2 - FRONTEND:
 echo   cd frontend
