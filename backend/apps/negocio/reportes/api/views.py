@@ -7,6 +7,19 @@ from apps.negocio.reportes.api.serializers import ReporteConfigSerializer
 from apps.negocio.reportes.services.report_service import ReportService
 import csv
 from django.http import HttpResponse
+from apps.negocio.reportes.services.builders import get_report_metadata
+from apps.negocio.reportes.services.exports.orchestrator import ExportOrchestrator
+
+class ReportMetadataAPIView(APIView):
+    """
+    Devuelve la estructura de los modelos disponibles para el Query Builder.
+    """
+    permission_classes = [HasPermiso]
+    required_permiso = 'REP_DINAMICO'
+
+    def get(self, request):
+        metadata = get_report_metadata()
+        return Response(metadata, status=status.HTTP_200_OK)
 
 class ReporteConfigViewSet(viewsets.ModelViewSet):
     """
@@ -71,3 +84,31 @@ class ReportBuilderAPIView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ExportAPIView(APIView):
+    """
+    Endpoint centralizado para orquestar la exportación de reportes (PDF/Excel)
+    generados enteramente en el backend.
+    """
+    permission_classes = [HasPermiso]
+    required_permiso = 'REP_ESTATICO' # Requerimos un permiso base, aunque podría ser más granular
+
+    def post(self, request):
+        config = request.data
+        fmt = config.get('format', 'pdf')
+        export_type = config.get('type', 'estatico')
+        metadata = config.get('metadata', {})
+
+        if not export_type or not fmt:
+            return Response({"error": "Faltan parámetros 'format' o 'type'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Delegate to the orchestrator
+            response = ExportOrchestrator.generate(export_type, fmt, metadata)
+            return response
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            return Response({"error": f"Error al generar exportación: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

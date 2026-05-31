@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import api from 'core/services/api';
 import DataTable from 'shared/widgets/DataTable/DataTable';
-import { exportToPDF, exportToExcel } from 'utils/exportUtils';
+import { generatePDF, generateExcel } from 'utils/exports/exportOrchestrator';
 import { Download, Mic, Square, Loader2, Table } from 'lucide-react';
 import { Button, Alert } from 'shared/components';
 import styles from './VoiceQueryWidget.module.css';
@@ -55,7 +55,7 @@ const VoiceQueryWidget = () => {
     const handleExportPDF = () => {
         if (!result || !result.results || result.results.length === 0) return;
         try {
-            exportToPDF(result.results, "Reporte de Consulta Inteligente", result.prompt);
+            generatePDF('voz', result.results, { transcripcion: result.prompt });
         } catch (err) {
             setError(err.message);
         }
@@ -64,7 +64,7 @@ const VoiceQueryWidget = () => {
     const handleExportExcel = () => {
         if (!result || !result.results || result.results.length === 0) return;
         try {
-            exportToExcel(result.results, "Reporte IA");
+            generateExcel('voz', result.results, { transcripcion: result.prompt });
         } catch (err) {
             setError(err.message);
         }

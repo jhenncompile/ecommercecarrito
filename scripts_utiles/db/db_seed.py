@@ -85,19 +85,40 @@ class BusinessGenerator:
         return f"shop{get_random_string(12, allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789')}"
 
     @staticmethod
-    def dias_periodo_pedidos(codigo):
-        codigo_normalizado = (codigo or '1m').strip().lower()
-        if codigo_normalizado not in BusinessGenerator.PERIODOS_PEDIDOS_DIAS:
-            print("  [i] Periodo inválido. Usando 1m por defecto.")
-            codigo_normalizado = '1m'
+    def parse_rango_fechas(entrada):
+        from datetime import datetime
+        ahora = timezone.now()
+        entrada = (entrada or '1m').strip().lower()
+        
+        if entrada in BusinessGenerator.PERIODOS_PEDIDOS_DIAS:
+            dias = BusinessGenerator.PERIODOS_PEDIDOS_DIAS[entrada]
+            return ahora - timedelta(days=dias), ahora
 
-        return BusinessGenerator.PERIODOS_PEDIDOS_DIAS[codigo_normalizado]
+        partes = entrada.split()
+        try:
+            if len(partes) == 1:
+                y = int(partes[0])
+                return timezone.make_aware(datetime(y, 1, 1)), timezone.make_aware(datetime(y, 12, 31, 23, 59, 59))
+            elif len(partes) == 2:
+                y1, y2 = map(int, partes)
+                return timezone.make_aware(datetime(y1, 1, 1)), timezone.make_aware(datetime(y2, 12, 31, 23, 59, 59))
+            elif len(partes) == 3:
+                d, m, y = map(int, partes)
+                return timezone.make_aware(datetime(y, m, d)), ahora
+            elif len(partes) == 6:
+                d1, m1, y1, d2, m2, y2 = map(int, partes)
+                return timezone.make_aware(datetime(y1, m1, d1)), timezone.make_aware(datetime(y2, m2, d2, 23, 59, 59))
+        except Exception as e:
+            print(f"  [i] Error al parsear fecha ({e}). Usando 1m por defecto.")
+        
+        return ahora - timedelta(days=30), ahora
 
     @staticmethod
-    def fecha_aleatoria_pedido(dias_atras):
-        ahora = timezone.now()
-        segundos_atras = random.randint(0, max(1, dias_atras * 24 * 60 * 60))
-        return ahora - timedelta(seconds=segundos_atras)
+    def fecha_aleatoria_rango(start, end):
+        delta = end - start
+        int_delta = int(delta.total_seconds())
+        if int_delta <= 0: return start
+        return start + timedelta(seconds=random.randint(0, int_delta))
 
     @staticmethod
     def random_product_data(categoria_obj):
@@ -123,8 +144,8 @@ class DatabaseSeeder:
         self.base_domain = BusinessGenerator.obtener_ip_dominio()
 
     def ejecutar_sincronizacion(self, n_tiendas, n_clientes, p_por_tienda, o_por_cliente, periodo_pedidos='1m'):
-        print(f"\n--- âš¡ Motor Especializado V5.4 ---")
-        dias_pedidos = BusinessGenerator.dias_periodo_pedidos(periodo_pedidos)
+        print(f"\n--- ⚡ Motor Especializado V5.4 ---")
+        fecha_inicio, fecha_fin = BusinessGenerator.parse_rango_fechas(periodo_pedidos)
 
         with schema_context('public'):
             print("\n🔑 1. Configurando Permisos Maestros y de Reportes...")
@@ -210,62 +231,74 @@ class DatabaseSeeder:
                 # Especialización
                 tienda_cats = random.sample(all_cat_names, random.randint(1, 3))
                 cat_objects = [Categoria.objects.get_or_create(nombre=cn)[0] for cn in tienda_cats]
+                creados = 0
                 for _ in range(p_por_tienda):
-                    Producto.objects.create(**BusinessGenerator.random_product_data(random.choice(cat_objects)))
+                    try:
+                        Producto.objects.create(**BusinessGenerator.random_product_data(random.choice(cat_objects)))
+                        creados += 1
+                    except Exception as e:
+                        print(f"  [!] Producto omitido en '{tenant.schema_name}' (posible límite de plan): {e}")
+                        break
                 
                 # Asegurar TipoPago
                 tp, _ = TipoPago.objects.get_or_create(nombre='Efectivo')
-                print(f"  âœ… {tenant.schema_name}: +{p_por_tienda} productos.")
+                print(f"  ✅ {tenant.schema_name}: +{creados} productos.")
 
         # 4. Pedidos Globales
         if o_por_cliente > 0 and not todas:
             print("  [i] No hay tiendas disponibles. Se omite generación de pedidos.")
-            print(f"\nâœ¨ Sincronización Finalizada.")
+            print(f"\n✨ Sincronización Finalizada.")
             return
 
         if o_por_cliente > 0:
-            print(f"\n🧾 4. Generando pedidos aleatorios de los últimos {dias_pedidos} días...")
+            print(f"\n🧾 4. Generando {o_por_cliente} pedidos por cliente EN CADA TIENDA entre {fecha_inicio.strftime('%d/%m/%Y')} y {fecha_fin.strftime('%d/%m/%Y')}...")
             print(f"  Estados posibles: {', '.join(BusinessGenerator.ESTADOS_PEDIDO_VENTA)}")
 
-        todos_clientes = Cliente.objects.all()
-        for cliente in todos_clientes:
-            for _ in range(o_por_cliente):
-                t_destino = random.choice(todas)
-                with tenant_context(t_destino):
-                    prods = list(Producto.objects.filter(activo=True))
-                    if prods:
-                        fecha_pedido = BusinessGenerator.fecha_aleatoria_pedido(dias_pedidos)
-                        estado_pedido = random.choice(BusinessGenerator.ESTADOS_PEDIDO_VENTA)
+        todos_clientes = list(Cliente.objects.all())
+        from django.db import transaction
 
-                        # FLUJO REAL: Carrito -> Pedido -> Factura
-                        carrito = Carrito.objects.create(cliente=cliente, estado='CERRADO')
-                        p = random.choice(prods)
-                        item = CarritoItem.objects.create(carrito=carrito, producto=p, cantidad=random.randint(1, 4))
-                        
-                        pedido = Pedido.objects.create(carrito=carrito, estado=estado_pedido)
-                        
-                        factura = Factura.objects.create(
-                            nro=f"FAC-{get_random_string(10).upper()}",
-                            pedido=pedido,
-                            cliente=cliente,
-                            tipo_pago=TipoPago.objects.first(),
-                            monto_total=p.precio * item.cantidad,
-                            estado='VIGENTE'
-                        )
+        for t_destino in todas:
+            with tenant_context(t_destino):
+                prods = list(Producto.objects.filter(activo=True))
+                if not prods:
+                    continue
+                
+                print(f"  -> {t_destino.schema_name}: Generando transacciones para {len(todos_clientes)} clientes...")
+                for cliente in todos_clientes:
+                    with transaction.atomic():
+                        for _ in range(o_por_cliente):
+                            fecha_pedido = BusinessGenerator.fecha_aleatoria_rango(fecha_inicio, fecha_fin)
+                            estado_pedido = random.choice(BusinessGenerator.ESTADOS_PEDIDO_VENTA)
 
-                        Carrito.objects.filter(pk=carrito.pk).update(
-                            fecha_creacion=fecha_pedido,
-                            fecha_actualizacion=fecha_pedido
-                        )
-                        CarritoItem.objects.filter(pk=item.pk).update(fecha_agregado=fecha_pedido)
-                        Pedido.objects.filter(pk=pedido.pk).update(
-                            fecha_creacion=fecha_pedido,
-                            fecha_actualizacion=fecha_pedido
-                        )
-                        Factura.objects.filter(pk=factura.pk).update(
-                            fecha=fecha_pedido.date(),
-                            hora=fecha_pedido.time()
-                        )
+                            # FLUJO REAL: Carrito -> Pedido -> Factura
+                            carrito = Carrito.objects.create(cliente=cliente, estado='CERRADO')
+                            p = random.choice(prods)
+                            item = CarritoItem.objects.create(carrito=carrito, producto=p, cantidad=random.randint(1, 4))
+                            
+                            pedido = Pedido.objects.create(carrito=carrito, estado=estado_pedido)
+                            
+                            factura = Factura.objects.create(
+                                nro=f"FAC-{get_random_string(10).upper()}",
+                                pedido=pedido,
+                                cliente=cliente,
+                                tipo_pago=TipoPago.objects.first(),
+                                monto_total=p.precio * item.cantidad,
+                                estado='VIGENTE'
+                            )
+
+                            Carrito.objects.filter(pk=carrito.pk).update(
+                                fecha_creacion=fecha_pedido,
+                                fecha_actualizacion=fecha_pedido
+                            )
+                            CarritoItem.objects.filter(pk=item.pk).update(fecha_agregado=fecha_pedido)
+                            Pedido.objects.filter(pk=pedido.pk).update(
+                                fecha_creacion=fecha_pedido,
+                                fecha_actualizacion=fecha_pedido
+                            )
+                            Factura.objects.filter(pk=factura.pk).update(
+                                fecha=fecha_pedido.date(),
+                                hora=fecha_pedido.time()
+                            )
         print(f"\nâœ¨ Sincronización Finalizada.")
 
 def main():
@@ -275,7 +308,7 @@ def main():
         nc = int(input("Â¿Clientes nuevos? [0]: ") or 0)
         pp = int(input("Â¿Productos A AÑADIR por tienda? [10]: ") or 10)
         op = int(input("Â¿Pedidos A GENERAR por cliente? [2]: ") or 2)
-        periodo = input("Â¿Desde cuánto tiempo atrás generar pedidos? [1m] (1a=1 año, 1m=1 mes, 1s=1 semana): ") or '1m'
+        periodo = input("¿Rango de fechas para pedidos? [1m]\n  (Formatos: '1m', '1a', '2002', '2002 2026', '18 12 2002', '18 12 2002 12 12 2026'): ") or '1m'
         seeder.ejecutar_sincronizacion(nt, nc, pp, op, periodo)
     except KeyboardInterrupt: pass
     except Exception as e: print(f"Error: {e}"); import traceback; traceback.print_exc()

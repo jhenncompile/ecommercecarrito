@@ -63,7 +63,7 @@ class Command(BaseCommand):
                 )
                 creados += 1
 
-            self.stdout.write(self.style.SUCCESS(f'✅ Completado: {creados} permisos recreados limpiamente.'))
+            self.stdout.write(self.style.SUCCESS(f'[OK] Completado: {creados} permisos recreados limpiamente.'))
 
         # Propagar permisos a los roles de todas las tiendas existentes
         self.stdout.write(self.style.WARNING('--- Configurando roles maestros y propagando a todas las tiendas ---'))
@@ -93,15 +93,15 @@ class Command(BaseCommand):
             from apps.customers.tenants.models.plan import Plan
             plan_basico = Plan.objects.filter(nombre__iexact='Básico').first()
             if plan_basico:
-                plan_basico.permisos.set(Permiso.objects.filter(codigo__in=['REP_ESTATICO']))
+                plan_basico.permisos.add(*Permiso.objects.filter(codigo__in=['REP_ESTATICO']))
             
             plan_medio = Plan.objects.filter(nombre__iexact='Medio').first()
             if plan_medio:
-                plan_medio.permisos.set(Permiso.objects.filter(codigo__in=['REP_ESTATICO', 'REP_DINAMICO']))
+                plan_medio.permisos.add(*Permiso.objects.filter(codigo__in=['REP_ESTATICO', 'REP_DINAMICO']))
                 
             plan_profesional = Plan.objects.filter(nombre__iexact='Profesional').first()
             if plan_profesional:
-                plan_profesional.permisos.set(Permiso.objects.filter(codigo__in=['REP_ESTATICO', 'REP_DINAMICO', 'REP_AUDIO']))
+                plan_profesional.permisos.add(*Permiso.objects.filter(codigo__in=['REP_ESTATICO', 'REP_DINAMICO', 'REP_AUDIO']))
 
         for tenant in Client.objects.exclude(schema_name='public'):
             with schema_context(tenant.schema_name):
@@ -117,4 +117,4 @@ class Command(BaseCommand):
                 if cliente_rol:
                     cliente_rol.permisos.set(maestro_cliente.permisos.all())
 
-        self.stdout.write(self.style.SUCCESS('✅ Permisos clonados correctamente en todas las tiendas.'))
+        self.stdout.write(self.style.SUCCESS('[OK] Permisos clonados correctamente en todas las tiendas.'))

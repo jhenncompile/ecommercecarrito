@@ -40,6 +40,7 @@ def show_main_menu():
         print_option(f"{Colors.YELLOW}I{Colors.RESET} - Instalación Rápida (Plug & Play)")
         print_option(f"{Colors.YELLOW}D{Colors.RESET} - Instalar Dependencias (Back, Front, Flutter)")
         print_option(f"{Colors.YELLOW}T{Colors.RESET} - Generar Token Seguro para subir Apps Móviles")
+        print_option(f"{Colors.YELLOW}X{Colors.RESET} - Ejecutar Fixes y Reparaciones (VPS y Local)")
         print_option(f"{Colors.CYAN}6{Colors.RESET} - Configuración de Entorno (.env)")
         print_option(f"{Colors.CYAN}7{Colors.RESET} - Servicios del Sistema (IP directa)")
         print_option(f"{Colors.CYAN}8{Colors.RESET} - Mantenimiento del Sistema")
@@ -74,6 +75,9 @@ def show_main_menu():
             pause()
         elif choice == 't':
             run_script('system/generate_token.py', use_venv=False)
+            pause()
+        elif choice == 'x':
+            run_script('db/run_fixes.py')
             pause()
         elif choice == '6':
             show_config_menu()

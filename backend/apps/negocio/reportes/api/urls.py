@@ -3,7 +3,9 @@ from rest_framework.routers import DefaultRouter
 from apps.negocio.reportes.api.views import (
     ReporteConfigViewSet, 
     ReporteEstaticoAPIView, 
-    ReportBuilderAPIView
+    ReportBuilderAPIView,
+    ReportMetadataAPIView,
+    ExportAPIView
 )
 from apps.negocio.reportes.api.forecast_views import (
     PrediccionCategoriasAPIView,
@@ -18,6 +20,8 @@ router.register(r'configuraciones', ReporteConfigViewSet, basename='reporte_conf
 urlpatterns = [
     path('estatico/<str:tipo>/', ReporteEstaticoAPIView.as_view(), name='reporte_estatico'),
     path('builder/', ReportBuilderAPIView.as_view(), name='reporte_builder'),
+    path('metadata/', ReportMetadataAPIView.as_view(), name='reporte_metadata'),
+    path('export/', ExportAPIView.as_view(), name='reporte_export'),
     path('prediccion/', PrediccionVentasAPIView.as_view(), name='prediccion_ventas'),
     path('prediccion/export-excel/', PrediccionVentasExcelAPIView.as_view(), name='prediccion_ventas_excel'),
     path('prediccion/productos/', PrediccionProductosAPIView.as_view(), name='prediccion_productos'),

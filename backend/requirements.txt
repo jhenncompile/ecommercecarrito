@@ -32,3 +32,5 @@ Faker==25.0.0
 faster-whisper==1.0.3
 firebase-admin==6.4.0
 reportlab==4.1.0     # Generación de PDFs de facturas
+matplotlib==3.10.9   # Generador de graficas (design engine)
+openpyxl==3.1.5      # Exportador de reportes a excel

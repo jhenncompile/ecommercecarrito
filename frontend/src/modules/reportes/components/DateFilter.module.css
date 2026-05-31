@@ -1,0 +1,111 @@
+.dateFilterContainer {
+    position: relative;
+    display: inline-block;
+}
+
+.triggerButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.triggerButton:hover {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.05);
+}
+
+.dropdownPanel {
+    position: absolute;
+    top: 110%;
+    right: 0;
+    width: 250px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    z-index: 100;
+    padding: 0.5rem;
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.rangeList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.rangeOption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-main);
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background 0.1s;
+}
+
+.rangeOption:hover {
+    background: var(--bg-body);
+}
+
+.rangeOption.active {
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.checkIcon {
+    color: var(--primary);
+}
+
+.customPanel {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.customPanel label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    gap: 0.3rem;
+}
+
+.customPanel input {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-body);
+    color: var(--text-main);
+    outline: none;
+    font-family: inherit;
+}
+
+.customPanel input:focus {
+    border-color: var(--primary);
+}

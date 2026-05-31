@@ -12,3 +12,5 @@ faster-whisper==1.0.3
 
 # Desarrollo y testing
 Faker==25.0.0
+matplotlib==3.10.9   # Generador de graficas (design engine)
+openpyxl==3.1.5    

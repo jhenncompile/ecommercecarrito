@@ -1,0 +1,412 @@
+.dndLayout {
+    display: flex;
+    gap: 1.5rem;
+    background: var(--bg-body);
+    border-radius: 12px;
+    min-height: 500px;
+}
+
+@media (max-width: 900px) {
+    .dndLayout {
+        flex-direction: column;
+    }
+}
+
+/* TABS */
+.tabsContainer {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.tabBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.tabBtn:hover {
+    color: var(--text-main);
+    background: rgba(var(--primary-rgb), 0.05);
+}
+
+.tabBtn.activeTab {
+    color: var(--primary);
+}
+
+.tabBtn.activeTab::after {
+    content: '';
+    position: absolute;
+    bottom: -0.65rem;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary);
+    border-radius: 3px 3px 0 0;
+}
+
+/* SIDEBAR - Panel Izquierdo */
+.sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.sidebarHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.sourceSelect {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-body);
+    color: var(--text-main);
+    font-weight: 600;
+    outline: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.sourceSelect:focus {
+    border-color: var(--primary);
+}
+
+.pillsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.pillsTitle {
+    margin: 0;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+}
+
+.pillsGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.dragPill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: grab;
+    transition: transform 0.1s, box-shadow 0.1s;
+    user-select: none;
+    border: 1px solid transparent;
+}
+
+.dragPill:active {
+    cursor: grabbing;
+}
+
+.dragPill:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.draggingPill {
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
+    transform: scale(1.05) !important;
+    opacity: 0.9 !important;
+}
+
+.gripIcon {
+    opacity: 0.5;
+}
+
+/* Colores de las Píldoras */
+.pillMetrica {
+    background: rgba(16, 185, 129, 0.15);
+    color: #059669;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.pillAgrupacion {
+    background: rgba(99, 102, 241, 0.15);
+    color: #4f46e5;
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.pillCampo {
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+:global(.dark) .pillMetrica { color: #34d399; }
+:global(.dark) .pillAgrupacion { color: #818cf8; }
+:global(.dark) .pillCampo { color: #fbbf24; }
+
+/* CANVAS - Lienzo Principal */
+.canvas {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.canvasToolbar {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.canvasGridTop {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+@media (max-width: 600px) {
+    .canvasGridTop {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dropZone {
+    background: var(--bg-card);
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease;
+    min-height: 120px;
+}
+
+.dropZoneActive {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.02);
+    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
+}
+
+.zoneHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.zoneContent {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.activePill {
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    display: inline-block;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.activeMetrica {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid #10b981;
+}
+
+.activeAgrupacion {
+    background: rgba(99, 102, 241, 0.1);
+    color: #4f46e5;
+    border: 1px solid #6366f1;
+}
+
+:global(.dark) .activeMetrica { color: #34d399; }
+:global(.dark) .activeAgrupacion { color: #818cf8; }
+
+/* SORTABLE LIST (Table Mode) */
+.sortableListContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+:global(.sortable-column-item) {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.6rem 1rem;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    background-color: var(--bg-card);
+}
+
+:global(.sortable-column-item:hover) {
+    border-color: var(--primary);
+}
+
+:global(.drag-handle) {
+    cursor: grab;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    padding: 0.2rem;
+}
+
+:global(.drag-handle:active) {
+    cursor: grabbing;
+}
+
+:global(.column-label) {
+    flex: 1;
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+
+:global(.remove-col-btn) {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.4rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+:global(.remove-col-btn:hover) {
+    color: var(--danger, #ef4444);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* FILTROS */
+.filtersDropZone {
+    flex: 1;
+}
+
+.emptyZoneText {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100px;
+    color: var(--text-muted);
+    font-style: italic;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.02);
+}
+
+.filtersList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.logicToggle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.orderSelect {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-body);
+    color: var(--text-main);
+    outline: none;
+    font-weight: 600;
+}
+
+.filterCard {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    padding: 1rem;
+    background: var(--bg-body);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+.filterFieldBadge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+:global(.dark) .filterFieldBadge { color: #fbbf24; }
+
+.filterSelect, .filterInput {
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-main);
+    outline: none;
+    font-size: 0.9rem;
+    min-width: 120px;
+}
+
+.filterSelect:focus, .filterInput:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+}
+
+.filterRemoveBtn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    margin-left: auto;
+}
+
+.filterRemoveBtn:hover {
+    color: var(--danger, #ef4444);
+    background: rgba(239, 68, 68, 0.1);
+}

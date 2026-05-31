@@ -15,7 +15,11 @@ export default function PredictionView() {
 
   const handleGenerarPrediccion = async (filterConfig) => {
     setConfig(filterConfig);
-    await generatePrediction(filterConfig);
+    try {
+      await generatePrediction(filterConfig);
+    } catch (err) {
+      console.warn("Prediction generated an error, handled by usePrediction state.");
+    }
   };
 
   return (

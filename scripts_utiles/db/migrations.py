@@ -57,7 +57,8 @@ def run_django_command_capture(args, silent_error=False):
     
     if not silent_error:
         if combined.strip():
-            print(combined)
+            sys.stdout.buffer.write(combined.encode('utf-8', errors='replace'))
+            sys.stdout.buffer.write(b'\n')
     return success, combined
 
 def run_make_migrations():
@@ -78,7 +79,7 @@ def run_migrate():
     while not success and retry_count < 5:
         import re
         match = re.search(
-            r"Applying ([\w\.]+)\.\.\. .*?(DuplicateTable|DuplicateColumn|already exists)",
+            r"Applying ([\w\.]+)\.\.\.\s*.*?(DuplicateTable|DuplicateColumn|already exists|ya existe)",
             output, re.DOTALL
         )
 
@@ -93,7 +94,8 @@ def run_migrate():
             retry_count += 1
         else:
             print("\n[X] ERROR CRÍTICO NO RECUPERABLE:")
-            print(output)
+            sys.stdout.buffer.write(output.encode('utf-8', errors='replace'))
+            sys.stdout.buffer.write(b'\n')
             sys.exit(1)
 
     if success:

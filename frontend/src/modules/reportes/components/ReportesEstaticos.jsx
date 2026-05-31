@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import api from 'core/services/api';
 import DataTable from 'shared/widgets/DataTable/DataTable';
 import { Button, Alert, Spinner } from 'shared/components';
-import { exportToPDF, exportToExcel } from 'utils/exportUtils';
+import { generatePDF, generateExcel } from 'utils/exports/exportOrchestrator';
 import { Download, Table, BarChart } from 'lucide-react';
 import ReportChart from './ReportChart';
 import { formatReportData } from 'utils/formatters';
@@ -31,7 +31,7 @@ const ReportesEstaticos = () => {
     const handleExportPDF = () => {
         if (!data.length) return;
         try {
-            exportToPDF(data, `Reporte Estático: ${tipo}`);
+            generatePDF('estatico', data, { title: `Reporte Estático: ${tipo}` });
         } catch (err) {
             setError(err.message);
         }
@@ -40,7 +40,7 @@ const ReportesEstaticos = () => {
     const handleExportExcel = () => {
         if (!data.length) return;
         try {
-            exportToExcel(data, tipo);
+            generateExcel('estatico', data, { title: tipo });
         } catch (err) {
             setError(err.message);
         }

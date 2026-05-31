@@ -1,0 +1,246 @@
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD WIDGETS — CSS MODULE
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── EMPTY ──────────────────────────────────────────────────── */
+.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 8rem;
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+/* ── BAR ────────────────────────────────────────────────────── */
+.chartScrollWrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* scrollbar pequeña */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.chartScrollWrapper::-webkit-scrollbar { height: 4px; }
+.chartScrollWrapper::-webkit-scrollbar-track { background: transparent; }
+.chartScrollWrapper::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+
+.chartContainer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    height: 200px;
+    gap: 0.35rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+/* Cada barra tiene un ancho mínimo para que no se aplaste */
+.barWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 36px;
+    flex: 1;
+    height: 100%;
+    justify-content: flex-end;
+    position: relative;
+}
+
+.bar {
+    width: 100%;
+    border-radius: 5px 5px 0 0;
+    transition: all 0.3s ease;
+    position: relative;
+    min-height: 4px;
+    cursor: pointer;
+}
+
+.bar:hover { filter: brightness(1.12); }
+
+.barTooltip {
+    opacity: 0;
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text-main);
+    color: var(--bg-body);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 5px;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+    z-index: 10;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.bar:hover .barTooltip { opacity: 1; }
+
+.barLabel {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* ── LINE / AREA ────────────────────────────────────────────── */
+.lineChartContainer {
+    width: 100%;
+    height: 200px;
+    position: relative;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.lineSvg {
+    width: 100%;
+    flex: 1;
+    overflow: visible;
+}
+
+.lineLabels {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 2px;
+    margin-top: 0.25rem;
+}
+
+/* ── PIE / DOUGHNUT ─────────────────────────────────────────── */
+.pieContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 0.5rem;
+    flex-wrap: wrap;
+    min-height: 180px;
+}
+
+.pieCircle {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.pieLegend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.pieLegendItem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pieColorDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.pieLegendLabel {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.pieLegendValue {
+    font-size: 0.73rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* ── KPI ────────────────────────────────────────────────────── */
+.kpiContainer {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    min-height: 100px;
+    padding: 0.5rem 0;
+}
+
+.kpiValue {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 900;
+    color: var(--text-main);
+    margin: 0.25rem 0;
+    line-height: 1;
+}
+
+.kpiTrend {
+    display: flex;
+    align-items: center;
+    margin-top: 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    gap: 0.3rem;
+}
+
+/* ── TABLE ──────────────────────────────────────────────────── */
+.tableContainer {
+    width: 100%;
+    max-height: 340px;
+    overflow: auto;
+    border-radius: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.tableContainer::-webkit-scrollbar { width: 5px; height: 5px; }
+.tableContainer::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+
+.table {
+    width: 100%;
+    text-align: left;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+}
+
+.table th {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    background: var(--bg-body);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.table td {
+    padding: 0.55rem 0.8rem;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.table tr:last-child td { border-bottom: none; }
+.table tbody tr:hover { background: rgba(var(--primary-rgb), 0.04); }
