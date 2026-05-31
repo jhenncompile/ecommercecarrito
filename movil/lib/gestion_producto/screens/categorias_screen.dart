@@ -226,6 +226,11 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
             Navigator.pushReplacementNamed(context, '/login');
           },
         ),
+        AppSidebarItem(
+          icon: Icons.trending_up,
+          label: 'Predicciones',
+          onTap: () => Navigator.pushReplacementNamed(context, '/predicciones'),
+        ),
       ],
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

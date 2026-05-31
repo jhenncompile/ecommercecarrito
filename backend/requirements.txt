@@ -26,6 +26,7 @@ stripe==15.1.0
 pandas==2.2.3        # ML data processing, compatible con scikit-learn 1.5.x
 scikit-learn==1.5.2  # NLP + vectorizacion TF-IDF
 numpy==2.1.3         # Dependencia base para ambas
+statsmodels==0.14.4  # ARIMA para prediccion de ventas
 Pillow==11.0.0          # Procesamiento de imagenes (requerido por ImageField)
 Faker==25.0.0
 faster-whisper==1.0.3

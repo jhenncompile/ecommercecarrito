@@ -34,7 +34,9 @@ class AppTableCard extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minWidth: MediaQuery.of(context).size.width < 600 ? 600 : MediaQuery.of(context).size.width - 50,
+                minWidth: columns.length <= 3 
+                    ? MediaQuery.of(context).size.width - 50 
+                    : (MediaQuery.of(context).size.width < 600 ? 600 : MediaQuery.of(context).size.width - 50),
               ),
               child: Table(
                 columnWidths: const {0: FlexColumnWidth()},

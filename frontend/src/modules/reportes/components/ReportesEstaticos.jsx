@@ -4,6 +4,8 @@ import DataTable from 'shared/widgets/DataTable/DataTable';
 import { Button, Alert, Spinner } from 'shared/components';
 import { exportToPDF, exportToExcel } from 'utils/exportUtils';
 import { Download, Table, BarChart } from 'lucide-react';
+import ReportChart from './ReportChart';
+import { formatReportData } from 'utils/formatters';
 import styles from './ReportesEstaticos.module.css';
 
 const ReportesEstaticos = () => {
@@ -17,7 +19,7 @@ const ReportesEstaticos = () => {
         setError(null);
         try {
             const response = await api.get(`reportes/estatico/${tipo}/`);
-            setData(response.data);
+            setData(formatReportData(response.data));
         } catch (err) {
             console.error('Error fetching static report:', err);
             setError(err.response?.data?.error || 'Error al obtener el reporte.');
@@ -57,8 +59,11 @@ const ReportesEstaticos = () => {
                         className={styles.select}
                     >
                         <option value="ventas_mensuales">Ventas Mensuales</option>
+                        <option value="ventas_anuales">Ventas Anuales</option>
                         <option value="top_productos">Top Productos</option>
-                        <option value="nuevos_clientes">Nuevos Clientes</option>
+                        <option value="top_categorias">Top Categorías</option>
+                        <option value="nuevos_clientes">Nuevos Clientes (Mensual)</option>
+                        <option value="nuevos_clientes_anual">Nuevos Clientes (Anual)</option>
                     </select>
                 </div>
                 <Button 
@@ -91,6 +96,8 @@ const ReportesEstaticos = () => {
                             PDF
                         </Button>
                     </div>
+                    
+                    <ReportChart data={data} title="Gráfico del Reporte Estático" />
                     
                     <div className={styles.tableWrapper}>
                         <DataTable

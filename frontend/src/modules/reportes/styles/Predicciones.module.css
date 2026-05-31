@@ -1,0 +1,91 @@
+.container {
+  padding: 24px;
+  display: grid;
+  gap: 24px;
+}
+
+.filtersSection {
+  background: white;
+  color: #1f2937;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-left: 4px solid #3b82f6;
+}
+
+.chartSection {
+  background: white;
+  color: #1f2937;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  position: relative;
+  height: 450px;
+}
+
+.tableSection {
+  background: white;
+  color: #1f2937;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.metricCard {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.exportButtons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #6b7280;
+  text-align: center;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.emptyState h3 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+@media (max-width: 768px) {
+  .chartSection {
+    height: 300px;
+  }
+  
+  .filtersSection {
+    flex-direction: column;
+  }
+  
+  .exportButtons {
+    flex-direction: column;
+  }
+  
+  .exportButtons button {
+    width: 100%;
+  }
+}

@@ -105,6 +105,11 @@ class _VentasScreenState extends State<VentasScreen> {
           onTap: () => Navigator.pushReplacementNamed(context, '/reportes'),
         ),
         AppSidebarItem(
+          icon: Icons.trending_up,
+          label: 'Predicciones',
+          onTap: () => Navigator.pushReplacementNamed(context, '/predicciones'),
+        ),
+        AppSidebarItem(
           icon: Icons.settings,
           label: 'Configuración',
           onTap: () => Navigator.pushReplacementNamed(context, '/configuracion'),

@@ -106,6 +106,11 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
           onTap: () => Navigator.pushReplacementNamed(context, '/reportes'),
         ),
         AppSidebarItem(
+          icon: Icons.trending_up,
+          label: 'Predicciones',
+          onTap: () => Navigator.pushReplacementNamed(context, '/predicciones'),
+        ),
+        AppSidebarItem(
           icon: Icons.settings,
           label: 'Configuración',
           isActive: true,

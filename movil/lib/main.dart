@@ -20,6 +20,7 @@ import 'gestion_reporte/screens/reportes_screen.dart';
 import 'gestion_producto/screens/inventario_screen.dart';
 import 'gestion_producto/screens/categorias_screen.dart';
 import 'gestion_usuario/screens/notifications_screen.dart';
+import 'gestion_reporte/screens/predicciones_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -64,6 +65,7 @@ class MyApp extends StatelessWidget {
         '/ventas': (context) => const VentasScreen(),
         '/clientes': (context) => const ClientesScreen(),
         '/reportes': (context) => const ReportesScreen(),
+        '/predicciones': (context) => const PrediccionesScreen(),
         '/inventario': (context) => const InventarioScreen(),
         '/configuracion': (context) => const ConfiguracionScreen(),
         '/notificaciones': (context) => const NotificationsScreen(),

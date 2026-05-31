@@ -15,6 +15,7 @@ import {
   Shield,
   Store,
   Database,
+  TrendingUp,
 } from 'lucide-react';
 
 // ─── MÓDULOS AUTENTICADOS (con sidebar) ─────────────────────
@@ -158,6 +159,17 @@ export const APP_MODULES = [
     label: 'Reportes',
     icon: BarChart3,
     component: lazy(() => import('modules/reportes/views/ReportesView')),
+    protected: true,
+    inSidebar: true,
+    group: 'analisis',
+    roles: ['vendedor'],
+  },
+  {
+    id: 'predicciones',
+    path: '/predicciones',
+    label: 'Predicciones IA',
+    icon: TrendingUp,
+    component: lazy(() => import('modules/reportes/views/Predicciones/PredictionView')),
     protected: true,
     inSidebar: true,
     group: 'analisis',

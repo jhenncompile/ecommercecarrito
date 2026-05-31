@@ -67,5 +67,7 @@ class ReportBuilderAPIView(APIView):
         try:
             datos = ReportService.ejecutar_dinamico(config)
             return Response(datos, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

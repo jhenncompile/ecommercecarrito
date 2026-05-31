@@ -1,8 +1,10 @@
-from django.db.models import Sum, Count, F, Q, DecimalField
-from django.db.models.functions import TruncMonth, TruncDay
+from django.db.models import Sum, Count, F, DecimalField, Value, CharField
+from django.db.models.functions import TruncYear, TruncMonth, TruncDay
 from apps.negocio.ordenes.models.pedido import Pedido
 from apps.negocio.catalogo.models.producto import Producto
 from .registry import ReportRegistry
+
+ESTADOS_VENTA_COBRADA = ['PAGADO', 'PROCESADO', 'ENVIADO', 'ENTREGADO']
 
 class ModelReportBuilder:
     """
@@ -22,7 +24,7 @@ class ModelReportBuilder:
         if not self.model:
             raise NotImplementedError("El builder debe especificar un 'model'.")
             
-        qs = self.model.objects.all()
+        qs = self.get_queryset()
         
         # 1. Aplicar Filtros
         for k, v in self.filtros.items():
@@ -30,10 +32,12 @@ class ModelReportBuilder:
                 qs = qs.filter(**{k: v})
         
         # 2. Aplicar Agrupación
-        if self.agrupar_por in self.agrupaciones:
+        if self.agrupar_por in (None, '', 'ninguno'):
+            qs = qs.annotate(grupo=Value('Total', output_field=CharField()))
+        elif self.agrupar_por in self.agrupaciones:
             qs = qs.annotate(grupo=self.agrupaciones[self.agrupar_por])
         else:
-            qs = qs.annotate(grupo=F('id')) # Por defecto (sin agrupación)
+            raise ValueError(f"Agrupación no soportada: {self.agrupar_por}")
             
         qs = qs.values('grupo')
         
@@ -41,10 +45,12 @@ class ModelReportBuilder:
         if self.metrica in self.metricas:
             qs = qs.annotate(resultado=self.metricas[self.metrica])
         else:
-            # Fallback seguro
-            qs = qs.annotate(resultado=Count('id'))
+            raise ValueError(f"Métrica no soportada: {self.metrica}")
             
         return qs.order_by('-grupo')
+
+    def get_queryset(self):
+        return self.model.objects.all()
 
 
 @ReportRegistry.register_dinamico('pedidos', 'Pedidos y Ventas')
@@ -52,14 +58,21 @@ class PedidoReportBuilder(ModelReportBuilder):
     model = Pedido
     metricas = {
         'total': Sum(F('carrito__items__producto__precio') * F('carrito__items__cantidad'), output_field=DecimalField()),
-        'conteo': Count('id')
+        'conteo': Count('id', distinct=True)
     }
     agrupaciones = {
+        'año': TruncYear('fecha_creacion'),
         'mes': TruncMonth('fecha_creacion'),
         'dia': TruncDay('fecha_creacion'),
         'estado': F('estado')
     }
     filtros_permitidos = ['estado']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if 'estado' in self.filtros:
+            return qs
+        return qs.filter(estado__in=ESTADOS_VENTA_COBRADA)
 
 
 @ReportRegistry.register_dinamico('productos', 'Inventario de Productos')
@@ -67,7 +80,7 @@ class ProductoReportBuilder(ModelReportBuilder):
     model = Producto
     metricas = {
         'stock': Sum('stock'),
-        'conteo': Count('id')
+        'conteo': Count('id', distinct=True)
     }
     agrupaciones = {
         'categoria': F('categoria__nombre')

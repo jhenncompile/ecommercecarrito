@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 const formatHeader = (key) => {
@@ -37,7 +37,7 @@ export const exportToPDF = (data, title = "Reporte de Datos", prompt = "") => {
             doc.text(`Total registros: ${data.length}`, 14, 38);
         }
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: prompt ? 50 : 44,
             head: [tableColumn],
             body: tableRows,
