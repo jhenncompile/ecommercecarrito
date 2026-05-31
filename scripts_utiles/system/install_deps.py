@@ -43,13 +43,13 @@ def install_backend():
         print(" [i] Creando entorno virtual...")
         run_command([sys.executable, '-m', 'venv', str(venv_path)], cwd=BACKEND_DIR)
     
-    req_file = BACKEND_DIR / 'requirements.txt'
+    req_file = BACKEND_DIR / 'requirements' / 'local.txt'
     if req_file.exists():
         print(" [i] Ejecutando pip install...")
         if run_command([str(pip_exe), 'install', '-r', str(req_file)], cwd=BACKEND_DIR):
             print_ok("Backend instalado correctamente.")
     else:
-        print_err("No se encontró requirements.txt en el backend.")
+        print_err("No se encontró requirements/local.txt en el backend.")
 
 def install_frontend():
     print_header("Instalando Dependencias Frontend (React)")
