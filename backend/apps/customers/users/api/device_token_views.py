@@ -17,25 +17,31 @@ class DeviceTokenRegisterView(APIView):
 
         token = serializer.validated_data['token']
 
-        print(f"📱 Recibida petición para registrar Device Token: {token[:15]}...")
+        print(f"Recibida peticion para registrar Device Token: {token[:15]}...")
 
         # Detectar si es cliente (app móvil) o vendedor (app vendedor)
         auth_payload = getattr(request, 'auth', {})
-        role = auth_payload.get('role') if isinstance(auth_payload, dict) else None
+        role = None
+        if hasattr(auth_payload, 'get'):
+            role = auth_payload.get('role')
+        elif hasattr(auth_payload, 'payload'):
+            role = auth_payload.payload.get('role')
 
         cliente_id = None
         usuario_id = None
 
         if role == 'CLIENTE':
-            cliente_id = auth_payload.get('cliente_id') or auth_payload.get('user_id')
-            print(f"👤 Identificado como CLIENTE. ID: {cliente_id}")
+            cliente_id = auth_payload.get('cliente_id') if hasattr(auth_payload, 'get') else auth_payload.payload.get('cliente_id')
+            if not cliente_id:
+                cliente_id = auth_payload.get('user_id') if hasattr(auth_payload, 'get') else auth_payload.payload.get('user_id')
+            print(f"Identificado como CLIENTE. ID: {cliente_id}")
         else:
             # Es vendedor (Usuario)
             usuario_id = request.user.id if request.user and request.user.is_authenticated else None
-            print(f"🧑‍💼 Identificado como VENDEDOR (Usuario). ID: {usuario_id}")
+            print(f"Identificado como VENDEDOR (Usuario). ID: {usuario_id}")
 
         if not cliente_id and not usuario_id:
-            print("❌ Error: No se pudo identificar al usuario en la petición de token.")
+            print("Error: No se pudo identificar al usuario en la peticion de token.")
             return Response({'error': 'No se pudo identificar al usuario.'}, status=401)
 
         # DeviceToken vive en SHARED_APPS -> schema public
@@ -54,8 +60,8 @@ class DeviceTokenRegisterView(APIView):
                 device_token.cliente = cliente
                 device_token.usuario = usuario
                 device_token.save()
-                print(f"🔄 Token actualizado para {'Cliente' if cliente else 'Usuario'}")
+                print(f"Token actualizado para {'Cliente' if cliente else 'Usuario'}")
             else:
-                print(f"✅ Nuevo Token creado para {'Cliente' if cliente else 'Usuario'}")
+                print(f"Nuevo Token creado para {'Cliente' if cliente else 'Usuario'}")
 
         return Response({'status': 'Token registrado exitosamente'})
