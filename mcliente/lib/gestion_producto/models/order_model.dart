@@ -8,6 +8,7 @@ class OrderModel {
   final DateTime fecha;
   final List<CartItemModel>? items;
   final String? tenantName;
+  final String? schemaName;
 
   OrderModel({
     required this.id,
@@ -17,6 +18,7 @@ class OrderModel {
     required this.fecha,
     this.items,
     this.tenantName,
+    this.schemaName,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -24,11 +26,12 @@ class OrderModel {
       id: json['id'],
       numero: json['numero_pedido'] ?? 'PED-${json['id']}',
       estado: json['estado'],
-      total: double.parse(json['total'].toString()),
-      fecha: DateTime.parse(json['created_at']),
+      total: double.parse((json['total_pedido'] ?? json['total'] ?? 0).toString()),
+      fecha: DateTime.parse(json['fecha_creacion'] ?? json['created_at'] ?? DateTime.now().toIso8601String()),
       tenantName: json['tenant_name'],
-      items: json['carrito'] != null && json['carrito']['items'] != null
-          ? (json['carrito']['items'] as List).map((i) => CartItemModel.fromJson(i)).toList()
+      schemaName: json['schema_name'],
+      items: json['items'] != null
+          ? (json['items'] as List).map((i) => CartItemModel.fromJson(i)).toList()
           : null,
     );
   }

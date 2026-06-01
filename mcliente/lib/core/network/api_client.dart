@@ -10,6 +10,7 @@ class ApiClient {
   Future<Map<String, String>> _getHeaders({
     bool requiresAuth = false,
     bool includeTenantHost = false,
+    String? tenantHostOverride,
   }) async {
     final headers = <String, String>{
       'Content-Type': 'application/json',
@@ -23,9 +24,13 @@ class ApiClient {
     }
 
     if (includeTenantHost) {
-      final subdomain = await _storage.getSubdomain();
-      if (subdomain != null && subdomain.isNotEmpty) {
-        headers['Host'] = ApiConstants.tenantHost(subdomain);
+      if (tenantHostOverride != null && tenantHostOverride.isNotEmpty) {
+        headers['Host'] = ApiConstants.tenantHost(tenantHostOverride);
+      } else {
+        final subdomain = await _storage.getSubdomain();
+        if (subdomain != null && subdomain.isNotEmpty) {
+          headers['Host'] = ApiConstants.tenantHost(subdomain);
+        }
       }
     }
 
@@ -36,10 +41,12 @@ class ApiClient {
     String url, {
     bool requiresAuth = false,
     bool includeTenantHost = false,
+    String? tenantHostOverride,
   }) async {
     final headers = await _getHeaders(
       requiresAuth: requiresAuth,
       includeTenantHost: includeTenantHost,
+      tenantHostOverride: tenantHostOverride,
     );
     final response = await http.get(Uri.parse(url), headers: headers);
 
@@ -48,6 +55,7 @@ class ApiClient {
             url,
             requiresAuth: requiresAuth,
             includeTenantHost: includeTenantHost,
+            tenantHostOverride: tenantHostOverride,
           ));
     }
     return response;
@@ -58,10 +66,12 @@ class ApiClient {
     Map<String, dynamic> body, {
     bool requiresAuth = false,
     bool includeTenantHost = false,
+    String? tenantHostOverride,
   }) async {
     final headers = await _getHeaders(
       requiresAuth: requiresAuth,
       includeTenantHost: includeTenantHost,
+      tenantHostOverride: tenantHostOverride,
     );
     final response = await http.post(
       Uri.parse(url),
@@ -75,6 +85,7 @@ class ApiClient {
             body,
             requiresAuth: requiresAuth,
             includeTenantHost: includeTenantHost,
+            tenantHostOverride: tenantHostOverride,
           ));
     }
     return response;
@@ -85,10 +96,12 @@ class ApiClient {
     Map<String, dynamic> body, {
     bool requiresAuth = false,
     bool includeTenantHost = false,
+    String? tenantHostOverride,
   }) async {
     final headers = await _getHeaders(
       requiresAuth: requiresAuth,
       includeTenantHost: includeTenantHost,
+      tenantHostOverride: tenantHostOverride,
     );
     final response = await http.put(
       Uri.parse(url),
@@ -102,6 +115,7 @@ class ApiClient {
             body,
             requiresAuth: requiresAuth,
             includeTenantHost: includeTenantHost,
+            tenantHostOverride: tenantHostOverride,
           ));
     }
     return response;
@@ -113,10 +127,12 @@ class ApiClient {
     Map<String, dynamic> body, {
     bool requiresAuth = false,
     bool includeTenantHost = false,
+    String? tenantHostOverride,
   }) async {
     final headers = await _getHeaders(
       requiresAuth: requiresAuth,
       includeTenantHost: includeTenantHost,
+      tenantHostOverride: tenantHostOverride,
     );
     final response = await http.patch(
       Uri.parse(url),
@@ -130,6 +146,7 @@ class ApiClient {
             body,
             requiresAuth: requiresAuth,
             includeTenantHost: includeTenantHost,
+            tenantHostOverride: tenantHostOverride,
           ));
     }
     return response;
@@ -139,10 +156,12 @@ class ApiClient {
     String url, {
     bool requiresAuth = false,
     bool includeTenantHost = false,
+    String? tenantHostOverride,
   }) async {
     final headers = await _getHeaders(
       requiresAuth: requiresAuth,
       includeTenantHost: includeTenantHost,
+      tenantHostOverride: tenantHostOverride,
     );
     final response = await http.delete(Uri.parse(url), headers: headers);
 
