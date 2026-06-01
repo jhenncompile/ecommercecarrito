@@ -24,6 +24,7 @@ class AppColors {
   // Bordes
   static const Color border         = Color(0xFFE2E8F0);
   static const Color borderInput    = Color(0xFFE1E4E8);
+  static const Color borderHighlight= Color(0xFF18AEA4);
 
   // Estados
   static const Color success        = Color(0xFF10B981);
@@ -36,9 +37,16 @@ class AppColors {
   static const Color warning        = Color(0xFFF59E0B);
   static const Color warningBg      = Color(0xFFFEF3C7);
   static const Color warningText    = Color(0xFFB45309);
+  
+  static const Color info           = Color(0xFF3B82F6);
+  static const Color primary        = Color(0xFF101124);
 
   // Highlight teal suave (tenant badge, feature card hover)
   static const Color tealLight      = Color(0xFFF0FDF4);
+  
+  static const Color surface2       = Color(0xFFF1F5F9);
+  static const Color bgSurface      = Color(0xFFFFFFFF);
+  static const Color textSecondary  = Color(0xFF64748B);
 
   // Sidebar
   static const Color sidebar        = Color(0xFF101124);
