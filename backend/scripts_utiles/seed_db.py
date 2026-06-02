@@ -11,7 +11,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django_tenants.utils import schema_context
-from apps.negocio.models import Categoria, Producto, Pedido, Factura
+from apps.negocio.models import Categoria, Producto, Pedido, Factura, DetalleFactura, TipoPago
 from apps.negocio.ordenes.models.carrito import Carrito
 from apps.negocio.ordenes.models.carrito_item import CarritoItem
 from apps.customers.models import Client, Domain, Usuario, Rol, Plan, Cliente, Permiso
@@ -181,9 +181,11 @@ def ejecutar():
             Producto.objects.all().delete()
             Categoria.objects.all().delete()
             Factura.objects.all().delete()
+            DetalleFactura.objects.all().delete()
             Pedido.objects.all().delete()
             CarritoItem.objects.all().delete()
             Carrito.objects.all().delete()
+            TipoPago.objects.all().delete()
 
             cat_obj, _ = Categoria.objects.get_or_create(nombre=conf['cat'])
 
@@ -196,27 +198,51 @@ def ejecutar():
                 )
                 prods_creados.append(p)
 
+            tipo_pago, _ = TipoPago.objects.get_or_create(nombre='EFECTIVO', defaults={'estado': 'ACTIVO'})
+
             for c_nom, c_email in clientes_data:
                 cliente, _ = Cliente.objects.get_or_create(correo=c_email, defaults={'nombre': c_nom})
                 
-                # Crear pedidos correctos (Carrito -> Items -> Pedido -> Factura)
-                for _ in range(2):
+                # Crear pedidos históricos para la predicción (1 a 5 meses atrás)
+                from datetime import timedelta
+                from django.utils import timezone
+                
+                num_pedidos = random.randint(3, 8)
+                for _ in range(num_pedidos):
                     p = random.choice(prods_creados)
+                    cant = random.randint(1, 3)
+                    
+                    dias_atras = random.randint(1, 150)
+                    fake_date = timezone.now() - timedelta(days=dias_atras)
                     
                     carrito = Carrito.objects.create(cliente=cliente, estado='CERRADO')
-                    item = CarritoItem.objects.create(carrito=carrito, producto=p, cantidad=random.randint(1, 3))
+                    Carrito.objects.filter(id=carrito.id).update(fecha_creacion=fake_date)
+                    
+                    item = CarritoItem.objects.create(carrito=carrito, producto=p, cantidad=cant)
                     
                     pedido = Pedido.objects.create(
                         carrito=carrito,
-                        estado='COMPLETADO'  # NOTA: report_service.py busca COMPLETADO
+                        estado='ENTREGADO'
                     )
+                    Pedido.objects.filter(id=pedido.id).update(fecha_creacion=fake_date)
                     
-                    Factura.objects.create(
-                        nro=f"FAC-{random.randint(1000, 9999)}",
+                    nro_fact = f"FAC-{random.randint(10000, 99999)}"
+                    factura = Factura.objects.create(
+                        nro=nro_fact,
                         pedido=pedido,
                         cliente=cliente,
+                        tipo_pago=tipo_pago,
                         monto_total=item.subtotal,
                         estado='VIGENTE'
+                    )
+                    Factura.objects.filter(nro=nro_fact).update(fecha=fake_date.date(), hora=fake_date.time())
+                    
+                    DetalleFactura.objects.create(
+                        factura=factura,
+                        producto=p,
+                        cantidad=cant,
+                        precio_unitario=p.precio,
+                        total=item.subtotal
                     )
 
     print("\nSEEDER MAESTRO EJECUTADO CON ÉXITO.")

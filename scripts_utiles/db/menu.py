@@ -33,7 +33,8 @@ def show_data_menu():
             print_option(f"{Colors.GREEN}V{Colors.RESET} - Optimizar Base de Datos (Vacuum)")
     
             print_section("6. Limpieza (CUIDADO)")
-            print_option(f"{Colors.RED}8{Colors.RESET} - Resetear BD Completa")
+            print_option(f"{Colors.RED}8{Colors.RESET} - Resetear BD Completa (Django reset)")
+            print_option(f"{Colors.RED}0{Colors.RESET} - Resetear y Sembrar BD (reset_db.py + seeder) -> IDEAL PARA FORECAST")
     
             print_section("7. Utilidades")
             print_option(f"{Colors.YELLOW}9{Colors.RESET} - Sanear Dominios de Tenants (quitar guiones bajos)")
@@ -69,6 +70,11 @@ def show_data_menu():
             elif choice == '8':
                 if input(f"{Colors.RED}¿SEGURO? Borra todo. (s/n): {Colors.RESET}").lower() == 's':
                     run_script('db/db_reset.py', 'all')
+                pause()
+            elif choice == '0':
+                if input(f"{Colors.RED}¿SEGURO? Borrará todo y creará historial para Predicciones. (s/n): {Colors.RESET}").lower() == 's':
+                    import subprocess
+                    subprocess.run(['python', 'backend/scripts_utiles/reset_db.py'])
                 pause()
             elif choice == '9':
                 print_info("Buscando dominios con guiones bajos...")
