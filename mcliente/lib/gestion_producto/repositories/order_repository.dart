@@ -30,11 +30,9 @@ class OrderRepository {
 
   /// Obtiene pedidos de todos los tenants para el usuario autenticado
   Future<List<OrderModel>> fetchGlobalOrders() async {
-    final url = await _buildUrl();
-    if (url == null) throw Exception('No hay tenant configurado.');
-    final globalUrl = '${url}global-list/';
+    final globalUrl = '${ApiConstants.mainBaseUrl}/pedidos/global-list/';
     
-    final response = await _apiClient.get(globalUrl, requiresAuth: true, includeTenantHost: true);
+    final response = await _apiClient.get(globalUrl, requiresAuth: true, includeTenantHost: false);
 
     if (response.statusCode == 200) {
       final dynamic decoded = jsonDecode(response.body);

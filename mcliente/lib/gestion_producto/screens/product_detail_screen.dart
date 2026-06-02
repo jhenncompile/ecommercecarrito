@@ -80,9 +80,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           tag: 'product-${widget.product.id}',
           child: Container(
             color: AppColors.bgSearch,
-            child: const Center(
-              child: Icon(Icons.image_outlined, size: 100, color: AppColors.textMuted),
-            ),
+            child: widget.product.imagenUrl != null && widget.product.imagenUrl!.isNotEmpty
+                ? Image.network(widget.product.imagenUrl!, fit: BoxFit.cover)
+                : const Center(
+                    child: Icon(Icons.image_outlined, size: 100, color: AppColors.textMuted),
+                  ),
           ),
         ),
       ),

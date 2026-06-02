@@ -136,6 +136,27 @@ class _OrderCardState extends State<_OrderCard> {
     }
   }
 
+  Color _getLabelColor(String currentStatus, String targetState) {
+    final statusUpper = currentStatus.toUpperCase();
+    final allStates = ['PENDIENTE', 'PAGADO', 'PROCESADO', 'ENVIADO', 'ENTREGADO'];
+    if (statusUpper == 'CANCELADO') return AppColors.textMuted;
+    
+    int currentIndex = allStates.indexOf(statusUpper);
+    int targetIndex = allStates.indexOf(targetState);
+    if (currentIndex == -1 || targetIndex == -1) return AppColors.textMuted;
+    
+    if (targetIndex <= currentIndex) {
+      switch (targetState) {
+        case 'PENDIENTE': return AppColors.primary;
+        case 'PAGADO': return AppColors.info;
+        case 'PROCESADO': return AppColors.warning;
+        case 'ENVIADO':
+        case 'ENTREGADO': return AppColors.success;
+      }
+    }
+    return AppColors.textMuted;
+  }
+
   Widget _buildProgressBar(String currentStatus) {
     final statusUpper = currentStatus.toUpperCase();
     final allStates = ['PENDIENTE', 'PAGADO', 'PROCESADO', 'ENVIADO', 'ENTREGADO'];
@@ -219,11 +240,11 @@ class _OrderCardState extends State<_OrderCard> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('PENDIENTE', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                            Text('PAGADO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.info)),
-                            Text('PROCESADO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.warning)),
-                            Text('ENVIADO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.success)),
-                            Text('ENTREGADO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.success)),
+                            Text('PENDIENTE', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: _getLabelColor(order.estado, 'PENDIENTE'))),
+                            Text('PAGADO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: _getLabelColor(order.estado, 'PAGADO'))),
+                            Text('PROCESADO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: _getLabelColor(order.estado, 'PROCESADO'))),
+                            Text('ENVIADO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: _getLabelColor(order.estado, 'ENVIADO'))),
+                            Text('ENTREGADO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: _getLabelColor(order.estado, 'ENTREGADO'))),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -336,15 +357,30 @@ class _OrderCardState extends State<_OrderCard> {
                             if (confirm == true) {
                               AppToast.showInfo(context, 'Actualizando estado...');
                               try {
-                                final res = await widget.apiClient.post('${ApiConstants.mainBaseUrl}/pedidos/${order.id}/cambiar-estado/', {'estado': 'ENTREGADO'}, requiresAuth: true, includeTenantHost: true, tenantHostOverride: order.schemaName);
+                                // Asegurar que el host sea el dominio completo (ej: gerlexxtech2.157.x.x.nip.io)
+                                // Si schemaName ya tiene un punto, es el dominio completo; si no, construir uno.
+                                final rawSchema = order.schemaName ?? '';
+                                final tenantHost = rawSchema.contains('.')
+                                    ? rawSchema
+                                    : '$rawSchema.${ApiConstants.vpsIp}.nip.io';
+
+                                final res = await widget.apiClient.post(
+                                  '${ApiConstants.mainBaseUrl}/pedidos/${order.id}/cambiar-estado/',
+                                  {'estado': 'ENTREGADO'},
+                                  requiresAuth: true,
+                                  includeTenantHost: true,
+                                  tenantHostOverride: tenantHost,
+                                );
                                 if (res.statusCode == 200 || res.statusCode == 201) {
                                   AppToast.showSuccess(context, '¡Pedido finalizado con éxito!');
                                   widget.onReload();
                                 } else {
-                                  AppToast.showError(context, 'Error al confirmar entrega.');
+                                  print('Error en cambiar-estado: ${res.statusCode} - ${res.body}');
+                                  AppToast.showError(context, 'Error al confirmar entrega. (${res.statusCode})');
                                 }
                               } catch(e) {
-                                AppToast.showError(context, 'Error al confirmar entrega.');
+                                print('Catch error en cambiar-estado: $e');
+                                AppToast.showError(context, 'Error de red al confirmar entrega.');
                               }
                             }
                           },

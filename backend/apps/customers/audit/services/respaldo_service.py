@@ -158,18 +158,23 @@ class RespaldoService:
                         FROM information_schema.tables 
                         WHERE table_schema = '{schema}' 
                         AND table_type = 'BASE TABLE'
+                        ORDER BY table_name
                     """)
                     tables = [row[0] for row in cursor.fetchall()]
                     
                     schema_data = {}
                     for table in tables:
                         try:
-                            # 3. Capturar muestra de datos (Top 20 filas)
-                            cursor.execute(f'SELECT * FROM "{schema}"."{table}" LIMIT 20;')
+                            # 3. Contar total real de filas
+                            cursor.execute(f'SELECT COUNT(*) FROM "{schema}"."{table}";')
+                            total_count = cursor.fetchone()[0]
+
+                            # 4. Capturar muestra de datos (Top 100 filas)
+                            cursor.execute(f'SELECT * FROM "{schema}"."{table}" LIMIT 100;')
                             columns = [col[0] for col in cursor.description]
                             rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
                             
-                            # Limpieza profunda de tipos no serializables (Decimal, UUID, datetime)
+                            # Limpieza profunda de tipos no serializables
                             from decimal import Decimal
                             from uuid import UUID
                             
@@ -179,12 +184,13 @@ class RespaldoService:
                                     elif isinstance(v, UUID): row[k] = str(v)
                                     elif hasattr(v, 'isoformat'): row[k] = v.isoformat()
                                     elif isinstance(v, bytes): row[k] = "<Binario>"
-                                    elif v is None: row[k] = ""
+                                    elif v is None: row[k] = None
                             
                             schema_data[table] = {
                                 'columns': columns,
                                 'rows': rows,
-                                'count': len(rows)
+                                'count': total_count,    # total real en la BD
+                                'sample': len(rows)      # filas en la muestra
                             }
                         except Exception:
                             continue
@@ -194,6 +200,7 @@ class RespaldoService:
         except Exception as e:
             logger.error(f"Error generando catálogo profundo: {e}")
             return {"error": str(e)}
+
 
     def obtener_historial_encadenado(self):
         """Retorna todos los respaldos en orden cronológico"""

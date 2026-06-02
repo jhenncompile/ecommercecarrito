@@ -7,6 +7,7 @@ class ProductModel {
   final String sku;
   final int? categoria;
   final String? categoriaNombre;
+  final String? imagenUrl;
 
   ProductModel({
     required this.id,
@@ -17,6 +18,7 @@ class ProductModel {
     this.sku = '',
     this.categoria,
     this.categoriaNombre,
+    this.imagenUrl,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class ProductModel {
       sku: json['sku'] ?? '',
       categoria: json['categoria'],
       categoriaNombre: json['categoria_detail']?['nombre'],
+      imagenUrl: json['imagen_url'],
     );
   }
 

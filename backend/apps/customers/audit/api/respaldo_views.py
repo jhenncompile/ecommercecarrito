@@ -50,9 +50,24 @@ class RespaldoViewSet(BaseViewSet):
     def config(self, request):
         """Obtiene o actualiza la configuración de respaldos automáticos"""
         from apps.customers.audit.models.respaldo import ConfiguracionRespaldo
-        
-        config_obj, created = ConfiguracionRespaldo.objects.get_or_create(id=1, defaults={'hora_ejecucion': '00:00:00'})
-        
+        from django.db import OperationalError, ProgrammingError
+
+        try:
+            config_obj, created = ConfiguracionRespaldo.objects.get_or_create(
+                id=1, defaults={'hora_ejecucion': '00:00:00'}
+            )
+        except (OperationalError, ProgrammingError):
+            # La tabla aún no existe (migración pendiente) — devolver valores por defecto
+            if request.method == 'GET':
+                return Response({
+                    'activo': False,
+                    'frecuencia': 'DIARIO',
+                    'hora_ejecucion': '00:00:00',
+                    'dia_referencia': 0,
+                    '_warning': 'Migración pendiente: ejecuta python manage.py migrate en el VPS'
+                })
+            return Response({'error': 'Tabla de configuración no existe. Ejecuta las migraciones.'}, status=500)
+
         if request.method == 'GET':
             return Response({
                 'activo': config_obj.activo,
@@ -60,7 +75,7 @@ class RespaldoViewSet(BaseViewSet):
                 'hora_ejecucion': str(config_obj.hora_ejecucion),
                 'dia_referencia': config_obj.dia_referencia
             })
-            
+
         elif request.method == 'POST':
             config_obj.activo = request.data.get('activo', config_obj.activo)
             config_obj.frecuencia = request.data.get('frecuencia', config_obj.frecuencia)
@@ -68,6 +83,7 @@ class RespaldoViewSet(BaseViewSet):
             config_obj.dia_referencia = request.data.get('dia_referencia', config_obj.dia_referencia)
             config_obj.save()
             return Response({'message': 'Configuración actualizada'})
+
 
     @action(detail=True, methods=['post'], url_path='restaurar')
     def restaurar(self, request, pk=None):

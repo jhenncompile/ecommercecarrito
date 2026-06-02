@@ -280,7 +280,12 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                     color: AppColors.bgSearch,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
                   ),
-                  child: const Icon(Icons.image_outlined, size: 50, color: AppColors.textMuted),
+                  child: product.imagenUrl != null && product.imagenUrl!.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                          child: Image.network(product.imagenUrl!, fit: BoxFit.cover),
+                        )
+                      : const Icon(Icons.image_outlined, size: 50, color: AppColors.textMuted),
                 ),
               ),
             ),

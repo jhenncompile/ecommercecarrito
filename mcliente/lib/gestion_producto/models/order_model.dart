@@ -24,12 +24,12 @@ class OrderModel {
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
       id: json['id'],
-      numero: json['numero_pedido'] ?? 'PED-${json['id']}',
-      estado: json['estado'],
+      numero: json['numero_pedido'] ?? json['numero'] ?? 'PED-${json['id']}',
+      estado: json['estado'] ?? 'PENDIENTE',
       total: double.parse((json['total_pedido'] ?? json['total'] ?? 0).toString()),
       fecha: DateTime.parse(json['fecha_creacion'] ?? json['created_at'] ?? DateTime.now().toIso8601String()),
       tenantName: json['tenant_name'],
-      schemaName: json['schema_name'],
+      schemaName: json['subdominio'] ?? json['schema_name'],
       items: json['items'] != null
           ? (json['items'] as List).map((i) => CartItemModel.fromJson(i)).toList()
           : null,
