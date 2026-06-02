@@ -52,7 +52,7 @@ class PedidoViewSet(BaseViewSet):
         Obtiene los pedidos del cliente logueado a través de todos los tenants.
         """
         from django_tenants.utils import schema_context
-        from apps.customers.models import Client
+        from apps.customers.models import Client, Domain
         
         if not request.user.is_authenticated:
             return Response([])
@@ -66,6 +66,18 @@ class PedidoViewSet(BaseViewSet):
         try:
             tenants = Client.objects.exclude(schema_name='public')
             for tenant in tenants:
+                domains = list(Domain.objects.filter(tenant=tenant).values_list('domain', flat=True))
+                # Preferir el dominio con nip.io o el más completo (mayor longitud)
+                # así el Host header en la app móvil será correcto
+                if domains:
+                    nip_domains = [d for d in domains if 'nip.io' in d]
+                    if nip_domains:
+                        tenant_domain = nip_domains[0]
+                    else:
+                        tenant_domain = max(domains, key=len)
+                else:
+                    tenant_domain = tenant.schema_name
+                
                 with schema_context(tenant.schema_name):
                     try:
                         # En tu modelo Cliente, el campo se llama 'correo', no 'email'
@@ -76,6 +88,7 @@ class PedidoViewSet(BaseViewSet):
                             data = serializer.data
                             data['tenant_name'] = tenant.name
                             data['schema_name'] = tenant.schema_name
+                            data['subdominio'] = tenant_domain
                             all_pedidos.append(data)
                     except Exception as e_tenant:
                         print(f"⚠️ Error en tenant {tenant.schema_name}: {str(e_tenant)}")
