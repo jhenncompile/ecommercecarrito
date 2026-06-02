@@ -427,15 +427,15 @@ export default function BackupsView() {
                                 style={{
                                     padding: '8px 10px', borderRadius: '6px',
                                     border: '1px solid var(--color-border)',
-                                    background: 'var(--color-surface)',
-                                    color: 'var(--color-text)',
+                                    background: '#1f2937',
+                                    color: '#f8fafc',
                                     fontSize: '14px', outline: 'none', width: '100%'
                                 }}
                                 disabled={!autoConfig.activo}
                             >
-                                <option value="DIARIO">Diario</option>
-                                <option value="SEMANAL">Semanal</option>
-                                <option value="MENSUAL">Mensual</option>
+                                <option value="DIARIO" style={{ background: '#1f2937', color: '#f8fafc' }}>Diario</option>
+                                <option value="SEMANAL" style={{ background: '#1f2937', color: '#f8fafc' }}>Semanal</option>
+                                <option value="MENSUAL" style={{ background: '#1f2937', color: '#f8fafc' }}>Mensual</option>
                             </select>
                         </div>
 
