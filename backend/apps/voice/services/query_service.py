@@ -237,9 +237,36 @@ class VoiceQueryService:
             raise Exception("No se pudo conectar con el servicio de IA.")
 
     @staticmethod
+    def _serialize_row(row: dict) -> dict:
+        """
+        Converts non-JSON-serializable types (date, datetime, Decimal, UUID, etc.)
+        to their string equivalents so results can be stored in a JSONField.
+        """
+        import datetime
+        from decimal import Decimal
+        import uuid
+
+        serialized = {}
+        for key, value in row.items():
+            if isinstance(value, (datetime.date, datetime.datetime)):
+                serialized[key] = value.isoformat()
+            elif isinstance(value, datetime.time):
+                serialized[key] = value.isoformat()
+            elif isinstance(value, Decimal):
+                serialized[key] = float(value)
+            elif isinstance(value, uuid.UUID):
+                serialized[key] = str(value)
+            elif isinstance(value, memoryview):
+                serialized[key] = bytes(value).hex()
+            else:
+                serialized[key] = value
+        return serialized
+
+    @staticmethod
     def execute_query(sql):
         """
         Executes the SQL query and returns the result as a list of dictionaries.
+        All values are JSON-serializable (dates → ISO strings, Decimal → float, etc.)
         """
         from django.db import connection
         if not sql:
@@ -255,7 +282,7 @@ class VoiceQueryService:
                     
                 columns = [col[0] for col in cursor.description]
                 results = [
-                    dict(zip(columns, row))
+                    VoiceQueryService._serialize_row(dict(zip(columns, row)))
                     for row in cursor.fetchall()
                 ]
                 logger.info(f"Query executed successfully. Rows returned: {len(results)}")
