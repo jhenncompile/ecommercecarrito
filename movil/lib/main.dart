@@ -21,6 +21,9 @@ import 'gestion_producto/screens/inventario_screen.dart';
 import 'gestion_producto/screens/categorias_screen.dart';
 import 'gestion_usuario/screens/notifications_screen.dart';
 import 'gestion_reporte/screens/predicciones_screen.dart';
+import 'gestion_recordatorio/screens/recordatorios_screen.dart';
+import 'gestion_cliente/screens/comportamiento_cliente_screen.dart';
+import 'gestion_backup/screens/backup_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -69,6 +72,9 @@ class MyApp extends StatelessWidget {
         '/inventario': (context) => const InventarioScreen(),
         '/configuracion': (context) => const ConfiguracionScreen(),
         '/notificaciones': (context) => const NotificationsScreen(),
+        '/recordatorios': (context) => const RecordatoriosScreen(),
+        '/comportamiento': (context) => const ComportamientoClienteScreen(),
+        '/backup': (context) => const BackupScreen(),
       },
     );
   }

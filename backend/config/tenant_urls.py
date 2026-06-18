@@ -10,6 +10,7 @@ from apps.negocio.catalogo.api.categoria_views import CategoriaViewSet
 from apps.negocio.billing.api.views import FacturaViewSet, TipoPagoViewSet
 from apps.negocio.billing.api.pago_views import PagoViewSet
 from apps.negocio.notificaciones.api.views import NotificacionViewSet
+from apps.negocio.recordatorios.api.views import RecordatorioViewSet
 from apps.voice.api.views import VoiceQueryView, VoiceTaskStatusView
 from apps.customers.users.api.views import (
     MyTokenObtainPairView, LogoutView,
@@ -78,6 +79,12 @@ urlpatterns = [
 
     # Reportes
     path('api/reportes/', include('apps.negocio.reportes.api.urls')),
+
+    # Recordatorios (CU-20)
+    path('api/recordatorios/', RecordatorioViewSet.as_view({'get': 'list', 'post': 'create'}), name='recordatorio-list'),
+    path('api/recordatorios/proximos/', RecordatorioViewSet.as_view({'get': 'proximos'}), name='recordatorio-proximos'),
+    path('api/recordatorios/<int:pk>/', RecordatorioViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='recordatorio-detail'),
+    path('api/recordatorios/<int:pk>/marcar-completado/', RecordatorioViewSet.as_view({'post': 'marcar_completado'}), name='recordatorio-marcar-completado'),
 ]
 
 from django.conf import settings

@@ -1,6 +1,10 @@
 import os
 import glob
+import sys
 import importlib.util
+
+# Añadir el root del proyecto al PATH para importar scripts_utiles.ui
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from scripts_utiles.ui import print_info, print_success, print_error, print_header
 
 def main():

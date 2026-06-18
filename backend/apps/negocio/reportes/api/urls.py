@@ -13,6 +13,7 @@ from apps.negocio.reportes.api.forecast_views import (
     PrediccionVentasAPIView,
     PrediccionVentasExcelAPIView,
 )
+from apps.negocio.reportes.api.behavior_views import ComportamientoClientesAPIView
 
 router = DefaultRouter()
 router.register(r'configuraciones', ReporteConfigViewSet, basename='reporte_config')
@@ -26,5 +27,6 @@ urlpatterns = [
     path('prediccion/export-excel/', PrediccionVentasExcelAPIView.as_view(), name='prediccion_ventas_excel'),
     path('prediccion/productos/', PrediccionProductosAPIView.as_view(), name='prediccion_productos'),
     path('prediccion/categorias/', PrediccionCategoriasAPIView.as_view(), name='prediccion_categorias'),
+    path('comportamiento-clientes/', ComportamientoClientesAPIView.as_view(), name='comportamiento_clientes'),
     path('', include(router.urls)),
 ]
