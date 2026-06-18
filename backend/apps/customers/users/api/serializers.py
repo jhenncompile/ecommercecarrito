@@ -56,7 +56,11 @@ class UsuarioCrudSerializer(serializers.ModelSerializer):
         is_superuser = obj.get('is_superuser', False) if isinstance(obj, dict) else obj.is_superuser
         
         if is_staff or is_superuser:
-            tenant = obj.get('tenant') if isinstance(obj, dict) else obj.tenant
+            try:
+                tenant = obj.get('tenant') if isinstance(obj, dict) else obj.tenant
+            except Exception: # Captura Client.DoesNotExist si la BD tiene inconsistencias
+                tenant = None
+                
             if tenant:
                 # Si el tenant es solo el ID (por validación en POST), devolvemos None,
                 # ya que no podemos acceder a tenant.name. Se mostrará correctamente en el próximo GET.

@@ -28,9 +28,40 @@ class ReportRepository {
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
+    } else if (response.statusCode == 202) {
+      final data = jsonDecode(response.body);
+      final taskId = data['task_id'];
+      if (taskId != null) {
+        return await _pollTaskStatus(baseUrl, taskId);
+      }
+      throw Exception('Error al procesar la consulta (sin task_id).');
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(errorData['error'] ?? 'Error al procesar la consulta.');
+    }
+  }
+
+  Future<Map<String, dynamic>> _pollTaskStatus(String baseUrl, String taskId) async {
+    final url = '$baseUrl/vquery/status/$taskId/';
+    while (true) {
+      await Future.delayed(const Duration(seconds: 2));
+      final response = await _apiClient.get(
+        url,
+        requiresAuth: true,
+        includeTenantHost: true,
+      );
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'SUCCESS') {
+          return data;
+        } else if (data['status'] == 'FAILURE') {
+          throw Exception(data['error'] ?? 'La consulta por voz falló.');
+        }
+        // Si es PENDING o PROCESSING, continúa el bucle
+      } else {
+        throw Exception('Error al consultar el estado de la tarea.');
+      }
     }
   }
 

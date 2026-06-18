@@ -16,6 +16,7 @@ import {
   Store,
   Database,
   TrendingUp,
+  Bell,
 } from 'lucide-react';
 
 // ─── MÓDULOS AUTENTICADOS (con sidebar) ─────────────────────
@@ -173,6 +174,17 @@ export const APP_MODULES = [
     protected: true,
     inSidebar: true,
     group: 'analisis',
+    roles: ['vendedor'],
+  },
+  {
+    id: 'recordatorios',
+    path: '/recordatorios',
+    label: 'Recordatorios',
+    icon: Bell,
+    component: lazy(() => import('modules/recordatorios/views/RecordatoriosView')),
+    protected: true,
+    inSidebar: true,
+    group: 'config',
     roles: ['vendedor'],
   },
   {

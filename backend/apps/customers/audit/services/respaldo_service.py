@@ -58,8 +58,11 @@ class RespaldoService:
         ]
         
         try:
-            logger.info(f"🚀 Generando snapshot binario en {full_path}")
-            subprocess.run(cmd, env=env, check=True)
+            logger.info(f"Generando snapshot binario en {full_path}")
+            subprocess.run(
+                cmd, env=env, check=True, capture_output=True, text=True,
+                errors='replace'
+            )
             
             # GENERAR CATÁLOGO: Obtenemos info de lo que acabamos de respaldar
             catalogo = self._generar_catalogo_actual()
@@ -121,18 +124,24 @@ class RespaldoService:
             '-d', db_config['NAME'],
             '-c', '--if-exists',
             '--no-owner', # No restaurar dueños de roles, previene errores de permisos
+            '-T', 'customers_respaldo', 
+            '-T', 'customers_configuracion_respaldo',
             respaldo.archivo_path
         ]
         
         try:
             logger.warning(f"⚠️ Iniciando RESTAURACIÓN desde {respaldo.archivo_path}")
-            result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+            result = subprocess.run(
+                cmd, env=env, capture_output=True, text=True, 
+                errors='replace'
+            )
             if result.returncode != 0:
-                logger.error(f"Error de pg_restore: {result.stderr}")
+                stderr_text = result.stderr or ""
+                logger.error(f"Error de pg_restore: {stderr_text}")
                 # A veces pg_restore termina con warnings pero funciona, lo consideramos error si es crítico.
                 # Si falló, levantamos la excepción.
-                if "FATAL" in result.stderr or "falló" in result.stderr.lower():
-                    raise Exception(f"Falló la restauración: {result.stderr}")
+                if "FATAL" in stderr_text or "falló" in stderr_text.lower():
+                    raise Exception(f"Falló la restauración: {stderr_text}")
                     
             logger.info("✅ Restauración completada con éxito.")
             return True

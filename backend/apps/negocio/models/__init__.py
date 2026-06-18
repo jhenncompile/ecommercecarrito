@@ -9,3 +9,4 @@ from apps.negocio.billing.models.detalle_factura import *
 from apps.negocio.notificaciones.models.notificacion import *
 from apps.negocio.reportes.models.reporte_config import *
 from apps.negocio.reportes.models.prediccion_cache import *
+from apps.negocio.recordatorios.models.recordatorio import *

@@ -20,7 +20,8 @@ class StorefrontScreen extends StatefulWidget {
 }
 
 class _StorefrontScreenState extends State<StorefrontScreen> {
-  List<ProductModel> _products = [];
+  List<ProductModel> _allProducts = []; // Para guardar todos los productos cargados
+  List<ProductModel> _filteredProducts = []; // Para mostrar
   List<Map<String, dynamic>> _categories = [];
   int? _selectedCategoryId;
   bool _isLoading = true;
@@ -28,6 +29,12 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
   String? _error;
   String _storeName = 'Cargando...';
   String _userName = 'Invitado';
+
+  // Filtros
+  String _searchQuery = '';
+  double _minPrice = 0;
+  double _maxPrice = 10000;
+  bool _inStockOnly = false;
 
   final ProductRepository _productRepository = ProductRepository();
   final AuthRepository _authRepository = AuthRepository();
@@ -109,15 +116,157 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
     try {
       final productos = await _productRepository.fetchProducts(categoryId: _selectedCategoryId);
       setState(() {
-        _products = productos;
+        _allProducts = productos;
         _isLoading = false;
       });
+      _aplicarFiltrosLocales();
     } catch (e) {
       setState(() {
         _error = e.toString().replaceAll('Exception: ', '');
         _isLoading = false;
       });
     }
+  }
+
+  void _aplicarFiltrosLocales() {
+    setState(() {
+      _filteredProducts = _allProducts.where((p) {
+        // 1. Busqueda (nombre o marca/sku)
+        if (_searchQuery.isNotEmpty) {
+          final query = _searchQuery.toLowerCase();
+          if (!p.nombre.toLowerCase().contains(query) && 
+              !(p.sku.toLowerCase().contains(query))) {
+            return false;
+          }
+        }
+        // 2. Disponibilidad
+        if (_inStockOnly && p.stock <= 0) return false;
+        // 3. Precio
+        if (p.precio < _minPrice || p.precio > _maxPrice) return false;
+
+        return true;
+      }).toList();
+    });
+  }
+
+  void _limpiarFiltros() {
+    setState(() {
+      _searchQuery = '';
+      _minPrice = 0;
+      _maxPrice = 10000;
+      _inStockOnly = false;
+    });
+    _aplicarFiltrosLocales();
+  }
+
+  void _abrirFiltros() {
+    // Valores temporales para el modal
+    double tempMin = _minPrice;
+    double tempMax = _maxPrice;
+    bool tempStock = _inStockOnly;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 24, left: 24, right: 24, top: 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Filtros Avanzados', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      TextButton(
+                        onPressed: () {
+                          setModalState(() {
+                            tempMin = 0;
+                            tempMax = 10000;
+                            tempStock = false;
+                          });
+                          _limpiarFiltros();
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('Limpiar', style: TextStyle(color: AppColors.danger)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('Rango de Precio', style: TextStyle(fontWeight: FontWeight.w600)),
+                  RangeSlider(
+                    values: RangeValues(tempMin, tempMax),
+                    min: 0,
+                    max: 10000,
+                    divisions: 100,
+                    labels: RangeLabels('Bs.\${tempMin.round()}', 'Bs.\${tempMax.round()}'),
+                    activeColor: AppColors.primaryDark,
+                    onChanged: (vals) {
+                      setModalState(() {
+                        tempMin = vals.start;
+                        tempMax = vals.end;
+                      });
+                    },
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Bs.\${tempMin.round()}', style: const TextStyle(color: AppColors.textMuted)),
+                      Text('Bs.\${tempMax.round()}', style: const TextStyle(color: AppColors.textMuted)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  SwitchListTile(
+                    title: const Text('Solo con disponibilidad (En stock)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: AppColors.primaryDark,
+                    value: tempStock,
+                    onChanged: (v) => setModalState(() => tempStock = v),
+                  ),
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryDark,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _minPrice = tempMin;
+                          _maxPrice = tempMax;
+                          _inStockOnly = tempStock;
+                        });
+                        _aplicarFiltrosLocales();
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text('Aplicar Filtros', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -181,16 +330,54 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Nuestro Catálogo', style: AppTextStyles.h1),
-          const SizedBox(height: 5),
-          Text('Encuentra los mejores productos aquí', style: AppTextStyles.subtitle),
-          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Nuestro Catálogo', style: AppTextStyles.h1),
+                  const SizedBox(height: 5),
+                  Text('Encuentra los mejores productos', style: AppTextStyles.subtitle),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.filter_list, color: AppColors.primaryDark),
+                onPressed: _abrirFiltros,
+                tooltip: 'Filtros Avanzados',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Buscador
+          TextField(
+            onChanged: (v) {
+              _searchQuery = v;
+              _aplicarFiltrosLocales();
+            },
+            decoration: InputDecoration(
+              hintText: 'Buscar por nombre o marca...',
+              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              filled: true,
+              fillColor: AppColors.bgCard,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 16),
           _buildCategoryBar(),
           const SizedBox(height: 20),
           if (_isLoading)
             const Center(child: CircularProgressIndicator(color: AppColors.accentTeal))
           else if (_error != null)
             Center(child: Text(_error!, style: const TextStyle(color: AppColors.danger)))
+          else if (_filteredProducts.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Text('No se encontraron productos con estos filtros.', style: TextStyle(color: Colors.grey)),
+              ),
+            )
           else
             GridView.builder(
               shrinkWrap: true,
@@ -201,9 +388,9 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                 mainAxisSpacing: 20,
                 childAspectRatio: 0.75,
               ),
-              itemCount: _products.length,
+              itemCount: _filteredProducts.length,
               itemBuilder: (context, index) {
-                final product = _products[index];
+                final product = _filteredProducts[index];
                 return _buildProductCard(product);
               },
             ),

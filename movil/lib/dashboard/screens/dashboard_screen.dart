@@ -171,6 +171,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onTap: () => Navigator.pushReplacementNamed(context, '/predicciones'),
         ),
         AppSidebarItem(
+          icon: Icons.alarm,
+          label: 'Recordatorios',
+          onTap: () => Navigator.pushReplacementNamed(context, '/recordatorios'),
+        ),
+        AppSidebarItem(
           icon: Icons.settings,
           label: 'Configuración',
           onTap: () => Navigator.pushReplacementNamed(context, '/configuracion'),
