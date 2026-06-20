@@ -1,8 +1,8 @@
 from django.test import TestCase, RequestFactory
 from django.contrib.auth import get_user_model
-from apps.customers.audit.models.bitacora import Bitacora
-from apps.customers.audit.services.bitacora_service import BitacoraService
-from apps.negocio.catalogo.models.producto import Producto
+from apps.gestionDeUsuarioySeguridad.cu6_gestionar_bitacora.models.bitacora import Bitacora
+from apps.gestionDeUsuarioySeguridad.cu6_gestionar_bitacora.services.bitacora_service import BitacoraService
+from apps.gestionDeProductoYCatalogo.cu7_gestionar_productos.models.producto import Producto
 
 Usuario = get_user_model()
 

@@ -7,7 +7,7 @@ from django.conf import settings
 from django_tenants.utils import schema_context
 from apps.customers.models import Client, Domain, Usuario, Rol, Plan, Cliente
 from datetime import timedelta
-from apps.negocio.models import Categoria, Producto, Pedido, Factura, Carrito, CarritoItem, DetalleFactura, TipoPago
+from apps.gestionDeProductoYCatalogo.cu9_gestionar_categorias.models.categoria import Categoria, Producto, Pedido, Factura, Carrito, CarritoItem, DetalleFactura, TipoPago
 
 class Command(BaseCommand):
     help = 'Genera datos de prueba procedurales: Tiendas, Productos, Clientes y Pedidos.'

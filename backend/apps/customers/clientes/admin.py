@@ -1,5 +1,5 @@
 ﻿from django.contrib import admin
-from apps.customers.admin.base import PublicOnlyAdmin
+from apps.gestionDeUsuarioySeguridad.cu3_gestion_de_usuario.admin_base import PublicOnlyAdmin
 from ..models import Cliente
 
 

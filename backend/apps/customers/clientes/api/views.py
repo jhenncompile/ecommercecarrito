@@ -14,7 +14,7 @@ from apps.customers.clientes.api.serializers import (
     ClienteTokenObtainSerializer,
     build_cliente_token_response,
 )
-from apps.customers.audit.services.bitacora_service import BitacoraService
+from apps.gestionDeUsuarioySeguridad.cu6_gestionar_bitacora.services.bitacora_service import BitacoraService
 from apps.customers.clientes.services.cliente_service import ClienteService
 
 

@@ -1,0 +1,2 @@
+# apps/negocio/notificaciones/services/__init__.py
+from apps.gestionDeReportes.cu18_gestionar_notificaciones.services.notification_service import send_notification

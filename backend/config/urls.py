@@ -1,48 +1,56 @@
+from apps.gestionDeUsuarioySeguridad.cu2_cerrar_sesion.api.views import LogoutView
+from apps.gestionDeUsuarioySeguridad.cu1_iniciar_sesion.api.views import MyTokenObtainPairView
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 # App Negocio
-from apps.negocio.catalogo.api.views import ProductoViewSet
-from apps.negocio.catalogo.api.categoria_views import CategoriaViewSet
-from apps.negocio.ordenes.api.views import CarritoViewSet
-from apps.negocio.ordenes.api.pedido_views import PedidoViewSet
-from apps.negocio.billing.api.views import FacturaViewSet, TipoPagoViewSet
-from apps.negocio.billing.api.pago_views import PagoViewSet
+from apps.gestionDeProductoYCatalogo.cu7_gestionar_productos.api.views import ProductoViewSet
+from apps.gestionDeProductoYCatalogo.cu8_visualizar_listado_de_productos.api.catalogo_views import CatalogoProductoViewSet
+from apps.gestionDeProductoYCatalogo.cu10_gestionar_inventario.api.views import InventarioViewSet
+from apps.gestionDeProductoYCatalogo.cu9_gestionar_categorias.api.categoria_views import CategoriaViewSet
+from apps.gestionDeVentasYFacturacion.cu11_gestion_carrito_de_compras.api.carrito_views import CarritoViewSet
+from apps.gestionDeVentasYFacturacion.cu13_gestionar_estado_de_pedido.api.views import PedidoViewSet
+from apps.gestionDeVentasYFacturacion.cu15_ver_historial_de_compras.api.historial_views import HistorialComprasViewSet
+from apps.gestionDeVentasYFacturacion.cu14_generar_facturacion.api.views import FacturaViewSet
+from apps.gestionDeVentasYFacturacion.cu12_gestionar_metodos_de_pago.api.tipo_pago_views import TipoPagoViewSet
+from apps.gestionDeVentasYFacturacion.cu12_gestionar_metodos_de_pago.api.pago_views import PagoViewSet
 
 # Customers
-from apps.customers.users.api.views import (
-    MyTokenObtainPairView, LogoutView, UsuarioCrudViewSet,
+from apps.gestionDeUsuarioySeguridad.cu3_gestion_de_usuario.api.views import (
+     UsuarioCrudViewSet,
     PasswordResetRequestView, PasswordResetConfirmView,
-    TenantListView, TenantCreateView, MiPerfilView,
-    CheckoutSuscripcionView, CrearTiendaConPagoView
+    MiPerfilView
 )
 from apps.customers.api.mobile_views import (
     LatestReleaseInfoView, DownloadLatestReleaseView, DownloadSpecificReleaseView,
     UploadMobileReleaseView
 )
-from apps.customers.users.api.rol_views import RolViewSet
-from apps.customers.users.api.permiso_views import PermisoViewSet
+from apps.gestionDeUsuarioySeguridad.cu4_gestion_de_roles.api.rol_views import RolViewSet
+from apps.gestionDeUsuarioySeguridad.cu5_gestionar_permisos.api.permiso_views import PermisoViewSet
 from apps.customers.tenants.api.plan_views import PlanViewSet
 from apps.customers.clientes.api.views import ClienteViewSet, ClienteLoginView
 from apps.customers.tenants.api.views import TiendaPublicViewSet, TiendaPerfilView, UpgradeSuscripcionView
-from apps.customers.audit.api.bitacora_views import BitacoraViewSet
-from apps.customers.audit.api.respaldo_views import RespaldoViewSet
-from apps.customers.users.api.device_token_views import DeviceTokenRegisterView
+from apps.gestionDeUsuarioySeguridad.cu6_gestionar_bitacora.api.bitacora_views import BitacoraViewSet
+from apps.gestionDeReportes.cu21_generar_backup.api.respaldo_views import RespaldoViewSet
+from apps.gestionDeUsuarioySeguridad.cu3_gestion_de_usuario.api.device_token_views import DeviceTokenRegisterView
 
 # Voice
 from apps.voice.api.views import VoiceQueryView, VoiceTaskStatusView
-from apps.negocio.notificaciones.api.views import NotificacionViewSet
+from apps.gestionDeReportes.cu18_gestionar_notificaciones.api.views import NotificacionViewSet
 
 # 1. Configuramos el enrutador de la API
 router = DefaultRouter()
 
 # App Negocio
 router.register(r'productos', ProductoViewSet, basename='productos')
+router.register(r'catalogo', CatalogoProductoViewSet, basename='catalogo')
+router.register(r'inventario', InventarioViewSet, basename='inventario')
 router.register(r'categorias', CategoriaViewSet, basename='categorias')
 router.register(r'carritos', CarritoViewSet, basename='carritos')
 router.register(r'pedidos', PedidoViewSet, basename='pedidos')
+router.register(r'historial-compras', HistorialComprasViewSet, basename='historial-compras')
 router.register(r'facturas', FacturaViewSet, basename='facturas')
 router.register(r'tipos-pago', TipoPagoViewSet, basename='tipos-pago')
 router.register(r'pagos', PagoViewSet, basename='pagos')
@@ -73,10 +81,6 @@ urlpatterns = [
     path('api/clientes/login/', ClienteLoginView.as_view(), name='cliente_login'),
     path('api/device-token/', DeviceTokenRegisterView.as_view(), name='device_token_register'),
 
-    path('api/tiendas/', TenantListView.as_view()),
-    path('api/tiendas/crear/', TenantCreateView.as_view()),
-    path('api/tiendas/checkout-suscripcion/', CheckoutSuscripcionView.as_view()),
-    path('api/tiendas/crear-con-pago/', CrearTiendaConPagoView.as_view()),
     
     path('api/usuarios/perfil/', MiPerfilView.as_view(), name='mi_perfil'),
     path('api/tienda/perfil/', TiendaPerfilView.as_view(), name='tienda_perfil'),
@@ -88,7 +92,8 @@ urlpatterns = [
     path('api/public/apps/<str:app_type>/version/<str:version>/download/', DownloadSpecificReleaseView.as_view(), name='apps_version_download'),
     path('api/public/apps/upload/', UploadMobileReleaseView.as_view(), name='apps_upload'),
 
-    path('api/reportes/', include('apps.negocio.reportes.api.urls')),
+    path('api/reportes/', include('apps.gestionDeReportes.cu19_generar_reportes_de_ventas.api.urls')),
+    path('api/tiendas/', include('apps.customers.tenants.api.urls')),
     path('api/', include(router.urls)),
 
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

@@ -1,13 +1,11 @@
-# apps/customers/tenants/api/urls.py
-# Rutas del módulo tenants - incluidas en config/urls.py
 from django.urls import path
-from apps.customers.views.tenant_views import TiendaPublicViewSet, TiendaPerfilView
-from apps.customers.views.plan_views import PlanViewSet
+from apps.customers.tenants.api.views import (
+    TenantListView, TenantCreateView, CheckoutSuscripcionView, CrearTiendaConPagoView
+)
 
 urlpatterns = [
-    path('tiendas/', __import__('customers.views.usuario_views', fromlist=['TenantListView']).TenantListView.as_view()),
-    path('tiendas/crear/', __import__('customers.views.usuario_views', fromlist=['TenantCreateView']).TenantCreateView.as_view()),
-    path('tiendas/checkout-suscripcion/', __import__('customers.views.usuario_views', fromlist=['CheckoutSuscripcionView']).CheckoutSuscripcionView.as_view()),
-    path('tiendas/crear-con-pago/', __import__('customers.views.usuario_views', fromlist=['CrearTiendaConPagoView']).CrearTiendaConPagoView.as_view()),
-    path('tienda/perfil/', TiendaPerfilView.as_view(), name='tienda_perfil'),
+    path('', TenantListView.as_view(), name='tenant-list'),
+    path('crear/', TenantCreateView.as_view(), name='tenant-create'),
+    path('checkout-suscripcion/', CheckoutSuscripcionView.as_view(), name='tenant-checkout-suscripcion'),
+    path('crear-con-pago/', CrearTiendaConPagoView.as_view(), name='tenant-crear-con-pago'),
 ]

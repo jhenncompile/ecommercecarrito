@@ -2,7 +2,7 @@ from django.conf import settings
 from django_tenants.utils import tenant_context
 from rest_framework import serializers
 from ..models.tenant import Client, Domain
-from apps.customers.users.models.usuario import Usuario
+from apps.gestionDeUsuarioySeguridad.cu3_gestion_de_usuario.models.usuario import Usuario
 
 class TenantService:
     """
@@ -57,7 +57,7 @@ class TenantService:
             )
 
             # Asignar automáticamente el rol de Administrador al dueño
-            from apps.customers.users.models.rol import Rol
+            from apps.gestionDeUsuarioySeguridad.cu4_gestion_de_roles.models.rol import Rol
             
             # Crear roles básicos si no existen en este tenant
             roles_basicos = [

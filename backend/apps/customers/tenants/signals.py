@@ -2,8 +2,8 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from django.db import connection
-from apps.negocio.catalogo.models.producto import Producto
-from apps.customers.users.models.usuario import Usuario
+from apps.gestionDeProductoYCatalogo.cu7_gestionar_productos.models.producto import Producto
+from apps.gestionDeUsuarioySeguridad.cu3_gestion_de_usuario.models.usuario import Usuario
 
 @receiver(pre_save, sender=Producto)
 def validate_product_limit(sender, instance, **kwargs):

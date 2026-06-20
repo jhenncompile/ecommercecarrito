@@ -3,7 +3,7 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 from django.conf import settings
 from apps.negocio.notificaciones.models.notificacion import Notificacion
-from apps.customers.users.models.device_token import DeviceToken
+from apps.gestionDeUsuarioySeguridad.cu3_gestion_de_usuario.models.device_token import DeviceToken
 
 def _initialize_firebase():
     """

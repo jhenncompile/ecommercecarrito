@@ -261,7 +261,7 @@ export default function UsersView() {
                             >
                                 <option value="">--- Acceso Global / Sin Tienda ---</option>
                                 {tenants.map(t => (
-                                    <option key={t.id} value={t.id}>{t.name} ({t.schema_name})</option>
+                                    <option key={t.id} value={t.id}>{t.nombre_comercial} ({t.schema_name})</option>
                                 ))}
                             </select>
                         </div>

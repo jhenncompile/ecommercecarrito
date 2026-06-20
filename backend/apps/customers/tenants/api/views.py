@@ -147,3 +147,114 @@ class UpgradeSuscripcionView(APIView):
             return Response({'success': True, 'message': f'Plan actualizado a {nuevo_plan.nombre}'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class TenantCreateView(APIView):
+    """Creación de nuevos esquemas (tiendas) - Plan Gratuito."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = TenantCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            # Asignar plan básico por defecto si no viene o viene 'basico'
+            plan_code = request.data.get('plan', 'basico')
+            from apps.customers.tenants.models.plan import Plan
+            try:
+                plan = Plan.objects.get(nombre__iexact=plan_code)
+            except Plan.DoesNotExist:
+                plan = Plan.objects.filter(precio_mensual=0).first()
+            
+            result = serializer.save(plan=plan)
+            return Response(result, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CheckoutSuscripcionView(APIView):
+    """Inicializa un PaymentIntent de Stripe para un Plan."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        plan_code = request.data.get('plan')
+        if not plan_code or plan_code == 'basico':
+            return Response({'error': 'Plan inválido para pago'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from apps.customers.tenants.models.plan import Plan
+        try:
+            plan = Plan.objects.get(nombre__iexact=plan_code)
+        except Plan.DoesNotExist:
+            return Response({'error': 'Plan no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+        import stripe
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        
+        try:
+            # Precio en centavos
+            amount = int(plan.precio_mensual * 100)
+            
+            intent = stripe.PaymentIntent.create(
+                amount=amount,
+                currency='usd',
+                automatic_payment_methods={'enabled': True},
+                metadata={'plan_id': plan.id, 'nombre_tienda': request.data.get('nombre_tienda', '')}
+            )
+            return Response({'clientSecret': intent.client_secret}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CrearTiendaConPagoView(APIView):
+    """Crea la tienda tras validar el pago exitoso en Stripe."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        payment_intent_id = request.data.get('payment_intent')
+        if not payment_intent_id:
+            return Response({'error': 'Falta el ID del pago'}, status=status.HTTP_400_BAD_REQUEST)
+
+        import stripe
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+
+        try:
+            intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            if intent.status != 'succeeded':
+                return Response({'error': 'El pago no fue exitoso.'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Proceder a crear el tenant
+        serializer = TenantCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            plan_code = request.data.get('plan', 'profesional')
+            from apps.customers.tenants.models.plan import Plan
+            try:
+                plan = Plan.objects.get(nombre__iexact=plan_code)
+            except Plan.DoesNotExist:
+                plan = None
+
+            # Asignar fechas de suscripción si pagó
+            from apps.customers.tenants.services.billing_helper import BillingDateHelper
+            fecha_inicio, fecha_fin = BillingDateHelper.calcular_fechas_mensuales()
+
+            result = serializer.save(plan=plan, fecha_inicio_suscripcion=fecha_inicio, fecha_fin_suscripcion=fecha_fin)
+            return Response(result, status=status.HTTP_201_CREATED)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TenantListView(APIView):
+    """Listado público de tiendas registradas."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from apps.customers.tenants.models.tenant import Client
+        from apps.customers.tenants.api.serializers import TiendaPublicSerializer
+        tenants = Client.objects.exclude(schema_name='public')
+        serializer = TiendaPublicSerializer(tenants, many=True, context={'request': request})
+        return Response(serializer.data)
+
+
+# --- Utilidades y RecuperaciÃ³n de ContraseÃ±a ---
+
+def send_email_ssl(to_email, subject, body):
+    from django.core.mail import send_mail
+    send_mail(subject, body, settings.EMAIL_HOST_USER, [to_email], fail_silently=False)
+

@@ -25,7 +25,7 @@ class HasPermiso(permissions.BasePermission):
         # 4. Validar límite de plan de suscripción (Solo para Tenants)
         schema_name = connection.schema_name
         if schema_name != 'public':
-            from apps.customers.users.models.permiso import Permiso
+            from apps.gestionDeUsuarioySeguridad.cu5_gestionar_permisos.models.permiso import Permiso
             from apps.customers.tenants.models.tenant import Client
             
             try:

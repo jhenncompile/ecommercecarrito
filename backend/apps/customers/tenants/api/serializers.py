@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.customers.users.models.rol import Rol
+from apps.gestionDeUsuarioySeguridad.cu4_gestion_de_roles.models.rol import Rol
 from apps.customers.tenants.models.tenant import Client, Domain
 from ..services.tenant_service import TenantService # âœ… ImportaciÃ³n del servicio
 import re
@@ -49,6 +49,7 @@ class TiendaPublicSerializer(serializers.ModelSerializer):
         fields = [
             'id', 
             'nombre_comercial', 
+            'name',
             'descripcion', 
             'categoria_tienda', 
             'logo_url', 
@@ -77,7 +78,7 @@ class TiendaPublicSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         origin = request.headers.get('origin') if request else None
 from rest_framework import serializers
-from apps.customers.users.models.rol import Rol
+from apps.gestionDeUsuarioySeguridad.cu4_gestion_de_roles.models.rol import Rol
 from apps.customers.tenants.models.tenant import Client, Domain
 from ..services.tenant_service import TenantService # ✅ Importación del servicio
 import re
@@ -222,8 +223,8 @@ class TiendaPrivadaSerializer(serializers.ModelSerializer):
         
         # Validar que estemos en el schema correcto
         if connection.schema_name == obj.schema_name:
-            from apps.negocio.catalogo.models.producto import Producto
-            from apps.customers.users.models.usuario import Usuario
+            from apps.gestionDeProductoYCatalogo.cu7_gestionar_productos.models.producto import Producto
+            from apps.gestionDeUsuarioySeguridad.cu3_gestion_de_usuario.models.usuario import Usuario
             productos_actuales = Producto.objects.count()
             usuarios_actuales = Usuario.objects.count()
             

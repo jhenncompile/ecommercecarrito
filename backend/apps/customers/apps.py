@@ -10,7 +10,7 @@ class CustomersConfig(AppConfig):
         # Evitar arrancar el scheduler en workers o comandos (como makemigrations)
         if os.environ.get('RUN_MAIN', None) == 'true':
             try:
-                from apps.customers.audit.services.scheduler import start_scheduler
+                from apps.core.services.scheduler import start_scheduler
                 start_scheduler()
             except ImportError:
                 pass

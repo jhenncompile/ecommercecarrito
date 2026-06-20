@@ -7,9 +7,9 @@ import { Badge, Alert } from 'shared/components';
 import api from 'core/services/api';
 
 const COLUMNS = [
-  { key: 'nombre', label: 'Nombre de la Tienda', render: (v) => <strong style={{ color: 'var(--color-text)' }}>{v}</strong> },
-  { key: 'schema', label: 'Esquema', render: (v) => <Badge variant="primary">{v}</Badge> },
-  { key: 'dominio', label: 'Dominio/Subdominio', render: (v) => v ? <a href={`http://${v}`} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary)' }}>{v}</a> : '—' },
+  { key: 'nombre_comercial', label: 'Nombre de la Tienda', render: (v, row) => <strong style={{ color: 'var(--color-text)' }}>{v || row.name || 'Sin Nombre'}</strong> },
+  { key: 'schema_name', label: 'Esquema', render: (v) => <Badge variant="primary">{v}</Badge> },
+  { key: 'subdominio', label: 'Dominio/Subdominio', render: (v) => v ? <a href={`http://${v}`} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary)' }}>{v}</a> : '—' },
   { key: 'estado', label: 'Estado', align: 'center', render: () => <Badge variant="success" dot>Activo</Badge> }
 ];
 

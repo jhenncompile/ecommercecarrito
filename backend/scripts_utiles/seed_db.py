@@ -12,8 +12,8 @@ django.setup()
 
 from django_tenants.utils import schema_context
 from apps.negocio.models import Categoria, Producto, Pedido, Factura, DetalleFactura, TipoPago
-from apps.negocio.ordenes.models.carrito import Carrito
-from apps.negocio.ordenes.models.carrito_item import CarritoItem
+from apps.gestionDeVentasYFacturacion.cu11_gestion_carrito_de_compras.models.carrito import Carrito
+from apps.gestionDeVentasYFacturacion.cu11_gestion_carrito_de_compras.models.carrito_item import CarritoItem
 from apps.customers.models import Client, Domain, Usuario, Rol, Plan, Cliente, Permiso
 
 def obtener_ip_dominio():

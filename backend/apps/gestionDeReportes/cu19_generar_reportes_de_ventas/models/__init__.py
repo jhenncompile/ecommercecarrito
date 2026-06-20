@@ -1,0 +1,2 @@
+from apps.gestionDeReportes.cu19_generar_reportes_de_ventas.models.reporte_config import *
+from apps.gestionDeClientes.cu22_gestionar_prediccion_de_ventas.models.prediccion_cache import *

@@ -1,4 +1,4 @@
-﻿"""
+"""
 config/settings/base.py
 ConfiguraciÃ³n base compartida por todos los entornos.
 Todas las settings de settings.py que NO son especÃ­ficas de entorno van aquÃ­.
@@ -16,6 +16,7 @@ AUTH_USER_MODEL = 'customers.Usuario'
 SHARED_APPS = (
     'django_tenants',
     'apps.customers',
+    'apps.gestionDeUsuarioySeguridad',
     'rest_framework',
     'drf_spectacular',
     'corsheaders',
@@ -31,7 +32,23 @@ SHARED_APPS = (
 
 TENANT_APPS = (
     'django.contrib.contenttypes',
-    'apps.negocio',
+    'apps.gestionDeProductoYCatalogo.cu7_gestionar_productos',
+    'apps.gestionDeProductoYCatalogo.cu8_visualizar_listado_de_productos',
+    'apps.gestionDeProductoYCatalogo.cu9_gestionar_categorias',
+    'apps.gestionDeProductoYCatalogo.cu10_gestionar_inventario',
+    'apps.gestionDeProductoYCatalogo.cu23_gestionar_filtro_de_producto',
+    'apps.gestionDeVentasYFacturacion.cu11_gestion_carrito_de_compras',
+    'apps.gestionDeVentasYFacturacion.cu12_gestionar_metodos_de_pago',
+    'apps.gestionDeVentasYFacturacion.cu13_gestionar_estado_de_pedido',
+    'apps.gestionDeVentasYFacturacion.cu14_generar_facturacion',
+    'apps.gestionDeVentasYFacturacion.cu15_ver_historial_de_compras',
+    'apps.gestionDeClientes.cu16_recomendar_productos',
+    'apps.gestionDeClientes.cu17_analizar_comportamiento_del_cliente',
+    'apps.gestionDeClientes.cu22_gestionar_prediccion_de_ventas',
+    'apps.gestionDeReportes.cu18_gestionar_notificaciones.apps.Cu18Config',
+    'apps.gestionDeReportes.cu19_generar_reportes_de_ventas.apps.Cu19Config',
+    'apps.gestionDeReportes.cu20_gestionar_recordatorios.apps.Cu20Config',
+    'apps.gestionDeReportes.cu21_generar_backup.apps.Cu21Config',
     'apps.voice',
 )
 
@@ -39,7 +56,7 @@ INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in S
 
 # â”€â”€ MIDDLEWARES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 MIDDLEWARE = [
-    'apps.customers.users.middleware.TenantHostMiddleware',
+    'apps.gestionDeUsuarioySeguridad.cu3_gestion_de_usuario.middleware.TenantHostMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django_tenants.middleware.main.TenantMainMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -55,7 +72,7 @@ USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CORS_ALLOW_CREDENTIALS = True
 
-ROOT_URLCONF = 'config.urls'
+ROOT_URLCONF = 'config.tenant_urls'
 PUBLIC_SCHEMA_URLCONF = 'config.urls'
 TENANT_URLCONF = 'config.tenant_urls'
 
@@ -102,8 +119,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'apps.customers.users.authentication.UsuarioJWTAuthentication',
-        'apps.customers.users.authentication.ClienteJWTAuthentication',
+        'apps.gestionDeUsuarioySeguridad.cu1_iniciar_sesion.authentication.UsuarioJWTAuthentication',
+        'apps.gestionDeUsuarioySeguridad.cu1_iniciar_sesion.authentication.ClienteJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',

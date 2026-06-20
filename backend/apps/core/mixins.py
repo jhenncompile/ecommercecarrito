@@ -1,4 +1,4 @@
-﻿from apps.customers.audit.services.bitacora_service import BitacoraService
+﻿from apps.gestionDeUsuarioySeguridad.cu6_gestionar_bitacora.services.bitacora_service import BitacoraService
 
 
 class AuditoriaMixin:

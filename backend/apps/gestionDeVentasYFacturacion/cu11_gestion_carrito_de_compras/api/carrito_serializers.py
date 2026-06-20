@@ -1,0 +1,61 @@
+from rest_framework import serializers
+from apps.gestionDeVentasYFacturacion.cu11_gestion_carrito_de_compras.models.carrito import Carrito
+from apps.gestionDeVentasYFacturacion.cu11_gestion_carrito_de_compras.models.carrito_item import CarritoItem
+from apps.gestionDeProductoYCatalogo.cu7_gestionar_productos.models.producto import Producto
+from apps.gestionDeProductoYCatalogo.cu7_gestionar_productos.api.serializers import ProductoSerializer
+from apps.customers.models import Cliente
+
+
+class CarritoItemSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
+    producto_precio = serializers.DecimalField(
+        source='producto.precio', 
+        max_digits=10, 
+        decimal_places=2, 
+        read_only=True
+    )
+    producto = ProductoSerializer(read_only=True)
+    subtotal = serializers.DecimalField(read_only=True, max_digits=12, decimal_places=2)
+    
+    class Meta:
+        model = CarritoItem
+        fields = [
+            'id', 'producto', 'producto_nombre', 'producto_precio',
+            'cantidad', 'fecha_agregado', 'subtotal'
+        ]
+        read_only_fields = ['id', 'fecha_agregado']
+
+
+class CarritoSerializer(serializers.ModelSerializer):
+    cliente = serializers.PrimaryKeyRelatedField(
+        queryset=Cliente.objects.all(),
+        required=False
+    )
+    items = CarritoItemSerializer(many=True, read_only=True)
+    cliente_nombre = serializers.CharField(source='cliente.nombre', read_only=True)
+    cantidad_items = serializers.IntegerField(read_only=True)
+    total_carrito = serializers.DecimalField(
+        read_only=True, 
+        max_digits=12, 
+        decimal_places=2
+    )
+    total = serializers.ReadOnlyField(source='total_carrito')
+    
+    class Meta:
+        model = Carrito
+        fields = [
+            'id', 'cliente', 'cliente_nombre', 'estado',
+            'fecha_creacion', 'fecha_actualizacion', 
+            'items', 'cantidad_items', 'total_carrito', 'total'
+        ]
+        read_only_fields = ['id', 'fecha_creacion', 'fecha_actualizacion']
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        auth = getattr(request, 'auth', None) if request else None
+        role = auth.get('role') if hasattr(auth, 'get') else None
+
+        if self.instance is None and role != 'CLIENTE' and not attrs.get('cliente'):
+            raise serializers.ValidationError({'cliente': 'Este campo es requerido.'})
+
+        return attrs
