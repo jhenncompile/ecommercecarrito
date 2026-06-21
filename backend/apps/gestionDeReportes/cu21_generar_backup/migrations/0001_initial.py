@@ -9,6 +9,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ('customers', '0010_delete_configuracionrespaldo_delete_respaldosistema'),
     ]
 
     operations = [

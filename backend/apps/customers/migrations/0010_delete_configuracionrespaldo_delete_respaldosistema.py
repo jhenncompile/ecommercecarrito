@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
                     reverse_sql=""
                 ),
                 migrations.RunSQL(
-                    "DROP TABLE IF EXISTS customers_respaldosistema CASCADE;",
+                    "DROP TABLE IF EXISTS customers_respaldo CASCADE;",
                     reverse_sql=""
                 ),
             ],

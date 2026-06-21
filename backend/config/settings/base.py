@@ -28,6 +28,7 @@ SHARED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework_simplejwt.token_blacklist',
+    'apps.gestionDeReportes.cu21_generar_backup.apps.Cu21Config',
 )
 
 TENANT_APPS = (
@@ -48,7 +49,6 @@ TENANT_APPS = (
     'apps.gestionDeReportes.cu18_gestionar_notificaciones.apps.Cu18Config',
     'apps.gestionDeReportes.cu19_generar_reportes_de_ventas.apps.Cu19Config',
     'apps.gestionDeReportes.cu20_gestionar_recordatorios.apps.Cu20Config',
-    'apps.gestionDeReportes.cu21_generar_backup.apps.Cu21Config',
     'apps.voice',
 )
 
