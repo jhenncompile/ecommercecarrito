@@ -67,6 +67,32 @@ def run():
             plan.permisos.set(permisos_a_asignar)
             print_success(f"Plan {plan.nombre} configurado con {len(permisos_a_asignar)} permisos premium.")
 
+        # Limpiar planes viejos y migrar tiendas
+        nuevos_nombres = [p['nombre'] for p in planes_config]
+        planes_viejos = Plan.objects.exclude(nombre__in=nuevos_nombres)
+        
+        if planes_viejos.exists():
+            from apps.customers.models import Client
+            plan_default = Plan.objects.get(nombre='Gratis')
+            plan_standard = Plan.objects.get(nombre='Standard')
+            plan_gold = Plan.objects.get(nombre='Gold')
+            
+            for p_viejo in planes_viejos:
+                if p_viejo.nombre == 'Básico':
+                    nuevo_plan = plan_standard
+                elif p_viejo.nombre == 'Medio':
+                    nuevo_plan = plan_gold
+                else:
+                    nuevo_plan = plan_default
+                    
+                tenants = Client.objects.filter(plan=p_viejo)
+                if tenants.exists():
+                    print_info(f"Migrando {tenants.count()} tiendas de '{p_viejo.nombre}' a '{nuevo_plan.nombre}'")
+                    tenants.update(plan=nuevo_plan)
+                    
+                print_info(f"Eliminando plan obsoleto: {p_viejo.nombre}")
+                p_viejo.delete()
+
         return True
     except Exception as e:
         print_error(f"Error al actualizar planes: {e}")

@@ -47,7 +47,7 @@ from apps.gestionDeVentasYFacturacion.cu14_generar_facturacion.models.factura im
 fake = Faker(['es_ES', 'es_MX'])
 
 class BusinessGenerator:
-    PASSWORD_STANDAR = "Password123!"
+    PASSWORD_STANDAR = "Pass123@"
     ESTADOS_PEDIDO_VENTA = ['PAGADO', 'PROCESADO', 'ENVIADO', 'ENTREGADO']
     PERIODOS_PEDIDOS_DIAS = {
         '1a': 365,
@@ -82,10 +82,14 @@ class BusinessGenerator:
     @staticmethod
     def schema_tienda_seguro():
         for _ in range(100):
-            raw_name = fake.unique.user_name().lower()
-            clean_name = re.sub(r'[^a-z0-9]+', '', raw_name)
-            if not clean_name:
-                clean_name = get_random_string(8, allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789')
+            raw_name = fake.unique.company()
+            # Convert to camelCase and remove special chars
+            parts = re.split(r'[^a-zA-Z0-9]+', raw_name)
+            parts = [p for p in parts if p]
+            if not parts:
+                clean_name = get_random_string(8, allowed_chars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+            else:
+                clean_name = parts[0].lower() + ''.join(p.capitalize() for p in parts[1:])
 
             schema = f"shop{clean_name}"[:20]
             if not Client.objects.filter(schema_name=schema).exists():
@@ -234,24 +238,31 @@ class DatabaseSeeder:
                 rol.permisos.set([permisos_obj[c] for c in codigos if c in permisos_obj])
 
             print("💳 3. Configurando Planes SaaS y sus Reportes...")
-            # 1. Crear o asegurar los planes oficiales de la plataforma
-            plan_basico, _ = Plan.objects.get_or_create(
-                nombre='Básico', 
-                defaults={'precio_mensual': 29.0, 'precio_anual': 290.0, 'max_usuarios': 2, 'max_productos': 50}
+            # 1. Crear o asegurar los 4 nuevos planes oficiales
+            plan_gratis, _ = Plan.objects.get_or_create(
+                nombre='Gratis', 
+                defaults={'precio_mensual': 0.0, 'precio_anual': 0.0, 'max_usuarios': 2, 'max_productos': 50, 'facturacion_max': 1000.0}
             )
-            plan_basico.permisos.set([permisos_obj['REP_ESTATICO']])
+            plan_gratis.permisos.set([])
+
+            plan_standard, _ = Plan.objects.get_or_create(
+                nombre='Standard', 
+                defaults={'precio_mensual': 29.0, 'precio_anual': 290.0, 'max_usuarios': 5, 'max_productos': 500, 'facturacion_max': 10000.0}
+            )
+            plan_standard.permisos.set([permisos_obj['REP_ESTATICO']])
+
+            plan_gold, _ = Plan.objects.get_or_create(
+                nombre='Gold', 
+                defaults={'precio_mensual': 69.0, 'precio_anual': 690.0, 'max_usuarios': 15, 'max_productos': 5000, 'facturacion_max': 500000.0}
+            )
+            # Faltan algunos permisos premium que crea el fix, pero el seeder base usa estos:
+            plan_gold.permisos.set([permisos_obj['REP_ESTATICO']])
 
             plan_profesional, _ = Plan.objects.get_or_create(
                 nombre='Profesional', 
-                defaults={'precio_mensual': 99.0, 'precio_anual': 990.0, 'max_usuarios': 20, 'max_productos': 5000}
+                defaults={'precio_mensual': 99.0, 'precio_anual': 990.0, 'max_usuarios': 0, 'max_productos': 0, 'facturacion_max': None}
             )
             plan_profesional.permisos.set([permisos_obj['REP_ESTATICO'], permisos_obj['REP_DINAMICO'], permisos_obj['REP_AUDIO']])
-
-            plan_medio, _ = Plan.objects.get_or_create(
-                nombre='Medio', 
-                defaults={'precio_mensual': 59.0, 'precio_anual': 590.0, 'max_usuarios': 5, 'max_productos': 500}
-            )
-            plan_medio.permisos.set([permisos_obj['REP_ESTATICO'], permisos_obj['REP_DINAMICO']])
             
             # Roles globales (aunque en este sistema multi-tenant los roles se crean por tenant)
             rol_admin = Rol.objects.get(nombre='Administrador', tenant=None)

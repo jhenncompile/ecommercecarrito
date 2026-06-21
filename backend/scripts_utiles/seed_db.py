@@ -72,7 +72,7 @@ def ensure_tenant_admin(tenant, rol_admin):
         defaults={'tenant': tenant, 'is_staff': True},
     )
     if created:
-        user.set_password('Password123!')
+        user.set_password('Pass123@')
     user.tenant = tenant
     user.is_staff = True
     user.save()
