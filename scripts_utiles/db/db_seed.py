@@ -264,6 +264,12 @@ class DatabaseSeeder:
             )
             plan_profesional.permisos.set([permisos_obj['REP_ESTATICO'], permisos_obj['REP_DINAMICO'], permisos_obj['REP_AUDIO']])
             
+            # Fuerza a actualizar los límites en la base de datos por si get_or_create encontró un plan viejo con 0
+            Plan.objects.filter(id=plan_gratis.id).update(max_usuarios=2, max_productos=50)
+            Plan.objects.filter(id=plan_standard.id).update(max_usuarios=5, max_productos=500)
+            Plan.objects.filter(id=plan_gold.id).update(max_usuarios=15, max_productos=5000)
+            Plan.objects.filter(id=plan_profesional.id).update(max_usuarios=999999, max_productos=999999)
+            
             todos_los_planes = [plan_gratis, plan_standard, plan_gold, plan_profesional]
             # Roles globales (aunque en este sistema multi-tenant los roles se crean por tenant)
             rol_admin = Rol.objects.get(nombre='Administrador', tenant=None)
