@@ -188,7 +188,7 @@ class DatabaseSeeder:
 
     def ensure_tenant_admin(self, tenant, rol_admin):
         user, created = Usuario.objects.get_or_create(
-            email=f"admin@{tenant.schema_name}.local",
+            email=f"admin@{tenant.schema_name}.com",
             defaults={'tenant': tenant, 'is_staff': True},
         )
         if created:

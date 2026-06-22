@@ -68,7 +68,7 @@ def get_or_create_tenant(schema_name, defaults):
 
 def ensure_tenant_admin(tenant, rol_admin):
     user, created = Usuario.objects.get_or_create(
-        email=f"admin@{tenant.schema_name}.local",
+        email=f"admin@{tenant.schema_name}.com",
         defaults={'tenant': tenant, 'is_staff': True},
     )
     if created:
