@@ -12,6 +12,7 @@ import {
 import { Doughnut, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 
+import RequirePremium from 'shared/components/RequirePremium';
 import api from 'core/services/api';
 import AppView from 'shared/widgets/AppView/AppView';
 import StatCard from 'shared/widgets/StatCard/StatCard';
@@ -43,8 +44,10 @@ export default function ClientesView() {
         const response = await api.get('/reportes/comportamiento-clientes/');
         setData(response.data);
       } catch (err) {
-        console.error("Error fetching customer behavior data:", err);
-        setError(err.response?.data?.error || "Error al cargar el análisis de comportamiento de clientes.");
+        setError({
+          message: err.response?.data?.error || err.response?.data?.detail || "Error al cargar el análisis de comportamiento de clientes.",
+          status: err.response?.status
+        });
       } finally {
         setLoading(false);
       }
@@ -63,9 +66,25 @@ export default function ClientesView() {
   }
 
   if (error) {
+    if (error.status === 403) {
+      return (
+        <AppView title="Clientes" subtitle="Análisis de comportamiento.">
+          <RequirePremium 
+              locked={true} 
+              title="Análisis Avanzado" 
+              message="El análisis de comportamiento de clientes es una característica Premium. Mejora tu plan para descubrir quiénes son tus mejores clientes y quiénes están en riesgo."
+          >
+            <div style={{ height: '600px', display: 'flex', gap: '20px', flexDirection: 'column' }}>
+               <div style={{ height: '200px', background: 'var(--color-surface)', borderRadius: '12px' }}></div>
+               <div style={{ height: '300px', background: 'var(--color-surface)', borderRadius: '12px' }}></div>
+            </div>
+          </RequirePremium>
+        </AppView>
+      );
+    }
     return (
       <AppView title="Clientes" subtitle="Análisis de comportamiento.">
-        <Alert variant="danger">{error}</Alert>
+        <Alert variant="danger">{error.message}</Alert>
       </AppView>
     );
   }
