@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import AppView from 'shared/widgets/AppView/AppView';
+import RequirePremium from 'shared/components/RequirePremium';
+import { useAuth } from 'core/hooks/useAuth';
 import PredictionFilters from '../../components/Predicciones/PredictionFilters';
 import PredictionChart from '../../components/Predicciones/PredictionChart';
 import PredictionTable from '../../components/Predicciones/PredictionTable';
@@ -9,6 +11,8 @@ import styles from '../../styles/Predicciones.module.css';
 import { TrendingUp, AlertTriangle } from 'lucide-react';
 
 export default function PredictionView() {
+  const { user } = useAuth();
+  const hasPermiso = user?.permisos_efectivos?.includes('VER_DASHBOARD_AVANZADO');
   const [config, setConfig] = useState(null);
   const { data, loading, error, generatePrediction } = usePrediction();
   const chartRef = useRef(null);
@@ -27,7 +31,12 @@ export default function PredictionView() {
       title="Predicciones de IA" 
       subtitle="Anticípate al futuro con estimaciones de ventas basadas en machine learning."
     >
-      <div className={styles.container}>
+      <RequirePremium 
+        locked={!hasPermiso} 
+        title="Función Premium" 
+        message="Las Predicciones con IA son una característica exclusiva del plan Profesional. Mejora tu plan para descubrir el futuro de tus ventas."
+      >
+        <div className={styles.container}>
         <PredictionFilters 
           onFilter={handleGenerarPrediccion}
           loading={loading}
@@ -88,6 +97,7 @@ export default function PredictionView() {
           </div>
         )}
       </div>
+      </RequirePremium>
     </AppView>
   );
 }

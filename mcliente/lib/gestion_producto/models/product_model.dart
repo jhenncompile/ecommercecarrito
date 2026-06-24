@@ -30,9 +30,15 @@ class ProductModel {
       stock: int.tryParse(json['stock'].toString()) ?? 0,
       sku: json['sku'] ?? '',
       categoria: json['categoria'],
-      categoriaNombre: json['categoria_detail']?['nombre'],
-      imagenUrl: json['imagen_url'],
+      categoriaNombre: json['categoria_detail']?['nombre'] ?? json['categoria_nombre'],
+      imagenUrl: _resolveImageUrl(json['imagen_url']),
     );
+  }
+
+  static String? _resolveImageUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return 'http://157.173.102.129:8001$url'; // Fallback for relative URLs
   }
 
   Map<String, dynamic> toJson() => {

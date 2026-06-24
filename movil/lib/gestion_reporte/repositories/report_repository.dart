@@ -190,10 +190,28 @@ class ReportRepository {
     
     final url = '${ApiConstants.mainBaseUrl}/tienda/suscripcion/upgrade/';
     
-    // 1. Obtener clientSecret y publishableKey
+    // 1. Obtener la lista de planes para encontrar el ID del plan 'Profesional'
+    final planesResponse = await _apiClient.get(
+      '${ApiConstants.mainBaseUrl}/planes/',
+      requiresAuth: true,
+      includeTenantHost: false,
+    );
+
+    if (planesResponse.statusCode != 200) {
+      throw Exception('Error al obtener planes: ${planesResponse.body}');
+    }
+
+    final List<dynamic> planes = jsonDecode(planesResponse.body);
+    final profesionalPlan = planes.firstWhere(
+      (p) => p['nombre']?.toString().toLowerCase() == 'profesional',
+      orElse: () => throw Exception('Plan Profesional no encontrado'),
+    );
+    final int planId = profesionalPlan['id'];
+
+    // 2. Obtener clientSecret y publishableKey
     final response = await _apiClient.post(
       url,
-      {'plan_id': 2}, // Profesional
+      {'plan_id': planId}, // Dinámicamente seleccionado
       requiresAuth: true,
       includeTenantHost: true,
     );
@@ -232,12 +250,12 @@ class ReportRepository {
       }
     }
 
-    // 5. Confirmar pago en backend
+    // 6. Confirmar pago en backend
     final paymentIntentId = clientSecret.split('_secret')[0];
     final confirmResponse = await _apiClient.post(
       url,
       {
-        'plan_id': 2,
+        'plan_id': planId,
         'payment_intent': paymentIntentId
       },
       requiresAuth: true,

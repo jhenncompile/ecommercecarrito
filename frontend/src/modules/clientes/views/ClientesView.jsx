@@ -70,9 +70,9 @@ export default function ClientesView() {
       return (
         <AppView title="Clientes" subtitle="Análisis de comportamiento.">
           <RequirePremium 
-              locked={true} 
-              title="Análisis Avanzado" 
-              message="El análisis de comportamiento de clientes es una característica Premium. Mejora tu plan para descubrir quiénes son tus mejores clientes y quiénes están en riesgo."
+            locked={true} 
+            title="Análisis de Comportamiento" 
+            message="El análisis de comportamiento de clientes es una característica Premium. Mejora tu plan para descubrir quiénes son tus mejores clientes y quiénes están en riesgo."
           >
             <div style={{ height: '600px', display: 'flex', gap: '20px', flexDirection: 'column' }}>
                <div style={{ height: '200px', background: 'var(--color-surface)', borderRadius: '12px' }}></div>

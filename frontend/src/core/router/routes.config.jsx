@@ -307,13 +307,16 @@ export const getSidebarGroups = (user) => {
       if (!m.roles?.includes(userRole)) return false;
       if (m.requireOwner && !isOwner) return false;
       
+      let item = { ...m };
       // Filter by permissions if route demands it
       if (m.permissions && m.permissions.length > 0) {
         const hasPerm = m.permissions.some(p => userPermissions.includes(p));
-        if (!hasPerm) return false;
+        if (!hasPerm) {
+          item.premiumLocked = true;
+        }
       }
       
-      return true;
+      return item;
     }
   );
   const groups = {};

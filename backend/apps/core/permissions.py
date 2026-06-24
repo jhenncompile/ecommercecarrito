@@ -62,7 +62,11 @@ class HasPermiso(permissions.BasePermission):
                         
                     # Verificar si el plan incluye la funcionalidad
                     if not plan.permisos.filter(codigo=required_permiso_codigo).exists():
-                        return False
+                        from rest_framework.exceptions import PermissionDenied
+                        raise PermissionDenied(
+                            detail="Función Premium. Mejora tu plan para acceder a esta característica.", 
+                            code="upgrade_required"
+                        )
             except Permiso.DoesNotExist:
                 return False
             except Client.DoesNotExist:

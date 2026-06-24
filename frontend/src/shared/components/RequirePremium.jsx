@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, Crown, ArrowUpCircle } from 'lucide-react';
+import { Lock, Gem, ArrowUpCircle } from 'lucide-react';
 import { useTiendaPerfil } from '../../modules/perfil/hooks/useTiendaPerfil';
 import Button from './Button/Button';
 
@@ -49,7 +49,7 @@ export default function RequirePremium({ locked = false, title = "Función Premi
             alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
             color: 'white', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.3)'
           }}>
-            <Crown size={32} />
+            <Gem size={32} />
           </div>
           
           <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
