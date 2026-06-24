@@ -9,7 +9,8 @@ def show_users_menu():
     
             print_section("Operaciones Básicas (CRUD)")
             print_option(f"{Colors.YELLOW}1{Colors.RESET} - Crear nuevo usuario")
-            print_option(f"{Colors.YELLOW}2{Colors.RESET} - Listar usuarios")
+            print_option(f"{Colors.YELLOW}2{Colors.RESET} - Listar usuarios (del sistema)")
+            print_option(f"{Colors.YELLOW}C{Colors.RESET} - Listar clientes (Compradores)")
             print_option(f"{Colors.YELLOW}3{Colors.RESET} - Cambiar contraseña de usuario")
             print_option(f"{Colors.YELLOW}4{Colors.RESET} - Eliminar usuario")
     
@@ -39,6 +40,9 @@ def show_users_menu():
                 pause()
             elif choice == '2':
                 run_script('users/manage_users.py', '--list')
+                pause()
+            elif choice == 'c':
+                run_script('users/manage_users.py', '--list-clientes')
                 pause()
             elif choice == '3':
                 email = input("Email del usuario a modificar: ").strip()

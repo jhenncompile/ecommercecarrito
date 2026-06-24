@@ -15,7 +15,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 import django
 django.setup()
 
-from apps.customers.models import Usuario, Rol, Permiso, Client
+from apps.customers.models import Usuario, Rol, Permiso, Client, Cliente
 from django.db import transaction
 import re
 
@@ -105,6 +105,14 @@ def list_users():
         roles = ", ".join([r.nombre for r in u.roles.all()])
         print(f"[{u.id}] {u.email} | Staff: {u.is_staff} | Roles: {roles or 'Ninguno'}")
 
+def list_clientes():
+    print("\n--- LISTADO DE CLIENTES (COMPRADORES) ---")
+    clientes = Cliente.objects.all()
+    if not clientes:
+        print("No hay clientes registrados.")
+    for c in clientes:
+        print(f"[{c.id}] {c.nombre} | Correo: {c.correo}")
+
 def create_user(email, password):
     es_fuerte, error = validar_password_fuerte(password)
     if not es_fuerte:
@@ -186,6 +194,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Gestor de Usuarios y Roles")
     parser.add_argument('--init', action='store_true', help="Inicializa roles y permisos básicos")
     parser.add_argument('--list', action='store_true', help="Lista todos los usuarios")
+    parser.add_argument('--list-clientes', action='store_true', help="Lista todos los clientes (compradores)")
     parser.add_argument('--create', type=str, help="Email del nuevo usuario")
     parser.add_argument('--pass', type=str, dest='password', help="Password del nuevo usuario")
     parser.add_argument('--set-su', type=str, help="Asigna rol Super Usuario a un email")
@@ -204,6 +213,8 @@ if __name__ == "__main__":
         init_system()
     elif args.list:
         list_users()
+    elif args.list_clientes:
+        list_clientes()
     elif args.create:
         if not args.password:
             print("❌ ERROR: Debes proporcionar una contraseña con --pass")
