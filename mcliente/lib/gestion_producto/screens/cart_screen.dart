@@ -81,32 +81,27 @@ class _CartScreenState extends State<CartScreen> {
     try {
       AppToast.showInfo(context, 'Procesando pedido...');
       
-      // Construir el payload igual que en la web
-      final itemsData = _cart!.items.map((item) => {
-        'producto': item.producto.id,
-        'cantidad': item.cantidad,
-        'precio_unitario': item.producto.precio
-      }).toList();
-
       final pedidoResponse = await ApiClient().post(
-        '${ApiConstants.mainBaseUrl}/pedidos/',
+        '${ApiConstants.mainBaseUrl}/pedidos/crear-desde-carrito/',
         {
-          'items': itemsData,
-          'total': _cart!.total
+          'carrito_id': _cart!.id,
         },
         requiresAuth: true,
         includeTenantHost: true,
       );
 
       if (pedidoResponse.statusCode != 201 && pedidoResponse.statusCode != 200) {
-        throw Exception('Error al crear el pedido en el servidor');
+        final errorMsg = jsonDecode(pedidoResponse.body)['error'] ?? 'Error desconocido';
+        throw Exception('Error al crear el pedido: $errorMsg');
       }
 
       final pedidoData = jsonDecode(pedidoResponse.body);
       final pedidoId = pedidoData['id'];
 
-      // Vaciar carrito local
-      await _cartRepository.clearCart(_cart!.id);
+      // Vaciar carrito local (el backend ya lo marca como cerrado, actualizamos la vista localmente obteniendo uno nuevo o vaciando el actual si fuera necesario)
+      setState(() {
+        _cart = null;
+      });
 
       // Intentamos procesar el pago nativo
       final success = await _paymentRepository.processPaymentSheet(pedidoId);

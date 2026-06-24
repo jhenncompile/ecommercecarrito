@@ -24,6 +24,7 @@ class ReporteVozTab extends StatefulWidget {
 class _ReporteVozTabState extends State<ReporteVozTab> {
   bool _isRecording = false;
   bool _isLoading = false;
+  bool _isUpgrading = false;
   Map<String, dynamic>? _result;
   String? _error;
 
@@ -280,17 +281,61 @@ class _ReporteVozTabState extends State<ReporteVozTab> {
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(top: 20),
-            child: Container(
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(color: AppColors.danger.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-              child: Row(
-                children: [
-                  const Icon(Icons.error_outline, color: AppColors.danger),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(_error!, style: const TextStyle(color: AppColors.danger))),
-                ],
-              ),
-            ),
+            child: _error!.contains('PLAN_REQUIRED')
+                ? Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [BoxShadow(color: Color(0xFFF59E0B).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.diamond, color: Colors.white, size: 48),
+                        const SizedBox(height: 10),
+                        const Text('Función Premium', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 5),
+                        const Text('Mejora tu plan para acceder a consultas por voz con IA.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white)),
+                        const SizedBox(height: 15),
+                        _isUpgrading 
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFFD97706),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              onPressed: () async {
+                                setState(() => _isUpgrading = true);
+                                try {
+                                  await _reportRepository.upgradePlan();
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Plan mejorado con éxito. Ya puedes grabar tu voz.')));
+                                  setState(() {
+                                    _error = null;
+                                  });
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                } finally {
+                                  setState(() => _isUpgrading = false);
+                                }
+                              },
+                              child: const Text('Mejorar Plan Ahora', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                      ],
+                    ),
+                  )
+                : Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(color: AppColors.danger.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: AppColors.danger),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(_error!, style: const TextStyle(color: AppColors.danger))),
+                      ],
+                    ),
+                  ),
           ),
 
         // Resultados

@@ -58,9 +58,9 @@ class ProductRepository {
   }
 
   Future<List<ProductModel>> fetchRecommendations(int productId) async {
-    final baseUrl = await _buildUrl();
-    if (baseUrl == null) throw Exception('No hay tenant configurado.');
-    final url = '$baseUrl$productId/recomendaciones/';
+    final subdomain = await _storage.getSubdomain();
+    if (subdomain == null || subdomain.isEmpty) throw Exception('No hay tenant configurado.');
+    final url = '${ApiConstants.tenantBaseUrl(subdomain)}/catalogo/$productId/recomendaciones/';
     final response = await _apiClient.get(url, requiresAuth: true, includeTenantHost: true);
 
     if (response.statusCode == 200) {

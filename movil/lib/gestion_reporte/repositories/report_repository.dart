@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import '../../core/network/api_client.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/storage/secure_storage.dart';
@@ -35,6 +36,8 @@ class ReportRepository {
         return await _pollTaskStatus(baseUrl, taskId);
       }
       throw Exception('Error al procesar la consulta (sin task_id).');
+    } else if (response.statusCode == 403) {
+      throw Exception('PLAN_REQUIRED');
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(errorData['error'] ?? 'Error al procesar la consulta.');
@@ -79,9 +82,12 @@ class ReportRepository {
       );
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
+      } else if (response.statusCode == 403) {
+        throw Exception('PLAN_REQUIRED');
       }
       return [];
     } catch (e) {
+      if (e.toString().contains('PLAN_REQUIRED')) rethrow;
       return [];
     }
   }
@@ -100,9 +106,12 @@ class ReportRepository {
       );
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
+      } else if (response.statusCode == 403) {
+        throw Exception('PLAN_REQUIRED');
       }
       return [];
     } catch (e) {
+      if (e.toString().contains('PLAN_REQUIRED')) rethrow;
       return [];
     }
   }
@@ -120,6 +129,8 @@ class ReportRepository {
     );
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
+    } else if (response.statusCode == 403) {
+      throw Exception('PLAN_REQUIRED');
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(errorData['error'] ?? 'Error al ejecutar reporte.');
@@ -143,6 +154,8 @@ class ReportRepository {
     
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
+    } else if (response.statusCode == 403) {
+      throw Exception('PLAN_REQUIRED');
     } else {
       try {
         final errorData = jsonDecode(response.body);
@@ -164,7 +177,75 @@ class ReportRepository {
     );
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
+    } else if (response.statusCode == 403) {
+      throw Exception('PLAN_REQUIRED');
     }
     return [];
+  }
+
+  // --- UPGRADE PLAN ---
+  Future<void> upgradePlan() async {
+    final subdomain = await _storage.getSubdomain();
+    if (subdomain == null || subdomain.isEmpty) throw Exception('No hay tenant configurado.');
+    
+    final url = '${ApiConstants.mainBaseUrl}/tienda/suscripcion/upgrade/';
+    
+    // 1. Obtener clientSecret y publishableKey
+    final response = await _apiClient.post(
+      url,
+      {'plan_id': 2}, // Profesional
+      requiresAuth: true,
+      includeTenantHost: false,
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception('Error al iniciar pago: ${response.body}');
+    }
+
+    final data = jsonDecode(response.body);
+    final clientSecret = data['clientSecret'];
+    final publishableKey = data['publishableKey'];
+
+    if (clientSecret == null || publishableKey == null) {
+      throw Exception('No se recibió la configuración de pago de Stripe.');
+    }
+
+    // 2. Configurar Stripe
+    Stripe.publishableKey = publishableKey;
+
+    // 3. Inicializar Payment Sheet
+    await Stripe.instance.initPaymentSheet(
+      paymentSheetParameters: SetupPaymentSheetParameters(
+        paymentIntentClientSecret: clientSecret,
+        merchantDisplayName: 'MiQhatu Premium',
+      ),
+    );
+
+    // 4. Mostrar Payment Sheet
+    try {
+      await Stripe.instance.presentPaymentSheet();
+    } catch (e) {
+      if (e is StripeException) {
+        throw Exception('Pago cancelado o fallido: ${e.error.localizedMessage}');
+      } else {
+        throw Exception('Error en el pago: $e');
+      }
+    }
+
+    // 5. Confirmar pago en backend
+    final paymentIntentId = clientSecret.split('_secret')[0];
+    final confirmResponse = await _apiClient.post(
+      url,
+      {
+        'plan_id': 2,
+        'payment_intent': paymentIntentId
+      },
+      requiresAuth: true,
+      includeTenantHost: false,
+    );
+
+    if (confirmResponse.statusCode != 200) {
+      throw Exception('Error al confirmar mejora: ${confirmResponse.body}');
+    }
   }
 }

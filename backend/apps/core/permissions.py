@@ -39,6 +39,27 @@ class HasPermiso(permissions.BasePermission):
                     if not plan or not plan.activo:
                         return False
                         
+                    # Verificación Lazy de Expiración
+                    import datetime
+                    hoy = datetime.date.today()
+                    if tenant.fecha_fin_suscripcion and tenant.fecha_fin_suscripcion < hoy:
+                        # La suscripción expiró. Degradamos automáticamente al plan gratis (precio 0)
+                        from apps.customers.tenants.models.plan import Plan
+                        plan_gratis = Plan.objects.filter(precio_mensual=0).first()
+                        if plan_gratis:
+                            tenant.plan = plan_gratis
+                            tenant.fecha_inicio_suscripcion = None
+                            tenant.fecha_fin_suscripcion = None
+                            tenant.save()
+                            # Actualizamos la variable local plan para el resto de la validación
+                            plan = plan_gratis
+                        else:
+                            return False # No se puede continuar sin plan válido
+                            
+                        # Si acaba de ser degradado a gratis, seguramente no tiene este permiso
+                        if not plan.permisos.filter(codigo=required_permiso_codigo).exists():
+                            return False
+                        
                     # Verificar si el plan incluye la funcionalidad
                     if not plan.permisos.filter(codigo=required_permiso_codigo).exists():
                         return False

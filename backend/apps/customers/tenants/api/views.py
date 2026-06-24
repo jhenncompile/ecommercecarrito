@@ -121,10 +121,7 @@ class UpgradeSuscripcionView(APIView):
                     return Response({'success': True, 'message': 'Plan actualizado a Gratuito.'}, status=status.HTTP_200_OK)
 
                 if not stripe.api_key:
-                    # MODO SIMULACIÓN: Si no hay clave de Stripe, aprobamos directamente
-                    tenant.plan = nuevo_plan
-                    tenant.save()
-                    return Response({'success': True, 'message': 'Modo Prueba: Plan actualizado sin cobro.'}, status=status.HTTP_200_OK)
+                    return Response({'error': 'Configuración de Stripe incompleta'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 intent = stripe.PaymentIntent.create(
                     amount=amount,
@@ -132,7 +129,11 @@ class UpgradeSuscripcionView(APIView):
                     automatic_payment_methods={'enabled': True},
                     metadata={'tenant_schema': tenant.schema_name, 'nuevo_plan_id': nuevo_plan.id}
                 )
-                return Response({'clientSecret': intent.client_secret}, status=status.HTTP_200_OK)
+                from django.conf import settings
+                return Response({
+                    'clientSecret': intent.client_secret,
+                    'publishableKey': settings.STRIPE_PUBLISHABLE_KEY
+                }, status=status.HTTP_200_OK)
             except Exception as e:
                 return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
