@@ -17,7 +17,8 @@ def show_data_menu():
     
             print_section("3. Contenido")
             print_option(f"{Colors.YELLOW}5{Colors.RESET} - Gestión de Usuarios (CRUD Completo)")
-            print_option(f"{Colors.YELLOW}6{Colors.RESET} - Ejecutar Seeders (Poblar con datos de prueba)")
+            print_option(f"{Colors.YELLOW}6{Colors.RESET} - Ejecutar Seeders COMPLETOS (Datos + Configuración SaaS)")
+            print_option(f"{Colors.YELLOW}N{Colors.RESET} - Ejecutar Seeders COMERCIALES (Solo Tiendas, Ventas y Productos)")
             print_option(f"{Colors.YELLOW}P{Colors.RESET} - Sembrar Permisos del Sistema (Obligatorio 1ra vez)")
     
             print_section("4. Reparación y Emergencia")
@@ -57,6 +58,8 @@ def show_data_menu():
                 show_users_menu()
             elif choice == '6':
                 run_script('db/db_seed.py'); pause()
+            elif choice == 'n':
+                run_script('db/db_seed_comercial.py'); pause()
             elif choice == 'p':
                 run_script('db/migrations.py', 'seed_permisos'); pause()
             elif choice == '7':
