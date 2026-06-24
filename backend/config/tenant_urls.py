@@ -29,7 +29,7 @@ from apps.gestionDeClientes.cu17_analizar_comportamiento_del_cliente.api.behavio
 from apps.gestionDeUsuarioySeguridad.cu3_gestion_de_usuario.api.device_token_views import DeviceTokenRegisterView
 from apps.gestionDeReportes.cu21_generar_backup.api.respaldo_views import RespaldoViewSet
 from apps.gestionDeUsuarioySeguridad.cu6_gestionar_bitacora.api.bitacora_views import BitacoraViewSet
-from apps.customers.tenants.api.views import TiendaPerfilView
+from apps.customers.tenants.api.views import TiendaPerfilView, UpgradeSuscripcionView
 from apps.gestionDeClientes.cu22_gestionar_prediccion_de_ventas.api.forecast_views import PrediccionVentasAPIView, PrediccionProductosAPIView, PrediccionCategoriasAPIView
 
 def debug_schema(request):
@@ -99,6 +99,7 @@ urlpatterns = [
     # Perfil del usuario autenticado
     path('api/usuarios/perfil/', MiPerfilView.as_view(), name='mi_perfil'),
     path('api/tienda/perfil/', TiendaPerfilView.as_view(), name='tienda_perfil'),
+    path('api/tienda/suscripcion/upgrade/', UpgradeSuscripcionView.as_view(), name='suscripcion_upgrade'),
 
     # Consultas por voz
     path('api/vquery/', VoiceQueryView.as_view(), name='voice_query'),

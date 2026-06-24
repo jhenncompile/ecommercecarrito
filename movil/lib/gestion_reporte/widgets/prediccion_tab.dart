@@ -54,7 +54,13 @@ class _PrediccionTabState extends State<PrediccionTab> {
         });
       }
     } catch (e) {
-      // Ignorar error de carga de opciones en UI
+      if (e.toString().contains('PLAN_REQUIRED')) {
+        if (mounted) {
+          setState(() {
+            _error = 'PLAN_REQUIRED';
+          });
+        }
+      }
     }
   }
 

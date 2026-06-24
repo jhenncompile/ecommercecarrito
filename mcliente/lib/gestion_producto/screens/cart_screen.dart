@@ -193,7 +193,10 @@ class _CartScreenState extends State<CartScreen> {
               leading: Container(
                 width: 50, height: 50,
                 decoration: BoxDecoration(color: AppColors.bgSearch, borderRadius: BorderRadius.circular(8)),
-                child: const Icon(Icons.image_outlined, color: AppColors.textMuted),
+                clipBehavior: Clip.hardEdge,
+                child: item.producto.imagenUrl != null && item.producto.imagenUrl!.isNotEmpty
+                    ? Image.network(item.producto.imagenUrl!, fit: BoxFit.cover, errorBuilder: (_,__,___) => const Icon(Icons.image_outlined, color: AppColors.textMuted))
+                    : const Icon(Icons.image_outlined, color: AppColors.textMuted),
               ),
               title: Text(item.producto.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text('${item.cantidad} x BS. ${item.producto.precio}'),
@@ -269,7 +272,11 @@ class _CartScreenState extends State<CartScreen> {
                 ),
                 child: Column(
                   children: [
-                    Expanded(child: Icon(Icons.shopping_bag_outlined, color: AppColors.accentTeal.withOpacity(0.5), size: 40)),
+                    Expanded(
+                      child: rec.imagenUrl != null && rec.imagenUrl!.isNotEmpty
+                          ? Image.network(rec.imagenUrl!, fit: BoxFit.cover, width: double.infinity, errorBuilder: (_,__,___) => Icon(Icons.shopping_bag_outlined, color: AppColors.accentTeal.withOpacity(0.5), size: 40))
+                          : Icon(Icons.shopping_bag_outlined, color: AppColors.accentTeal.withOpacity(0.5), size: 40),
+                    ),
                     Text(rec.nombre, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12), maxLines: 2, textAlign: TextAlign.center),
                     const SizedBox(height: 5),
                     Text('BS. ${rec.precio}', style: const TextStyle(color: AppColors.accentTeal, fontWeight: FontWeight.bold)),

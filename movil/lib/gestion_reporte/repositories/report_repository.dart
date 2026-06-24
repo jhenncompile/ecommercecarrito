@@ -195,7 +195,7 @@ class ReportRepository {
       url,
       {'plan_id': 2}, // Profesional
       requiresAuth: true,
-      includeTenantHost: false,
+      includeTenantHost: true,
     );
     
     if (response.statusCode != 200) {
@@ -241,7 +241,7 @@ class ReportRepository {
         'payment_intent': paymentIntentId
       },
       requiresAuth: true,
-      includeTenantHost: false,
+      includeTenantHost: true,
     );
 
     if (confirmResponse.statusCode != 200) {
