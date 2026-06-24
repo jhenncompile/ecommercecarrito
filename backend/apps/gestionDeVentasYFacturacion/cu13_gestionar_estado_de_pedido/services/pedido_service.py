@@ -194,19 +194,29 @@ class PedidoService(BaseService):
         except Client.DoesNotExist:
             return
             
-        if not tenant.plan or tenant.plan.facturacion_max is None:
+        if not tenant.plan:
             return
 
-        current_month = now().month
-        current_year = now().year
+        current_day = now().date()
         
-        pedidos_mes = Pedido.objects.filter(
-            fecha_creacion__year=current_year,
-            fecha_creacion__month=current_month,
+        pedidos_dia = Pedido.objects.filter(
+            fecha_creacion__date=current_day,
             estado__in=['PENDIENTE', 'PAGADO', 'PROCESADO', 'ENVIADO', 'ENTREGADO']
         )
         
-        total_facturado = sum(p.carrito.total_carrito for p in pedidos_mes)
+        total_facturado = sum(p.carrito.total_carrito for p in pedidos_dia)
+        cantidad_ventas = pedidos_dia.count()
         
-        if (float(total_facturado) + float(total_nuevo_pedido)) > float(tenant.plan.facturacion_max):
-            raise ValidationError({"limite_alcanzado": f"Has superado el límite de facturación mensual de tu plan ({tenant.plan.nombre}): ${tenant.plan.facturacion_max}. Has facturado ${total_facturado} este mes. Este pedido es de ${total_nuevo_pedido}. Por favor mejora tu suscripción."})
+        # Verificar límite de facturación (si aplica)
+        if tenant.plan.facturacion_max is not None:
+            if (float(total_facturado) + float(total_nuevo_pedido)) > float(tenant.plan.facturacion_max):
+                tenant.limite_alcanzado_fecha = current_day
+                tenant.save()
+                raise ValidationError({"limite_alcanzado": f"Has superado el límite de facturación diaria de tu plan ({tenant.plan.nombre}): ${tenant.plan.facturacion_max}. Has facturado ${total_facturado} hoy. Este pedido es de ${total_nuevo_pedido}. Por favor mejora tu suscripción."})
+
+        # Verificar límite de ventas diarias (si aplica)
+        if tenant.plan.ventas_max is not None:
+            if (cantidad_ventas + 1) > tenant.plan.ventas_max:
+                tenant.limite_alcanzado_fecha = current_day
+                tenant.save()
+                raise ValidationError({"limite_alcanzado": f"Has superado el límite de ventas diarias de tu plan ({tenant.plan.nombre}): {tenant.plan.ventas_max} ventas/día. Llevas {cantidad_ventas} hoy. Por favor mejora tu suscripción."})

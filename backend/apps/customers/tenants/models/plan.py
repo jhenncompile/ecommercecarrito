@@ -35,12 +35,17 @@ class Plan(models.Model):
     max_productos = models.IntegerField(
         verbose_name='Máximo de Productos'
     )
+    ventas_max = models.IntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Límite de Ventas Diarias'
+    )
     facturacion_max = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         blank=True,
         null=True,
-        verbose_name='Límite de Facturación Mensual'
+        verbose_name='Límite de Facturación Diaria'
     )
     permisos = models.ManyToManyField(
         'customers.Permiso',

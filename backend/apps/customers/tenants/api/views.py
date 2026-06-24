@@ -40,11 +40,14 @@ class TiendaPublicViewSet(viewsets.ReadOnlyModelViewSet):
     - GET /api/tiendas-publicas/?categoria_tienda=ropa - Filtrar por categoría
     """
     
-    # Solo tiendas activas
-    queryset = Client.objects.filter(activo=True).prefetch_related('domains')
     serializer_class = TiendaPublicSerializer
     permission_classes = [AllowAny]  # Acceso sin JWT
     pagination_class = DirectorioPagination
+    
+    def get_queryset(self):
+        from django.utils import timezone
+        today = timezone.now().date()
+        return Client.objects.filter(activo=True).exclude(limite_alcanzado_fecha=today).prefetch_related('domains')
     
     # Filtros y búsqueda
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]

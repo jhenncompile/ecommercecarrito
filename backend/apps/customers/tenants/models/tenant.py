@@ -35,6 +35,12 @@ class Client(TenantMixin):
         verbose_name='Activo'
     )
     
+    limite_alcanzado_fecha = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Fecha de Límite Alcanzado'
+    )
+    
     # Campos comerciales para el Marketplace (Escenario C)
     nombre_comercial = models.CharField(
         max_length=150,
