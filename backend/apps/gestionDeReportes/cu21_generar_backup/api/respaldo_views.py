@@ -92,5 +92,8 @@ class RespaldoViewSet(BaseViewSet):
             self.get_service().restaurar_respaldo(pk)
             return Response({'message': 'Restauración completada con éxito.'})
         except Exception as e:
+            import traceback
+            print("❌ Error en la vista de restaurar:")
+            print(traceback.format_exc())
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
