@@ -71,7 +71,7 @@ class RespaldoService:
             
             nuevo_respaldo = RespaldoSistema.objects.create(
                 nombre=f"{nombre_base}",
-                archivo_path=full_path,
+                archivo_path=filename, # Guardar solo el nombre para portabilidad
                 anterior=ultimo_respaldo,
                 metadata={
                     'size_bytes': os.path.getsize(full_path),
@@ -96,8 +96,16 @@ class RespaldoService:
         from ..models.respaldo import RespaldoSistema, ConfiguracionRespaldo
         
         respaldo = RespaldoSistema.objects.get(id=respaldo_id)
-        if not respaldo.archivo_path or not os.path.exists(respaldo.archivo_path):
-            raise Exception("El archivo físico del respaldo no existe.")
+        
+        project_root = getattr(settings, 'PROJECT_ROOT', settings.BASE_DIR.parent)
+        backup_dir = os.path.join(project_root, 'backups')
+        
+        # Retrocompatibilidad: extraer el nombre del archivo si se guardó con ruta absoluta
+        filename = os.path.basename(respaldo.archivo_path)
+        real_path = os.path.join(backup_dir, filename)
+        
+        if not real_path or not os.path.exists(real_path):
+            raise Exception(f"El archivo físico '{filename}' no existe en este servidor. Si creaste este respaldo ejecutando el código en tu computadora local, el archivo se quedó guardado en tu computadora, no en el VPS.")
             
         db_config = settings.DATABASES['default']
         env = os.environ.copy()
@@ -131,11 +139,11 @@ class RespaldoService:
             '-d', db_config['NAME'],
             '-c', '--if-exists',
             '--no-owner', # No restaurar dueños de roles, previene errores de permisos
-            respaldo.archivo_path
+            real_path
         ]
         
         try:
-            logger.warning(f"⚠️ Iniciando RESTAURACIÓN desde {respaldo.archivo_path}")
+            logger.warning(f"⚠️ Iniciando RESTAURACIÓN desde {real_path}")
             
             # Dejamos que pg_restore con -c haga la limpieza, para no envenenar la conexión actual.
             logger.info("Ejecutando pg_restore...")
