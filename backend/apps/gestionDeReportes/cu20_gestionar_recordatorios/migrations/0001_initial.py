@@ -10,7 +10,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('cu13_gestionar_estado_de_pedido', '__first__'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
