@@ -145,7 +145,13 @@ class RespaldoService:
         try:
             logger.warning(f"⚠️ Iniciando RESTAURACIÓN desde {real_path}")
             
-            # Dejamos que pg_restore con -c haga la limpieza, para no envenenar la conexión actual.
+            # Cerrar la conexión actual ANTES de pg_restore para evitar DEADLOCK
+            # pg_restore necesita un AccessExclusiveLock para hacer DROP. Si Django mantiene
+            # la conexión abierta mientras espera a pg_restore, se bloquean mutuamente.
+            from django.db import connection
+            connection.close()
+
+            # Dejamos que pg_restore con -c haga la limpieza.
             logger.info("Ejecutando pg_restore...")
             print(f"🚀 [Scheduler] Ejecutando pg_restore: {' '.join(cmd)}")
             result = subprocess.run(
@@ -160,10 +166,6 @@ class RespaldoService:
                     pass # pg_restore a veces arroja errores ignorables, seguimos adelante.
             else:
                 print("✅ [pg_restore] Éxito absoluto")
-            
-            # Cerrar la conexión actual para obligar a Django a reconectar y no usar transacciones rotas
-            from django.db import connection
-            connection.close()
             
             # Ejecutar migraciones por si el backup es muy antiguo y le faltan tablas nuevas (como esta de respaldos)
             import sys
