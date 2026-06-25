@@ -6,7 +6,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import AppView   from 'shared/widgets/AppView/AppView';
 import DataTable from 'shared/widgets/DataTable/DataTable';
-import { Button, Input, Badge, Alert, Spinner } from 'shared/components';
+import { Button, Input, Badge, Alert, Spinner, UpgradeModal } from 'shared/components';
 import { productosApi, categoriasApi } from '../services/productosApi';
 import styles from './Productos.module.css';
 
@@ -120,7 +120,7 @@ function CategoryPanel({ categorias, selectedId, onSelect, onManage }) {
 }
 
 /** Drawer de formulario para crear / editar producto */
-function ProductDrawer({ open, producto, categorias, onClose, onSaved }) {
+function ProductDrawer({ open, producto, categorias, onClose, onSaved, onLimitReached }) {
   const isEdit = !!producto?.id;
   const [form,    setForm]    = useState(EMPTY_PRODUCT);
   const [loading, setLoading] = useState(false);
@@ -168,7 +168,13 @@ function ProductDrawer({ open, producto, categorias, onClose, onSaved }) {
       onClose();
     } catch (err) {
       const detail = err.response?.data;
-      setError(typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Error al guardar.');
+      if (detail && (detail.limite_alcanzado || detail?.errors?.limite_alcanzado)) {
+        const msg = detail.limite_alcanzado || detail.errors.limite_alcanzado;
+        onLimitReached(Array.isArray(msg) ? msg[0] : msg);
+        onClose();
+      } else {
+        setError(typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Error al guardar.');
+      }
     } finally {
       setLoading(false);
     }
@@ -370,7 +376,7 @@ function ProductDrawer({ open, producto, categorias, onClose, onSaved }) {
 }
 
 /** Modal para gestionar categorías (crear/ eliminar padres e hijos) */
-function CategoryManager({ open, categorias, onClose, onRefresh }) {
+function CategoryManager({ open, categorias, onClose, onRefresh, onLimitReached }) {
   const [form,         setForm]         = useState(EMPTY_CAT);
   const [saving,       setSaving]       = useState(false);
   const [formError,    setFormError]    = useState('');
@@ -396,7 +402,14 @@ function CategoryManager({ open, categorias, onClose, onRefresh }) {
       setForm(EMPTY_CAT);
       onRefresh();
     } catch (err) {
-      setFormError(JSON.stringify(err.response?.data) || 'Error al crear categoría.');
+      const detail = err.response?.data;
+      if (detail && (detail.limite_alcanzado || detail?.errors?.limite_alcanzado)) {
+        const msg = detail.limite_alcanzado || detail.errors.limite_alcanzado;
+        onLimitReached(Array.isArray(msg) ? msg[0] : msg);
+        onClose();
+      } else {
+        setFormError(JSON.stringify(detail) || 'Error al crear categoría.');
+      }
     } finally {
       setSaving(false);
     }
@@ -632,6 +645,7 @@ export default function ProductosView() {
   const [catMgrOpen,   setCatMgrOpen]   = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting,     setDeleting]     = useState(false);
+  const [upgradeMsg,   setUpgradeMsg]   = useState('');
 
   // Cargar datos
   const cargar = useCallback(async () => {
@@ -842,20 +856,28 @@ export default function ProductosView() {
       </div>
 
       {/* Drawer: crear / editar producto */}
+      {/* Modal de Limite Alcanzado (Upgrade Plan) */}
+      <UpgradeModal
+        isOpen={!!upgradeMsg}
+        onClose={() => setUpgradeMsg('')}
+        message={upgradeMsg}
+      />
+
       <ProductDrawer
         open={drawerOpen}
         producto={editProduct}
         categorias={categorias}
         onClose={() => setDrawerOpen(false)}
         onSaved={cargar}
+        onLimitReached={(msg) => setUpgradeMsg(msg)}
       />
 
-      {/* Drawer: gestionar categorías */}
       <CategoryManager
         open={catMgrOpen}
         categorias={categorias}
         onClose={() => setCatMgrOpen(false)}
         onRefresh={cargar}
+        onLimitReached={(msg) => setUpgradeMsg(msg)}
       />
     </AppView>
   );

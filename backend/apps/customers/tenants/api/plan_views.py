@@ -1,3 +1,4 @@
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from apps.core.views import BaseViewSet
 from apps.customers.models import Plan
 from apps.customers.tenants.api.serializers import PlanSerializer
@@ -17,7 +18,14 @@ class PlanViewSet(BaseViewSet):
     queryset = Plan.objects.all()
     serializer_class = PlanSerializer
     modulo_auditoria = "Plan"
+    pagination_class = None
+    
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = PlanService()
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]

@@ -80,6 +80,7 @@ class _PrediccionTabState extends State<PrediccionTab> {
       final params = {
         'granularidad': _granularidad,
         'prediccion_meses': meses.toString(),
+        'data_historica_meses': '1200', // Enviar 100 años para capturar data antigua
       };
       
       if (widget.endpoint == '') {

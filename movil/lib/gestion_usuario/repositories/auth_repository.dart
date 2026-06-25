@@ -4,6 +4,7 @@ import '../../core/constants/api_constants.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/services/push_notification_service.dart';
 import '../models/auth_tokens.dart';
+import '../../main.dart' as import_main;
 
 class AuthRepository {
   final ApiClient _apiClient = ApiClient();
@@ -90,6 +91,7 @@ class AuthRepository {
       // Si falla la petición al servidor, igual borramos localmente
     } finally {
       await _storage.deleteAll();
+      import_main.navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (route) => false);
     }
   }
 

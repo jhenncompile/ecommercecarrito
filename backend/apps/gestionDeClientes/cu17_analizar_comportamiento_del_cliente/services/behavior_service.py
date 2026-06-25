@@ -76,6 +76,11 @@ class CustomerBehaviorService:
             n_clusters = min(4, len(compradores_list))
             
             if n_clusters >= 2:
+                # Evitar UserWarning de joblib en sistemas sin 'cat' (ej. Docker, Windows, Vercel)
+                import os
+                if 'LOKY_MAX_CPU_COUNT' not in os.environ:
+                    os.environ['LOKY_MAX_CPU_COUNT'] = '1'
+
                 # Lazy import de sklearn
                 from sklearn.cluster import KMeans
                 from sklearn.preprocessing import StandardScaler

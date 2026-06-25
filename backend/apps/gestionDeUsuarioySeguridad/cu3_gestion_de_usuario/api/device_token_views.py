@@ -16,6 +16,8 @@ class DeviceTokenRegisterView(APIView):
             return Response(serializer.errors, status=400)
 
         token = serializer.validated_data['token']
+        if not token or str(token).lower() in ['null', 'undefined', 'none']:
+            return Response({'error': 'Token inválido o nulo ignorado.'}, status=400)
 
         print(f"Recibida peticion para registrar Device Token: {token[:15]}...")
 
@@ -53,15 +55,21 @@ class DeviceTokenRegisterView(APIView):
             usuario = Usuario.objects.filter(id=usuario_id).first() if usuario_id else None
 
             device_token, created = DeviceToken.objects.get_or_create(
-                token=token,
-                defaults={'cliente': cliente, 'usuario': usuario}
+                token=token
             )
-            if not created:
+            
+            # Solo actualizamos si el nuevo valor no es nulo, para no sobreescribir con null
+            # si el mismo dispositivo se usa para cliente y usuario.
+            needs_save = False
+            if cliente and device_token.cliente != cliente:
                 device_token.cliente = cliente
+                needs_save = True
+            if usuario and device_token.usuario != usuario:
                 device_token.usuario = usuario
+                needs_save = True
+
+            if needs_save or created:
                 device_token.save()
-                print(f"Token actualizado para {'Cliente' if cliente else 'Usuario'}")
-            else:
-                print(f"Nuevo Token creado para {'Cliente' if cliente else 'Usuario'}")
+                print(f"Token {'creado' if created else 'actualizado'} para {'Cliente' if cliente else 'Usuario'}")
 
         return Response({'status': 'Token registrado exitosamente'})

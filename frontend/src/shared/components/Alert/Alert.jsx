@@ -20,7 +20,7 @@ const Alert = ({ variant = 'info', title, children }) => {
       {Icon && <Icon size={18} className={styles.icon} />}
       <div>
         {title && <p className={styles.title}>{title}</p>}
-        {children && <p className={styles.body}>{children}</p>}
+        {children && <div className={styles.body}>{children}</div>}
       </div>
     </div>
   );

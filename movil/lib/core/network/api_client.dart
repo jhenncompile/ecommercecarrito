@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../storage/secure_storage.dart';
 import '../constants/api_constants.dart';
+import '../../main.dart' as import_main;
 
 /// Cliente HTTP centralizado con:
 /// - Header `Authorization: Bearer <token>` automático
@@ -122,20 +123,32 @@ class ApiClient {
     );
     request.files.add(file);
 
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+    try {
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 120),
+        onTimeout: () {
+          throw Exception('Tiempo de espera agotado al subir el archivo (timeout).');
+        },
+      );
+      final response = await http.Response.fromStream(streamedResponse);
 
-    if (response.statusCode == 401 && requiresAuth) {
-      return await _handleTokenRefresh(() => multipartPost(
-            url,
-            filePath: filePath,
-            fieldName: fieldName,
-            additionalFields: additionalFields,
-            requiresAuth: requiresAuth,
-            includeTenantHost: includeTenantHost,
-          ));
+      if (response.statusCode == 401 && requiresAuth) {
+        return await _handleTokenRefresh(() => multipartPost(
+              url,
+              filePath: filePath,
+              fieldName: fieldName,
+              additionalFields: additionalFields,
+              requiresAuth: requiresAuth,
+              includeTenantHost: includeTenantHost,
+            ));
+      }
+      return response;
+    } catch (e) {
+      if (e.toString().contains('SocketException') || e.toString().contains('Connection timed out')) {
+        throw Exception('Error de red: No se pudo conectar al servidor ($url). Revisa tu IP y conexión.');
+      }
+      rethrow;
     }
-    return response;
   }
 
   Future<http.Response> put(
@@ -261,12 +274,18 @@ class ApiClient {
         // El refresh token también expiró → limpiar todo
         await _storage.deleteAll();
         _isRefreshing = false;
+        _forceLogout();
         return refreshResponse;
       }
     } catch (e) {
       await _storage.deleteAll();
       _isRefreshing = false;
+      _forceLogout();
       return http.Response('{"detail": "Error en refresh: $e"}', 401);
     }
+  }
+
+  void _forceLogout() {
+    import_main.navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (route) => false);
   }
 }
