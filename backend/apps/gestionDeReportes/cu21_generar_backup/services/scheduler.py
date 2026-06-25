@@ -10,11 +10,22 @@ scheduler = BackgroundScheduler()
 
 def ejecutar_respaldo_automatico():
     from apps.gestionDeReportes.cu21_generar_backup.services.respaldo_service import RespaldoService
-    logger.info("⏰ Ejecutando Respaldo Automático Programado...")
+    from apps.gestionDeReportes.cu21_generar_backup.models.respaldo import ConfiguracionRespaldo
+    from django.db import transaction, OperationalError
+    
+    logger.info("Intentando iniciar Respaldo Automático Programado...")
     try:
-        service = RespaldoService()
-        service.crear_respaldo(nombre_base="Respaldo Automático")
-        logger.info("✅ Respaldo Automático Exitoso")
+        with transaction.atomic():
+            # Bloqueo atómico a nivel de fila (Postgres) para que solo un worker ejecute el respaldo a la vez
+            config = ConfiguracionRespaldo.objects.select_for_update(nowait=True).first()
+            if not config:
+                return
+                
+            service = RespaldoService()
+            service.crear_respaldo(nombre_base="Respaldo Automático")
+            logger.info("✅ Respaldo Automático Exitoso")
+    except OperationalError:
+        logger.info("⏭️ Otro proceso ya está ejecutando el respaldo en este momento (Lock adquirido).")
     except Exception as e:
         logger.error(f"❌ Error en Respaldo Automático: {e}")
 
