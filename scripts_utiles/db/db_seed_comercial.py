@@ -418,7 +418,12 @@ class DatabaseSeeder:
                                         )
                                         
                                     pedidos_to_create.append(
-                                        Pedido(carrito=carrito, estado=pdata['estado'], tracking_code="", fecha_creacion=pdata['fecha'], fecha_actualizacion=pdata['fecha'])
+                                        Pedido(
+                                            carrito=carrito, 
+                                            estado=pdata['estado'], 
+                                            fecha_creacion=pdata['fecha'], 
+                                            fecha_actualizacion=pdata['fecha']
+                                        )
                                     )
                                     
                                 # 2. Bulk Create Items & Pedidos
