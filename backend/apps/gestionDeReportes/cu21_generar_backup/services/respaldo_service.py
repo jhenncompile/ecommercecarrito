@@ -139,15 +139,19 @@ class RespaldoService:
             
             # Dejamos que pg_restore con -c haga la limpieza, para no envenenar la conexión actual.
             logger.info("Ejecutando pg_restore...")
+            print(f"🚀 [Scheduler] Ejecutando pg_restore: {' '.join(cmd)}")
             result = subprocess.run(
                 cmd, env=env, capture_output=True, text=True, 
                 errors='replace'
             )
             if result.returncode != 0:
                 stderr_text = result.stderr or ""
+                print(f"❌ [pg_restore] ERROR: {stderr_text}")
                 logger.error(f"Error de pg_restore: {stderr_text}")
                 if "fatal:" in stderr_text.lower() or "falló" in stderr_text.lower() or "error" in stderr_text.lower():
                     pass # pg_restore a veces arroja errores ignorables, seguimos adelante.
+            else:
+                print("✅ [pg_restore] Éxito absoluto")
             
             # Cerrar la conexión actual para obligar a Django a reconectar y no usar transacciones rotas
             from django.db import connection
