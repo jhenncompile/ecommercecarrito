@@ -18,7 +18,7 @@ class PedidoItem {
   factory PedidoItem.fromJson(Map<String, dynamic> json) {
     return PedidoItem(
       id: json['id'] ?? 0,
-      productoId: json['producto'] ?? 0,
+      productoId: json['producto'] is Map ? (json['producto']['id'] ?? 0) : (json['producto'] ?? 0),
       productoNombre: json['producto_nombre'] ?? '',
       productoPrecio: json['producto_precio']?.toString() ?? '0.00',
       cantidad: json['cantidad'] ?? 0,

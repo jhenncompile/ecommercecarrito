@@ -185,7 +185,6 @@ class VoiceQueryService:
         # Models to try if the primary one is rate-limited
         fallback_models = [
             model,
-            "google/gemini-2.5-flash:free",
             "mistralai/mistral-7b-instruct:free",
             "deepseek/deepseek-chat:free",
             "qwen/qwen-2-7b-instruct:free"

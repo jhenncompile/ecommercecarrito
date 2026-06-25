@@ -66,7 +66,6 @@ class ReportRepository {
           throw Exception(data['error'] ?? 'La consulta por voz falló.');
         }
         // Si es PENDING o PROCESSING, continúa el bucle
-        onProgress?.call('Ejecutando consulta...');
       } else {
         throw Exception('Error al consultar el estado de la tarea.');
       }
