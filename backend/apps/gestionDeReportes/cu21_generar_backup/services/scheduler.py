@@ -3,12 +3,12 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from zoneinfo import ZoneInfo
+import pytz
 import logging
 
 logger = logging.getLogger(__name__)
 
-scheduler = BackgroundScheduler(timezone=ZoneInfo(settings.TIME_ZONE) if hasattr(settings, 'TIME_ZONE') and settings.TIME_ZONE else ZoneInfo("UTC"))
+scheduler = BackgroundScheduler(timezone=pytz.timezone(settings.TIME_ZONE) if hasattr(settings, 'TIME_ZONE') and settings.TIME_ZONE else pytz.utc)
 
 def ejecutar_respaldo_automatico():
     from apps.gestionDeReportes.cu21_generar_backup.services.respaldo_service import RespaldoService
