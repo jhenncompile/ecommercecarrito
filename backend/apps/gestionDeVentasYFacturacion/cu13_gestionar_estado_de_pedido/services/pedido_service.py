@@ -47,12 +47,16 @@ class PedidoService(BaseService):
         
         return pedido
 
-    def crear_pedido_directo(self, cliente_id, items):
-        """Crea un carrito y un pedido en un solo paso."""
+    def crear_pedido_directo(self, cliente_id, items, envio=None):
+        """Crea un carrito y un pedido en un solo paso.
+
+        `envio` (opcional) es un dict con la logística del checkout:
+        {tipo_envio, costo_envio, ciudad_envio, zona_envio}
+        """
         from apps.gestionDeVentasYFacturacion.cu11_gestion_carrito_de_compras.models.carrito_item import CarritoItem
         from apps.gestionDeProductoYCatalogo.cu7_gestionar_productos.models.producto import Producto
         from apps.customers.clientes.models.cliente import Cliente
-        
+
         with transaction.atomic():
             cliente = Cliente.objects.get(id=cliente_id)
             carrito = Carrito.objects.create(cliente=cliente, estado='CERRADO')
@@ -82,15 +86,20 @@ class PedidoService(BaseService):
                 )
                 
             self._verificar_limite_facturacion(carrito.total_carrito)
-            
+
+            envio = envio or {}
             pedido = Pedido.objects.create(
                 carrito=carrito,
-                estado='PENDIENTE'
+                estado='PENDIENTE',
+                tipo_envio=envio.get('tipo_envio') or None,
+                costo_envio=envio.get('costo_envio') or 0,
+                ciudad_envio=envio.get('ciudad_envio') or None,
+                zona_envio=envio.get('zona_envio') or None,
             )
-            
+
             # Notificar nueva venta al vendedor
             self._notificar_nueva_venta(pedido)
-            
+
             return pedido
 
     def _notificar_stock_bajo(self, producto):

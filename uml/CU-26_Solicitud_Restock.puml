@@ -1,0 +1,20 @@
+@startuml
+skinparam rectangle {
+    BackgroundColor white
+    BorderColor black
+    RoundCorner 10
+    padding 10
+}
+rectangle "Pantalla de Detalle de Producto" as Producto
+rectangle "CU-26 Gestionar Solicitud de Restock\nSolicitar producto agotado" as CU26
+rectangle "Validar Inventario (Stock Cero) (CU-10)" as CU10
+rectangle "Registrar Solicitud de Restock" as Registro
+rectangle "Panel de Vendedor (Intención de Compra)" as PanelVendedor
+rectangle "Notificar al Cliente (Automático)" as Notificar
+
+Producto --> CU26 : intenta comprar
+CU26 -left-> CU10 : deshabilita comprar\nhabilita solicitar
+CU26 --> Registro : confirma interés
+Registro -right-> PanelVendedor : agrupa estadísticas
+PanelVendedor --> Notificar : al reabastecer
+@enduml

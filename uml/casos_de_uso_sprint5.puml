@@ -1,0 +1,21 @@
+@startuml
+left to right direction
+actor "Cliente" as Cliente
+actor "Vendedor" as Vendedor
+
+rectangle "Sistema" {
+  usecase "CU-24 Gestionar Reservas" as CU24
+  usecase "CU-25 Gestionar Logística y Envíos" as CU25
+  usecase "CU-26 Gestionar Solicitud de Restock" as CU26
+  usecase "CU-27 Gestionar Reseñas y Calificaciones" as CU27
+}
+
+Cliente --> CU24
+Cliente --> CU25
+Cliente --> CU26
+Cliente --> CU27
+
+Vendedor --> CU25
+Vendedor --> CU26
+Vendedor --> CU27
+@enduml

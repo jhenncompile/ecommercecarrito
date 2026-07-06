@@ -194,8 +194,9 @@ class TiendaPrivadaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = [
-            'id', 'nombre_comercial', 'descripcion', 'categoria_tienda', 
-            'logo_url', 'icono', 'subdominio', 'schema_name', 
+            'id', 'nombre_comercial', 'descripcion', 'categoria_tienda',
+            'logo_url', 'icono', 'subdominio', 'schema_name',
+            'ciudad', 'whatsapp', 'enable_local_delivery', 'enable_national_shipping',
             'plan', 'plan_detalle', 'fecha_inicio_suscripcion', 'fecha_fin_suscripcion', 'uso'
         ]
         read_only_fields = fields

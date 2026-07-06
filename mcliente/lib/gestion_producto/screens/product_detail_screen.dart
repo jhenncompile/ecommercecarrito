@@ -112,6 +112,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ),
         const SizedBox(height: 12),
+        if (widget.product.enPreventa)
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF7C3AED),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'PRE-VENTA',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.2),
+            ),
+          ),
         Text(widget.product.nombre, style: AppTextStyles.h1),
       ],
     );
@@ -127,8 +140,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           children: [
             const Text('Precio total', style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
             const SizedBox(height: 4),
+            if (widget.product.tieneDescuento)
+              Text(
+                'BS. ${widget.product.precioOriginal.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppColors.textMuted,
+                  decoration: TextDecoration.lineThrough,
+                ),
+              ),
             Text(
-              'BS. ${widget.product.precio}',
+              'BS. ${widget.product.precioFinal.toStringAsFixed(2)}',
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w900,
@@ -183,8 +205,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
       child: Column(
         children: [
-          _buildMetaRow('Disponibilidad', widget.product.stock > 0 ? '${widget.product.stock} unidades' : 'Agotado', 
+          _buildMetaRow('Disponibilidad', widget.product.stock > 0 ? '${widget.product.stock} unidades' : (widget.product.enPreventa ? 'En preventa' : 'Agotado'),
               widget.product.stock > 0 ? AppColors.accentTeal : AppColors.danger),
+          if (widget.product.enPreventa && (widget.product.estimatedArrivalDate?.isNotEmpty ?? false)) ...[
+            const Divider(height: 30),
+            _buildMetaRow('Llegada estimada', widget.product.estimatedArrivalDate!, AppColors.primaryDark),
+          ],
           const Divider(height: 30),
           _buildMetaRow('Código SKU', widget.product.sku.isNotEmpty ? widget.product.sku : '#PRD-${widget.product.id}', AppColors.textPrimary),
         ],
@@ -212,8 +238,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ],
       ),
       child: AppButton.primary(
-        label: _isAdding ? 'Añadiendo...' : 'Agregar al carrito',
-        onPressed: widget.product.stock > 0 ? _addToCart : null,
+        label: _isAdding
+            ? 'Añadiendo...'
+            : (widget.product.enPreventa ? 'Reservar con Descuento' : 'Agregar al carrito'),
+        onPressed: (widget.product.enPreventa || widget.product.stock > 0) ? _addToCart : null,
       ),
     );
   }

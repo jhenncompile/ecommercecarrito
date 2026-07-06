@@ -6,6 +6,7 @@ import StatCard  from 'shared/widgets/StatCard/StatCard';
 import DataTable from 'shared/widgets/DataTable/DataTable';
 import { Button, Badge, Alert } from 'shared/components';
 import { useTenant } from 'core/hooks/useTenant';
+import { restockApi } from 'modules/tienda/services/restockApi';
 import api from 'core/services/api';
 
 // ─── Columnas de la tabla de productos ───────────────────────
@@ -24,6 +25,17 @@ const COLUMNS = [
       </Badge>
     ),
   },
+];
+
+// ─── Columnas de la tabla de Intención de Compra (Restock) ───
+const RESTOCK_COLUMNS = [
+  { key: 'producto', label: 'Producto', render: (v) => <strong style={{ color: 'var(--color-text)' }}>{v}</strong> },
+  { key: 'cantidad_solicitudes', label: 'Solicitudes', align: 'center', render: (v) => (
+      <Badge variant="warning" dot>{v}</Badge>
+  ) },
+  { key: 'ultima_solicitud', label: 'Última solicitud', align: 'center', render: (v) => (
+      v ? new Date(v).toLocaleDateString() : '—'
+  ) },
 ];
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -127,6 +139,7 @@ export default function PanelView() {
   const navigate = useNavigate();
   const [products,  setProducts]  = useState([]);
   const [facturas,  setFacturas]  = useState([]);
+  const [restock,   setRestock]   = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
 
@@ -134,14 +147,17 @@ export default function PanelView() {
     const load = async () => {
       setLoading(true);
       try {
-        const [resProd, resFact] = await Promise.all([
+        const [resProd, resFact, resRestock] = await Promise.all([
           api.get('/productos/'),
           api.get('/facturas/'),
+          restockApi.ranking().catch(() => ({ data: [] })),
         ]);
         const prodData = resProd.data;
         const factData = resFact.data;
+        const restockData = resRestock.data;
         setProducts(Array.isArray(prodData) ? prodData : Array.isArray(prodData?.results) ? prodData.results : []);
         setFacturas(Array.isArray(factData) ? factData : Array.isArray(factData?.results) ? factData.results : []);
+        setRestock(Array.isArray(restockData) ? restockData : Array.isArray(restockData?.results) ? restockData.results : []);
         setError(null);
       } catch {
         setError('No se pudo conectar con el servidor.');
@@ -205,6 +221,16 @@ export default function PanelView() {
         loading={loading}
         emptyText="No hay productos registrados para este tenant."
         footer={!loading ? `Mostrando ${products.length} producto${products.length !== 1 ? 's' : ''}` : ''}
+      />
+
+      {/* Intención de Compra (Restock) */}
+      <DataTable
+        title="Intención de Compra"
+        columns={RESTOCK_COLUMNS}
+        data={restock}
+        loading={loading}
+        emptyText="Aún no hay solicitudes de aviso de stock."
+        footer={!loading && restock.length ? `${restock.length} producto${restock.length !== 1 ? 's' : ''} con demanda` : ''}
       />
     </AppView>
   );

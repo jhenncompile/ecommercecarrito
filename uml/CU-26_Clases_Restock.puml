@@ -1,0 +1,55 @@
+@startuml
+left to right direction
+allowmixing
+skinparam classAttributeIconSize 0
+skinparam BackgroundColor white
+
+actor "Cliente" as Cliente
+
+class "Formulario de Producto" as Form <<Interface>> {
+  + Producto
+  + Stock
+  + SolicitarRestock()
+}
+
+class "RestockController" as Control {
+  + validarStockCero()
+  + registrarIntencion()
+}
+
+class "ClienteEntity" as CEntity {
+  + Integer id;
+  + String nombre;
+  + String correo;
+  constructor
+  setter
+  getter
+}
+
+class "ProductoEntity" as PEntity {
+  + Integer id;
+  + String nombre;
+  + Integer stock;
+  constructor
+  setter
+  getter
+}
+
+class "SolicitudRestockEntity" as SEntity {
+  + Integer id;
+  + Date fecha;
+  + String estado;
+  constructor
+  setter
+  getter
+}
+
+Cliente -- Form
+Form -- Control
+Control -- SEntity
+Control -- CEntity
+
+CEntity "1..1" -- "1..*" SEntity
+SEntity "1..*" -- "1..1" PEntity
+
+@enduml

@@ -1,0 +1,16 @@
+@startuml
+robust "Cliente" as C
+
+@0
+C is "Cargar vista (Producto)"
+@5
+C is "Solicitar datos (stock 0)"
+@15
+C is "Accion: solicitar restock"
+@30
+C is "Accion: confirmar interés"
+@60
+C is "Cargar vista (Producto)"
+@65
+C is "Cargar vista (Producto)"
+@enduml

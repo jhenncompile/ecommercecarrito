@@ -111,6 +111,19 @@ class PagoViewSet(viewsets.ViewSet):
             if not line_items:
                 return Response({'error': 'El carrito está vacío'}, status=400)
 
+            # Costo de envío (CU-24): se agrega como línea adicional si aplica
+            if pedido.costo_envio and float(pedido.costo_envio) > 0:
+                line_items.append({
+                    'price_data': {
+                        'currency': 'bob',
+                        'product_data': {
+                            'name': f"Envío - {pedido.zona_envio or pedido.get_tipo_envio_display() or 'Delivery'}",
+                        },
+                        'unit_amount': int(round(float(pedido.costo_envio) * 100)),
+                    },
+                    'quantity': 1,
+                })
+
             # Crear sesión
             checkout_session = stripe.checkout.Session.create(
                 payment_method_types=['card'],

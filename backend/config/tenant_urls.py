@@ -31,6 +31,8 @@ from apps.gestionDeReportes.cu21_generar_backup.api.respaldo_views import Respal
 from apps.gestionDeUsuarioySeguridad.cu6_gestionar_bitacora.api.bitacora_views import BitacoraViewSet
 from apps.customers.tenants.api.views import TiendaPerfilView, UpgradeSuscripcionView
 from apps.gestionDeClientes.cu22_gestionar_prediccion_de_ventas.api.forecast_views import PrediccionVentasAPIView, PrediccionProductosAPIView, PrediccionCategoriasAPIView
+from apps.gestionDeVentasYFacturacion.cu24_gestionar_logistica.api.views import DeliveryZoneViewSet, ConfiguracionEnvioView
+from apps.gestionDeClientes.cu25_gestionar_solicitud_de_restock.api.views import RestockRequestViewSet
 
 def debug_schema(request):
     return JsonResponse({'urlconf': 'config.tenant_urls', 'schema': connection.schema_name})
@@ -84,6 +86,15 @@ urlpatterns = [
     path('api/pagos/webhook/', PagoViewSet.as_view({'post': 'stripe_webhook'}), name='pago-stripe-webhook'),
     path('api/pagos/confirm-success/', PagoViewSet.as_view({'post': 'confirm_success'}), name='pago-confirm-success'),
     path('api/pagos/confirm-payment/', PagoViewSet.as_view({'post': 'confirm_payment'}), name='pago-confirm-payment'),
+
+    # Intención de Compra / Restock (CU-25)
+    path('api/restock/', RestockRequestViewSet.as_view({'post': 'create'}), name='restock-create'),
+    path('api/restock/ranking/', RestockRequestViewSet.as_view({'get': 'ranking'}), name='restock-ranking'),
+
+    # Logística y Envíos (CU-24)
+    path('api/envios/config/', ConfiguracionEnvioView.as_view(), name='envios-config'),
+    path('api/zonas-delivery/', DeliveryZoneViewSet.as_view({'get': 'list', 'post': 'create'}), name='zonas-delivery-list'),
+    path('api/zonas-delivery/<int:pk>/', DeliveryZoneViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='zonas-delivery-detail'),
 
     # Categorías
     path('api/categorias/', CategoriaViewSet.as_view({'get': 'list', 'post': 'create'}), name='categoria-list'),

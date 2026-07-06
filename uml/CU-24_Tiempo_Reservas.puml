@@ -1,0 +1,16 @@
+@startuml
+robust "Cliente" as C
+
+@0
+C is "Cargar vista (Catálogo)"
+@5
+C is "Seleccionar preventa"
+@15
+C is "Solicitar datos (pago)"
+@30
+C is "Accion: formalizar reserva"
+@60
+C is "Cargar vista (Mis Reservas)"
+@65
+C is "Cargar vista (Mis Reservas)"
+@enduml

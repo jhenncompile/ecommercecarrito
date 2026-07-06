@@ -1,0 +1,25 @@
+@startuml
+skinparam ActivityBackgroundColor #FFF2CC
+skinparam ActivityBorderColor #D6B656
+skinparam ActivityDiamondBackgroundColor #D5E8D4
+skinparam ActivityDiamondBorderColor #82B366
+skinparam PartitionBackgroundColor #FCFCE0
+skinparam PartitionBorderColor #D6B656
+
+start
+partition "CU-25: Gestionar Logística y Envíos" {
+  :Ingresar a la pantalla de Checkout;
+  :Proporcionar dirección y zona de envío;
+  :Consultar opciones logísticas disponibles;
+  :Mostrar métodos (Delivery local / Encomienda);
+  
+  if (¿Acepta los costos y tiempos?) then (Sí)
+    :Seleccionar medio de envío preferido;
+    :Calcular y sumar costo de envío en tiempo real;
+    :Confirmar pedido con envío incluido;
+  else (No)
+    :Modificar zona o cancelar pedido;
+  endif
+}
+stop
+@enduml

@@ -1,0 +1,25 @@
+@startuml
+actor Cliente
+participant "checkoutForm" as Form
+participant "logisticaControl" as Control
+participant "Envio" as Entity
+
+Cliente -> Form : 1: ingresarZona(zonaId)
+activate Form
+Form -> Control : 1.1: obtenerMetodos(zonaId)
+activate Control
+Control --> Form : metodosEnvio
+deactivate Control
+
+Cliente -> Form : 2: seleccionarEnvio(metodoId)
+Form -> Control : 2.1: calcularCostoEnvio(metodoId)
+activate Control
+Control -> Entity : 2.2: actualizarCostoPedido()
+activate Entity
+Entity --> Control : pedidoActualizado
+deactivate Entity
+Control --> Form : costoCalculado
+deactivate Control
+Form --> Cliente : mostrarTotal()
+deactivate Form
+@enduml

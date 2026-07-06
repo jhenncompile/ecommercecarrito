@@ -23,14 +23,17 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await PushNotificationService.initializeApp();
   
   await dotenv.load(fileName: "assets/.env");
   
   Stripe.publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? "";
   await Stripe.instance.applySettings();
 
+  // Iniciar la app primero para evitar la pantalla negra
   runApp(const MyApp());
+  
+  // Solicitar permisos y configurar notificaciones DESPUÉS de que la UI ya se esté renderizando
+  PushNotificationService.initializeApp();
 }
 
 class MyApp extends StatelessWidget {

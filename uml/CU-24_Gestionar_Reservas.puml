@@ -1,0 +1,22 @@
+@startuml
+skinparam rectangle {
+    BackgroundColor white
+    BorderColor black
+    RoundCorner 10
+    padding 10
+}
+rectangle "Pantalla Principal del Cliente (Tienda)" as Tienda
+rectangle "CU-24 Gestionar Reservas\nSeleccionar producto preventa, realizar pago" as CU24
+rectangle "Ver Catálogo de Productos (CU-8)" as CU8
+rectangle "Procesar Pago de Reserva (Adicional/Parcial)" as Pago
+rectangle "Panel de Cliente (Mis Reservas)" as Panel
+rectangle "Formalizar Reserva" as Formalizar
+rectangle "Visualizar Detalle de Reserva" as Detalle
+
+Tienda --> CU24 : accede
+CU24 -left-> CU8 : filtra catálogo
+CU24 --> Pago : selecciona preventa
+CU24 -right-> Panel : ver reservas activas
+Pago --> Formalizar : confirma
+Panel --> Detalle : ver detalle
+@enduml

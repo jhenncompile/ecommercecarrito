@@ -211,10 +211,17 @@ class ReportRepository {
     }
 
     final List<dynamic> planes = jsonDecode(planesResponse.body);
-    final profesionalPlan = planes.firstWhere(
-      (p) => p['nombre']?.toString().toLowerCase() == 'profesional',
-      orElse: () => throw Exception('Plan Profesional no encontrado'),
-    );
+    // Puede haber más de un plan llamado 'profesional' (datos duplicados);
+    // elegimos SIEMPRE el de mayor precio (el tier real) para no ser ambiguos.
+    final candidatos = planes
+        .where((p) => p['nombre']?.toString().toLowerCase() == 'profesional')
+        .toList()
+      ..sort((a, b) => (double.tryParse(b['precio_mensual'].toString()) ?? 0)
+          .compareTo(double.tryParse(a['precio_mensual'].toString()) ?? 0));
+    if (candidatos.isEmpty) {
+      throw Exception('Plan Profesional no encontrado');
+    }
+    final profesionalPlan = candidatos.first;
     final int planId = profesionalPlan['id'];
 
     // 2. Obtener clientSecret y publishableKey

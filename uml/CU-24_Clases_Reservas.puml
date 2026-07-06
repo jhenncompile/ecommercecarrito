@@ -1,0 +1,60 @@
+@startuml
+left to right direction
+allowmixing
+skinparam classAttributeIconSize 0
+skinparam BackgroundColor white
+
+actor "Cliente" as Cliente
+
+class "Formulario de Reservas" as Form <<Interface>> {
+  + Cliente
+  + Producto_Preventa
+  + Monto
+  + SeleccionarPreventa()
+  + PagarReserva()
+}
+
+class "ReservaController" as Control {
+  + verificarPreventa()
+  + procesarPago()
+  + registrarReserva()
+}
+
+class "ClienteEntity" as CEntity {
+  + Integer id;
+  + String nombre;
+  + String correo;
+  constructor
+  setter
+  getter
+}
+
+class "ProductoEntity" as PEntity {
+  + Integer id;
+  + String nombre;
+  + float precio;
+  + boolean esPreventa;
+  constructor
+  setter
+  getter
+}
+
+class "ReservaEntity" as REntity {
+  + Integer id;
+  + Date fecha;
+  + float montoAbonado;
+  + String estado;
+  constructor
+  setter
+  getter
+}
+
+Cliente -- Form
+Form -- Control
+Control -- REntity
+Control -- CEntity
+
+CEntity "1..1" -- "1..*" REntity
+REntity "1..*" -- "1..1" PEntity
+
+@enduml

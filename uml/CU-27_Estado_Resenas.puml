@@ -1,0 +1,26 @@
+@startuml
+skinparam ActivityBackgroundColor #FFF2CC
+skinparam ActivityBorderColor #D6B656
+skinparam ActivityDiamondBackgroundColor #D5E8D4
+skinparam ActivityDiamondBorderColor #82B366
+skinparam PartitionBackgroundColor #FCFCE0
+skinparam PartitionBorderColor #D6B656
+
+start
+partition "CU-27: Gestionar Reseñas y Calificaciones" {
+  :Ingresar al historial de compras;
+  :Seleccionar un pedido pasado;
+  
+  if (¿El estado del producto es "Entregado"?) then (Sí)
+    :Habilitar formulario de calificación;
+    :Asignar de 1 a 5 estrellas;
+    :Escribir reseña del producto;
+    :Enviar reseña al sistema;
+    :Pasar a estado "Pendiente de Moderación";
+  else (No)
+    :Deshabilitar opción de reseñar;
+    :Mostrar mensaje informativo;
+  endif
+}
+stop
+@enduml

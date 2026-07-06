@@ -1,0 +1,13 @@
+@startuml
+left to right direction
+skinparam BackgroundColor white
+
+actor "Cliente" as Cliente
+boundary "historialForm" as Form
+control "resenaControl" as Control
+database "Resena" as DB
+
+Cliente -> Form : 1: seleccionarPedido()\n2: enviarCalificacion()
+Form -> Control : 1.1: validarEstadoEntregado()\n2.1: procesarResena()
+Control -> DB : 2.2: guardarResena()
+@enduml

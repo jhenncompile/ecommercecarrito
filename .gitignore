@@ -53,3 +53,17 @@ git_subir.bat
 # Firebase Credentials
 backend/credenciales/*.json
 !backend/credenciales/.gitkeep
+
+*.md
+
+# Archivos Excel
+*.xlsx
+~$*.xlsx
+~*.xlsx
+
+# Carpeta de Claude
+.claude/
+.claude
+
+# Script temporal
+generar_excel_pruebas.py

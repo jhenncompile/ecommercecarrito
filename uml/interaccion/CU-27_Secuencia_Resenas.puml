@@ -1,0 +1,25 @@
+@startuml
+actor Cliente
+participant "historialForm" as Form
+participant "resenaControl" as Control
+participant "Resena" as Entity
+
+Cliente -> Form : 1: seleccionarPedido(pedidoId)
+activate Form
+Form -> Control : 1.1: validarEstadoEntregado(pedidoId)
+activate Control
+Control --> Form : estadoValido
+deactivate Control
+
+Cliente -> Form : 2: enviarCalificacion(estrellas, comentario)
+Form -> Control : 2.1: procesarResena(estrellas, comentario)
+activate Control
+Control -> Entity : 2.2: guardarResena()
+activate Entity
+Entity --> Control : resenaGuardada
+deactivate Entity
+Control --> Form : confirmacion
+deactivate Control
+Form --> Cliente : mostrarMensajeExito()
+deactivate Form
+@enduml

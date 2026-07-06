@@ -34,6 +34,23 @@ class Producto(models.Model):
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
 
+    # Preventa (Reservas)
+    is_preorder = models.BooleanField(
+        default=False,
+        verbose_name='En Preventa'
+    )
+    estimated_arrival_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Fecha Estimada de Llegada'
+    )
+    preorder_discount_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name='Descuento de Preventa (%)'
+    )
+
     class Meta:
         app_label = 'cu7_gestionar_productos'
         db_table = 'app_negocio_producto'

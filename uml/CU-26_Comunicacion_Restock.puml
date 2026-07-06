@@ -1,0 +1,13 @@
+@startuml
+left to right direction
+skinparam BackgroundColor white
+
+actor "Cliente" as Cliente
+boundary "productoForm" as Form
+control "restockControl" as Control
+database "SolicitudRestock" as DB
+
+Cliente -> Form : 1: solicitarRestock()
+Form -> Control : 1.1: validarStockCero()
+Control -> DB : 1.2: registrarIntencionCompra()
+@enduml

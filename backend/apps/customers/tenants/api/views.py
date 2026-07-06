@@ -82,9 +82,17 @@ class TiendaPerfilView(APIView):
             tenant.descripcion = request.data['descripcion']
         if 'categoria_tienda' in request.data:
             tenant.categoria_tienda = request.data['categoria_tienda']
+        if 'ciudad' in request.data:
+            tenant.ciudad = request.data['ciudad']
+        if 'whatsapp' in request.data:
+            tenant.whatsapp = request.data['whatsapp']
+        if 'enable_local_delivery' in request.data:
+            tenant.enable_local_delivery = str(request.data['enable_local_delivery']).lower() in ('true', '1', 'on', 'yes')
+        if 'enable_national_shipping' in request.data:
+            tenant.enable_national_shipping = str(request.data['enable_national_shipping']).lower() in ('true', '1', 'on', 'yes')
         if 'icono' in request.FILES:
             tenant.icono = request.FILES['icono']
-            
+
         tenant.save()
         from apps.customers.tenants.api.serializers import TiendaPrivadaSerializer
         serializer = TiendaPrivadaSerializer(tenant, context={'request': request})

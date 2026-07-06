@@ -21,6 +21,7 @@ class PedidoSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'carrito', 'carrito_id', 'cliente_nombre', 'cliente_email', 'estado',
             'fecha_creacion', 'fecha_actualizacion', 'observaciones',
+            'tipo_envio', 'costo_envio', 'ciudad_envio', 'zona_envio',
             'total_pedido', 'cantidad_items', 'items'
         ]
         read_only_fields = ['id', 'fecha_creacion', 'fecha_actualizacion']

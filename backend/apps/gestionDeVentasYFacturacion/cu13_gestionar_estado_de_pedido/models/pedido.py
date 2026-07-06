@@ -23,6 +23,11 @@ class Pedido(models.Model):
         ('CANCELADO', 'Cancelado'),
     ]
 
+    TIPO_ENVIO_CHOICES = [
+        ('LOCAL', 'Delivery Local'),
+        ('ENCOMIENDA', 'Envío por Encomienda (Pago en Destino)'),
+    ]
+
     stripe_session_id = models.CharField(
         max_length=255, 
         blank=True, 
@@ -55,7 +60,34 @@ class Pedido(models.Model):
         null=True,
         verbose_name='Observaciones'
     )
-    
+
+    # Logística y Envíos (CU-24)
+    tipo_envio = models.CharField(
+        max_length=20,
+        choices=TIPO_ENVIO_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name='Tipo de Envío'
+    )
+    costo_envio = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='Costo de Envío'
+    )
+    ciudad_envio = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Ciudad de Envío'
+    )
+    zona_envio = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        verbose_name='Zona de Delivery'
+    )
+
     class Meta:
         app_label = 'cu13_gestionar_estado_de_pedido'
         db_table = 'app_negocio_pedido'

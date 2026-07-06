@@ -1,0 +1,49 @@
+@startuml
+left to right direction
+allowmixing
+skinparam classAttributeIconSize 0
+skinparam BackgroundColor white
+
+actor "Cliente" as Cliente
+
+class "Formulario de Checkout" as Form <<Interface>> {
+  + Zona de Envío
+  + Método de Envío
+  + SeleccionarZona()
+  + ConfirmarEnvio()
+}
+
+class "LogisticaController" as Control {
+  + obtenerMetodos()
+  + calcularCostoEnvio()
+  + actualizarPedido()
+}
+
+class "PedidoEntity" as PEntity {
+  + Integer id;
+  + Date fecha;
+  + float total;
+  constructor
+  setter
+  getter
+}
+
+class "EnvioEntity" as EEntity {
+  + Integer id;
+  + String metodo;
+  + String zona;
+  + float costo;
+  + String estado;
+  constructor
+  setter
+  getter
+}
+
+Cliente -- Form
+Form -- Control
+Control -- EEntity
+Control -- PEntity
+
+PEntity "1..1" -- "1..1" EEntity
+
+@enduml

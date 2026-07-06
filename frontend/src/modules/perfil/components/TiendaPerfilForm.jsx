@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Image as ImageIcon, X } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Image as ImageIcon, X, MapPin, Trash2, Plus } from 'lucide-react';
+import { enviosApi } from 'modules/tienda/services/enviosApi';
 import './PerfilForm.css';
 
 export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
@@ -7,9 +8,18 @@ export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
     nombre_comercial: '',
     descripcion: '',
     categoria_tienda: '',
+    ciudad: '',
+    whatsapp: '',
+    enable_local_delivery: false,
+    enable_national_shipping: true,
   });
   const [icono, setIcono] = useState(null);
   const [preview, setPreview] = useState(null);
+
+  // --- Zonas de Delivery (CU-24) ---
+  const [zonas, setZonas] = useState([]);
+  const [nuevaZona, setNuevaZona] = useState({ zone_name: '', price: '' });
+  const [zonasLoading, setZonasLoading] = useState(false);
 
   useEffect(() => {
     if (perfil) {
@@ -17,6 +27,10 @@ export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
         nombre_comercial: perfil.nombre_comercial || '',
         descripcion: perfil.descripcion || '',
         categoria_tienda: perfil.categoria_tienda || '',
+        ciudad: perfil.ciudad || '',
+        whatsapp: perfil.whatsapp || '',
+        enable_local_delivery: !!perfil.enable_local_delivery,
+        enable_national_shipping: perfil.enable_national_shipping !== false,
       });
       if (perfil.icono) {
         setPreview(perfil.icono);
@@ -24,9 +38,20 @@ export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
     }
   }, [perfil]);
 
+  const cargarZonas = useCallback(async () => {
+    try {
+      const res = await enviosApi.listarZonas();
+      setZonas(Array.isArray(res.data) ? res.data : res.data?.results || []);
+    } catch (e) {
+      setZonas([]);
+    }
+  }, []);
+
+  useEffect(() => { cargarZonas(); }, [cargarZonas]);
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleImageChange = (e) => {
@@ -49,10 +74,39 @@ export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
     onGuardar(data);
   };
 
+  const handleAgregarZona = async () => {
+    if (!nuevaZona.zone_name.trim()) return;
+    setZonasLoading(true);
+    try {
+      await enviosApi.crearZona({
+        zone_name: nuevaZona.zone_name.trim(),
+        price: parseFloat(nuevaZona.price) || 0,
+      });
+      setNuevaZona({ zone_name: '', price: '' });
+      await cargarZonas();
+    } catch (e) {
+      // no romper el flujo del formulario
+    } finally {
+      setZonasLoading(false);
+    }
+  };
+
+  const handleEliminarZona = async (id) => {
+    setZonasLoading(true);
+    try {
+      await enviosApi.eliminarZona(id);
+      await cargarZonas();
+    } catch (e) {
+      // ignorar
+    } finally {
+      setZonasLoading(false);
+    }
+  };
+
   return (
     <form className="perfil-form" onSubmit={handleSubmit} style={{ marginTop: '20px' }}>
       <h3 style={{ marginBottom: '15px', color: '#0f172a' }}>Datos de la Tienda</h3>
-      
+
       <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Icono de la Tienda</label>
         {!preview ? (
@@ -120,6 +174,119 @@ export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
           rows={3}
           style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
         />
+      </div>
+
+      {/* --- Logística y Envíos (CU-24) --- */}
+      <h3 style={{ margin: '24px 0 15px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <MapPin size={18} /> Logística y Envíos
+      </h3>
+
+      <div className="form-row">
+        <div>
+          <label htmlFor="ciudad">Ciudad de la Tienda</label>
+          <input
+            type="text"
+            id="ciudad"
+            name="ciudad"
+            value={formData.ciudad}
+            onChange={handleChange}
+            placeholder="Ej: Santa Cruz"
+            disabled={loading}
+          />
+        </div>
+        <div>
+          <label htmlFor="whatsapp">WhatsApp de la Tienda</label>
+          <input
+            type="text"
+            id="whatsapp"
+            name="whatsapp"
+            value={formData.whatsapp}
+            onChange={handleChange}
+            placeholder="Ej: 59170012345 (con código de país)"
+            disabled={loading}
+          />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '10px 0 4px' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'normal', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            name="enable_local_delivery"
+            checked={formData.enable_local_delivery}
+            onChange={handleChange}
+            disabled={loading}
+          />
+          Habilitar Delivery Local (por zonas)
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'normal', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            name="enable_national_shipping"
+            checked={formData.enable_national_shipping}
+            onChange={handleChange}
+            disabled={loading}
+          />
+          Habilitar Envío Nacional (Encomienda, pago en destino)
+        </label>
+      </div>
+
+      {/* Gestor de zonas de delivery */}
+      <div style={{ marginTop: '16px', padding: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', backgroundColor: '#f8fafc' }}>
+        <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Zonas de Delivery</label>
+
+        {zonas.length === 0 ? (
+          <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 10px' }}>Aún no has agregado zonas de delivery.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+            {zonas.map(z => (
+              <div key={z.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 12px' }}>
+                <span style={{ fontSize: '14px', color: '#0f172a' }}>{z.zone_name}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <strong style={{ fontSize: '14px' }}>Bs. {parseFloat(z.price).toFixed(2)}</strong>
+                  <button
+                    type="button"
+                    onClick={() => handleEliminarZona(z.id)}
+                    disabled={zonasLoading}
+                    style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', display: 'flex' }}
+                    title="Eliminar zona"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input
+            type="text"
+            value={nuevaZona.zone_name}
+            onChange={(e) => setNuevaZona(prev => ({ ...prev, zone_name: e.target.value }))}
+            placeholder="Nombre de la zona"
+            disabled={zonasLoading}
+            style={{ flex: 2, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+          />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={nuevaZona.price}
+            onChange={(e) => setNuevaZona(prev => ({ ...prev, price: e.target.value }))}
+            placeholder="Precio Bs."
+            disabled={zonasLoading}
+            style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+          />
+          <button
+            type="button"
+            onClick={handleAgregarZona}
+            disabled={zonasLoading || !nuevaZona.zone_name.trim()}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            <Plus size={16} /> Agregar
+          </button>
+        </div>
       </div>
 
       <div className="form-actions" style={{ marginTop: '15px' }}>

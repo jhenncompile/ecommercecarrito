@@ -1,0 +1,32 @@
+@startuml
+actor Cliente
+participant "reservaForm" as Form
+participant "reservaControl" as Control
+participant "Reserva" as Entity
+
+Cliente -> Form : 1: seleccionarPreventa()
+activate Form
+Form -> Control : 1.1: verificarPreventa()
+activate Control
+Control --> Form : preventaValida
+deactivate Control
+
+Cliente -> Form : 2: pagarReserva(datosPago)
+Form -> Control : 2.1: procesarPago(datosPago)
+activate Control
+
+alt Pago Exitoso
+  Control -> Entity : 2.2: registrarReserva()
+  activate Entity
+  Entity --> Control : reservaId
+  deactivate Entity
+  Control --> Form : reservaConfirmada
+  Form --> Cliente : mostrarConfirmacion()
+else Pago Rechazado
+  Control --> Form : errorPago
+  Form --> Cliente : mostrarError()
+end
+
+deactivate Control
+deactivate Form
+@enduml

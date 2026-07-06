@@ -1,0 +1,20 @@
+@startuml
+skinparam rectangle {
+    BackgroundColor white
+    BorderColor black
+    RoundCorner 10
+    padding 10
+}
+rectangle "Historial de Compras (CU-15)" as Historial
+rectangle "CU-27 Gestionar Reseñas y Calificaciones\nCalificar y moderar" as CU27
+rectangle "Validar Estado del Pedido (Entregado)" as ValidaEstado
+rectangle "Formulario (Calificación y Reseña)" as Formulario
+rectangle "Panel de Vendedor (Moderación)" as Moderacion
+rectangle "Publicar en Catálogo Público" as Publicar
+
+Historial --> CU27 : selecciona producto
+CU27 -left-> ValidaEstado : verifica
+CU27 --> Formulario : escribe opinión
+Formulario -right-> Moderacion : envía
+Moderacion --> Publicar : modera/responde
+@enduml

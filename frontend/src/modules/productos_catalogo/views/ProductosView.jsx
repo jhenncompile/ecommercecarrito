@@ -14,6 +14,7 @@ import styles from './Productos.module.css';
 const EMPTY_PRODUCT = {
   nombre: '', sku: '', descripcion: '', precio: '',
   stock: '', categoria: '', imagen_url: '', activo: true,
+  is_preorder: false, estimated_arrival_date: '', preorder_discount_percentage: '',
 };
 const EMPTY_CAT = { nombre: '', descripcion: '', parent: '' };
 
@@ -138,6 +139,9 @@ function ProductDrawer({ open, producto, categorias, onClose, onSaved, onLimitRe
             categoria:   producto.categoria   || '',
             imagen_url:  producto.imagen_url  || '',
             activo:      producto.activo      ?? true,
+            is_preorder: producto.is_preorder ?? false,
+            estimated_arrival_date: producto.estimated_arrival_date || '',
+            preorder_discount_percentage: producto.preorder_discount_percentage ?? '',
           }
         : EMPTY_PRODUCT
       );
@@ -161,6 +165,9 @@ function ProductDrawer({ open, producto, categorias, onClose, onSaved, onLimitRe
         precio: parseFloat(form.precio) || 0,
         stock:  parseInt(form.stock,  10) || 0,
         categoria: parseInt(form.categoria, 10),
+        is_preorder: !!form.is_preorder,
+        estimated_arrival_date: form.is_preorder && form.estimated_arrival_date ? form.estimated_arrival_date : null,
+        preorder_discount_percentage: form.is_preorder ? (parseFloat(form.preorder_discount_percentage) || 0) : 0,
       };
       if (isEdit) await productosApi.actualizar(producto.id, payload);
       else        await productosApi.crear(payload);
@@ -326,6 +333,42 @@ function ProductDrawer({ open, producto, categorias, onClose, onSaved, onLimitRe
                   required
                 />
               </div>
+            </div>
+
+            {/* Preventa (opcional) */}
+            <div className={styles.section}>
+              <span className={styles.sectionLabel}>Preventa (opcional)</span>
+              <div className={styles.toggleRow}>
+                <span className={styles.toggleLabel}>Producto en preventa</span>
+                <label className={styles.toggle}>
+                  <input type="checkbox" name="is_preorder" checked={form.is_preorder} onChange={handle} />
+                  <span className={styles.toggleSlider} />
+                </label>
+              </div>
+              {form.is_preorder && (
+                <div className={styles.twoCol}>
+                  <Input
+                    id="prod-preorder-date"
+                    name="estimated_arrival_date"
+                    label="Fecha estimada de llegada"
+                    type="date"
+                    value={form.estimated_arrival_date}
+                    onChange={handle}
+                  />
+                  <Input
+                    id="prod-preorder-disc"
+                    name="preorder_discount_percentage"
+                    label="Descuento de preventa (%)"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="0"
+                    value={form.preorder_discount_percentage}
+                    onChange={handle}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Imagen */}

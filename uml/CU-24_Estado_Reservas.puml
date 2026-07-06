@@ -1,0 +1,25 @@
+@startuml
+skinparam ActivityBackgroundColor #FFF2CC
+skinparam ActivityBorderColor #D6B656
+skinparam ActivityDiamondBackgroundColor #D5E8D4
+skinparam ActivityDiamondBorderColor #82B366
+skinparam PartitionBackgroundColor #FCFCE0
+skinparam PartitionBorderColor #D6B656
+
+start
+partition "CU-24: Gestionar Reservas (Preventa)" {
+  :Ingresar al catálogo de productos;
+  :Filtrar productos por estado "Preventa";
+  :Seleccionar producto deseado;
+  
+  if (¿Confirmar reserva del producto?) then (Sí)
+    :Ingresar datos de facturación;
+    :Realizar pago adicional/parcial;
+    :Registrar reserva en el sistema;
+    :Visualizar panel de reservas activas;
+  else (No)
+    :Cancelar operación;
+  endif
+}
+stop
+@enduml

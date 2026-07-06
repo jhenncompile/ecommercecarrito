@@ -23,10 +23,15 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late TextEditingController _priceController;
   late TextEditingController _stockController;
   late TextEditingController _skuController;
+  late TextEditingController _preorderDiscountController;
 
   List<CategoryModel> _categories = [];
   int? _selectedCategoryId;
   bool _isLoading = false;
+
+  // Preventa
+  bool _isPreorder = false;
+  DateTime? _arrivalDate;
 
   @override
   void initState() {
@@ -37,6 +42,19 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _stockController = TextEditingController(text: widget.product?.stock.toString() ?? '');
     _skuController = TextEditingController(text: widget.product?.sku ?? '');
     _selectedCategoryId = widget.product?.categoria;
+
+    // Preventa
+    _isPreorder = widget.product?.isPreorder ?? false;
+    _preorderDiscountController = TextEditingController(
+      text: (widget.product?.preorderDiscountPercentage ?? 0) > 0
+          ? widget.product!.preorderDiscountPercentage.toString()
+          : '',
+    );
+    final arrival = widget.product?.estimatedArrivalDate;
+    if (arrival != null && arrival.isNotEmpty) {
+      _arrivalDate = DateTime.tryParse(arrival);
+    }
+
     _loadCategories();
   }
 
@@ -70,6 +88,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         stock: int.parse(_stockController.text),
         sku: _skuController.text,
         categoria: _selectedCategoryId,
+        isPreorder: _isPreorder,
+        estimatedArrivalDate: _isPreorder && _arrivalDate != null
+            ? _arrivalDate!.toIso8601String().split('T').first
+            : null,
+        preorderDiscountPercentage:
+            _isPreorder ? (double.tryParse(_preorderDiscountController.text) ?? 0.0) : 0.0,
       );
 
       if (widget.product == null) {
@@ -170,6 +194,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               ),
               const SizedBox(height: 15),
               _buildField('Descripción', _descController, Icons.description, maxLines: 3),
+              const SizedBox(height: 15),
+              _buildPreorderSection(),
               const SizedBox(height: 30),
               AppButton.submit(
                 label: _isLoading ? 'Guardando...' : (isEdit ? 'Actualizar Producto' : 'Crear Producto'),
@@ -203,6 +229,83 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           validator: (v) => (v == null || v.isEmpty) ? 'Campo requerido' : null,
         ),
       ],
+    );
+  }
+
+  Widget _buildPreorderSection() {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.event_available, color: AppColors.accentTeal, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Producto en Preventa', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ),
+              Switch(
+                value: _isPreorder,
+                activeColor: AppColors.accentTeal,
+                onChanged: (v) => setState(() => _isPreorder = v),
+              ),
+            ],
+          ),
+          if (_isPreorder) ...[
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: () async {
+                final now = DateTime.now();
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _arrivalDate ?? now,
+                  firstDate: now,
+                  lastDate: DateTime(now.year + 5),
+                );
+                if (picked != null) setState(() => _arrivalDate = picked);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+                decoration: BoxDecoration(color: AppColors.bgLight, borderRadius: BorderRadius.circular(10)),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today, color: AppColors.accentTeal, size: 18),
+                    const SizedBox(width: 10),
+                    Text(
+                      _arrivalDate != null
+                          ? 'Llegada: ${_arrivalDate!.toIso8601String().split('T').first}'
+                          : 'Seleccionar fecha estimada de llegada',
+                      style: const TextStyle(color: AppColors.textPrimary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Descuento de Preventa (%)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _preorderDiscountController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.percent, color: AppColors.accentTeal, size: 20),
+                    filled: true,
+                    fillColor: AppColors.bgLight,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 

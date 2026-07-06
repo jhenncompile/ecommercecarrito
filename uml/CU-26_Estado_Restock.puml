@@ -1,0 +1,25 @@
+@startuml
+skinparam ActivityBackgroundColor #FFF2CC
+skinparam ActivityBorderColor #D6B656
+skinparam ActivityDiamondBackgroundColor #D5E8D4
+skinparam ActivityDiamondBorderColor #82B366
+skinparam PartitionBackgroundColor #FCFCE0
+skinparam PartitionBorderColor #D6B656
+
+start
+partition "CU-26: Gestionar Solicitud de Restock" {
+  :Visualizar detalle de producto;
+  :Verificar inventario del producto;
+  
+  if (¿Stock disponible es igual a cero?) then (Sí)
+    :Habilitar botón "Solicitar Restock";
+    :Usuario presiona "Solicitar Restock";
+    :Registrar intención de compra en la base de datos;
+    :Actualizar conteo para el vendedor;
+    :Mostrar mensaje de solicitud exitosa;
+  else (No)
+    :Mostrar botón estándar de compra;
+  endif
+}
+stop
+@enduml

@@ -75,5 +75,30 @@ class Client(TenantMixin):
         verbose_name='Icono de la Tienda'
     )
 
+    # Configuración de Logística y Envíos
+    ciudad = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Ciudad de la Tienda'
+    )
+
+    whatsapp = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+        verbose_name='Número de WhatsApp de la Tienda'
+    )
+
+    enable_local_delivery = models.BooleanField(
+        default=False,
+        verbose_name='Habilitar Delivery Local'
+    )
+
+    enable_national_shipping = models.BooleanField(
+        default=True,
+        verbose_name='Habilitar Envío Nacional (Encomienda)'
+    )
+
 class Domain(DomainMixin):
     pass

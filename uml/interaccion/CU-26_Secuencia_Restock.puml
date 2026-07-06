@@ -1,0 +1,26 @@
+@startuml
+actor Cliente
+participant "productoForm" as Form
+participant "restockControl" as Control
+participant "SolicitudRestock" as Entity
+
+Cliente -> Form : 1: solicitarRestock()
+activate Form
+Form -> Control : 1.1: validarStockCero()
+activate Control
+
+alt Stock es Cero
+  Control -> Entity : 1.2: registrarIntencionCompra()
+  activate Entity
+  Entity --> Control : solicitudRegistrada
+  deactivate Entity
+  Control --> Form : confirmacionRestock
+  Form --> Cliente : mostrarMensajeExito()
+else Stock Disponible
+  Control --> Form : errorStockDisponible
+  Form --> Cliente : mostrarError()
+end
+
+deactivate Control
+deactivate Form
+@enduml

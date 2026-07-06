@@ -32,7 +32,17 @@ class Command(BaseCommand):
 
         # 2. Asegurar Roles Básicos y Plan
         rol_admin, _ = Rol.objects.get_or_create(nombre='Administrador', defaults={'descripcion': 'Acceso total'})
-        plan_pro, _ = Plan.objects.get_or_create(nombre='Profesional', defaults={'precio': 99.00, 'limite_productos': 1000})
+        # Campos reales del modelo Plan (evita crear un plan inválido/duplicado).
+        # Nombre canónico 'Profesional' consistente con el seeder oficial.
+        plan_pro, _ = Plan.objects.get_or_create(
+            nombre='Profesional',
+            defaults={
+                'precio_mensual': 99.00,
+                'precio_anual': 990.00,
+                'max_usuarios': 999999,
+                'max_productos': 999999,
+            },
+        )
 
         # 3. Datos Procedurales
         scenarios = [

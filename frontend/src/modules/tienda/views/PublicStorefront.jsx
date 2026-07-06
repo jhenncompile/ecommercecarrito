@@ -8,14 +8,35 @@ import {
     X,
     ImageOff,
     ShoppingCart,
-    ArrowLeft
+    ArrowLeft,
+    Bell,
+    CheckCircle,
+    MessageCircle
 } from 'lucide-react';
 import { productosApi, categoriasApi } from '../../productos_catalogo/services/productosApi';
 import { Button, Spinner } from 'shared/components';
 import { useCart } from '../hooks/useCart';
+import { enviosApi } from '../services/enviosApi';
+import { restockApi } from '../services/restockApi';
 import api from 'core/services/api';
 import { getBaseDomain, isBaseDomain } from 'core/utils/domain';
 import styles from './PublicStorefront.module.css';
+
+// Departamentos / ciudades de Bolivia para selección de envío
+const CIUDADES_BOLIVIA = [
+    'La Paz', 'Santa Cruz', 'Cochabamba', 'Oruro', 'Potosí',
+    'Chuquisaca', 'Tarija', 'Beni', 'Pando'
+];
+
+const normalizarCiudad = (v) => (v || '').trim().toLowerCase();
+
+// Precios calculados por el backend (con fallback al precio crudo)
+const getPricing = (p) => {
+    const original = parseFloat(p?.precio_original ?? p?.precio) || 0;
+    const final = parseFloat(p?.precio_final ?? p?.precio) || 0;
+    const preorder = !!p?.en_preventa;
+    return { original, final, preorder, hasDiscount: final < original };
+};
 
 const PublicStorefront = () => {
     // --- Estado de Datos ---
@@ -39,6 +60,76 @@ const PublicStorefront = () => {
     // --- Carrito ---
     const { cart, addToCart, removeFromCart, updateQuantity, total, clearCart } = useCart();
     const [isCartOpen, setIsCartOpen] = useState(false);
+
+    // --- Solicitud de Restock (CU-25) ---
+    const [toast, setToast] = useState(null);
+    const [restockLoading, setRestockLoading] = useState(false);
+
+    useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 3500);
+        return () => clearTimeout(t);
+    }, [toast]);
+
+    const handleRestockRequest = async (producto) => {
+        if (!producto) return;
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            setToast({ type: 'info', msg: 'Inicia sesión como cliente para recibir el aviso.' });
+            return;
+        }
+        setRestockLoading(true);
+        try {
+            const res = await restockApi.solicitar(producto.id);
+            setToast({ type: 'success', msg: res.data?.mensaje || 'Te avisaremos cuando vuelva a haber stock.' });
+        } catch (err) {
+            setToast({ type: 'error', msg: err.response?.data?.error || 'No se pudo registrar tu solicitud.' });
+        } finally {
+            setRestockLoading(false);
+        }
+    };
+
+    // --- Logística y Envíos (CU-24) ---
+    const [shippingConfig, setShippingConfig] = useState({
+        ciudad: null, enable_local_delivery: false, enable_national_shipping: true, zonas: []
+    });
+    const [ciudadCliente, setCiudadCliente] = useState('');
+    const [selectedZoneId, setSelectedZoneId] = useState('');
+
+    useEffect(() => {
+        enviosApi.obtenerConfig()
+            .then(res => setShippingConfig(res.data))
+            .catch(() => { /* la tienda no expuso config de envíos */ });
+    }, []);
+
+    // Determinar caso de envío según la ciudad seleccionada
+    const mismaCiudad = !!ciudadCliente &&
+        normalizarCiudad(ciudadCliente) === normalizarCiudad(shippingConfig.ciudad);
+    const mostrarZonas = mismaCiudad && shippingConfig.enable_local_delivery;
+    const zonaSeleccionada = shippingConfig.zonas.find(z => String(z.id) === String(selectedZoneId));
+    const envioCosto = mostrarZonas && zonaSeleccionada ? parseFloat(zonaSeleccionada.price) || 0 : 0;
+    const totalConEnvio = total + envioCosto;
+
+    // Datos de envío que se enviarán al crear el pedido
+    const buildEnvioPayload = () => {
+        if (mostrarZonas && zonaSeleccionada) {
+            return {
+                tipo_envio: 'LOCAL',
+                costo_envio: envioCosto,
+                ciudad_envio: ciudadCliente,
+                zona_envio: zonaSeleccionada.zone_name,
+            };
+        }
+        if (ciudadCliente && !mismaCiudad && shippingConfig.enable_national_shipping) {
+            return {
+                tipo_envio: 'ENCOMIENDA',
+                costo_envio: 0,
+                ciudad_envio: ciudadCliente,
+                zona_envio: null,
+            };
+        }
+        return { tipo_envio: null, costo_envio: 0, ciudad_envio: ciudadCliente || null, zona_envio: null };
+    };
 
     // --- Recomendaciones del carrito ---
     const [recommendations, setRecommendations] = useState([]);
@@ -132,6 +223,34 @@ const PublicStorefront = () => {
         }
     }, [clearCart]);
 
+    // Finalizar el pedido por WhatsApp (no crea pedido; lo gestiona el vendedor)
+    const handleWhatsappCheckout = () => {
+        if (cart.length === 0) return;
+
+        const numero = (shippingConfig.whatsapp || '').replace(/\D/g, '');
+        if (!numero) {
+            setToast({ type: 'info', msg: 'Esta tienda aún no configuró un número de WhatsApp.' });
+            return;
+        }
+
+        const nombreCliente = localStorage.getItem('user_full_name') || 'Cliente';
+
+        const lineas = cart.map(item => {
+            const pu = parseFloat(item.precio_final ?? item.precio) || 0;
+            return `• ${item.nombre} x${item.quantity} — Bs. ${(pu * item.quantity).toFixed(2)}`;
+        });
+
+        let mensaje = `¡Hola! Soy ${nombreCliente} y quiero finalizar mi pedido:\n\n`;
+        mensaje += lineas.join('\n');
+        if (envioCosto > 0) {
+            mensaje += `\n\nEnvío${zonaSeleccionada ? ` (${zonaSeleccionada.zone_name})` : ''}: Bs. ${envioCosto.toFixed(2)}`;
+        }
+        mensaje += `\n\n*Total: Bs. ${totalConEnvio.toFixed(2)}*`;
+
+        const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+    };
+
     const handleCheckout = async () => {
         if (cart.length === 0 || checkoutInProgress.current) return;
         checkoutInProgress.current = true;
@@ -139,14 +258,15 @@ const PublicStorefront = () => {
         let pedidoId = null;
 
         try {
-            // 1. Crear el pedido primero
+            // 1. Crear el pedido primero (incluye datos de envío CU-24)
             const pedidoRes = await api.post('/pedidos/', {
                 productos: cart.map(item => ({
                     producto_id: item.id,
                     cantidad: item.quantity,
                     precio_unitario: item.precio
                 })),
-                total: total
+                total: totalConEnvio,
+                ...buildEnvioPayload()
             });
 
             pedidoId = pedidoRes.data.id;
@@ -415,31 +535,55 @@ const PublicStorefront = () => {
                                             ) : (
                                                 <div className={styles.noImage}><ImageOff size={32} /></div>
                                             )}
-                                            {prod.stock < 5 && prod.stock > 0 && (
+                                            {getPricing(prod).preorder ? (
+                                                <span className={styles.lowStockBadge} style={{ background: '#7c3aed' }}>PRE-VENTA</span>
+                                            ) : prod.stock < 5 && prod.stock > 0 && (
                                                 <span className={styles.lowStockBadge}>Últimas unidades</span>
                                             )}
                                         </div>
                                         <div className={styles.productBody}>
                                             <span className={styles.categoryName}>{prod.categoria_detail?.nombre}</span>
                                             <h3 className={styles.productName}>{prod.nombre}</h3>
-                                            <div className={styles.priceRow}>
-                                                <span className={styles.currency}>Bs.</span>
-                                                <span className={styles.priceValue}>{parseFloat(prod.precio).toFixed(2)}</span>
-                                            </div>
+                                            {(() => {
+                                                const pr = getPricing(prod);
+                                                return (
+                                                    <div className={styles.priceRow} style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+                                                        {pr.hasDiscount && (
+                                                            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', textDecoration: 'line-through' }}>
+                                                                Bs. {pr.original.toFixed(2)}
+                                                            </span>
+                                                        )}
+                                                        <span className={styles.currency}>Bs.</span>
+                                                        <span className={styles.priceValue}>{pr.final.toFixed(2)}</span>
+                                                    </div>
+                                                );
+                                            })()}
                                             <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-                                                Stock disponible: <strong>{prod.stock}</strong>
+                                                {getPricing(prod).preorder && prod.estimated_arrival_date
+                                                    ? <>Llega aprox: <strong>{prod.estimated_arrival_date}</strong></>
+                                                    : <>Stock disponible: <strong>{prod.stock}</strong></>}
                                             </div>
-                                            <button
-                                                className={styles.addToCartBtn}
-                                                style={prod.stock <= 0 ? { backgroundColor: 'var(--color-text-muted)', cursor: 'not-allowed' } : {}}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (prod.stock > 0) addToCart(prod);
-                                                }}
-                                                disabled={prod.stock <= 0}
-                                            >
-                                                {prod.stock <= 0 ? 'Agotado' : 'Agregar al carrito'}
-                                            </button>
+                                            {getPricing(prod).preorder ? (
+                                                <button
+                                                    className={styles.addToCartBtn}
+                                                    style={{ background: '#7c3aed' }}
+                                                    onClick={(e) => { e.stopPropagation(); addToCart(prod); }}
+                                                >
+                                                    Reservar con Descuento
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    className={styles.addToCartBtn}
+                                                    style={prod.stock <= 0 ? { backgroundColor: 'var(--color-text-muted)', cursor: 'not-allowed' } : {}}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (prod.stock > 0) addToCart(prod);
+                                                    }}
+                                                    disabled={prod.stock <= 0}
+                                                >
+                                                    {prod.stock <= 0 ? 'Agotado' : 'Agregar al carrito'}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))
@@ -495,10 +639,71 @@ const PublicStorefront = () => {
                                             ))}
                                         </div>
                                     </div>
+                                    {/* --- ENVÍO (CU-24) --- */}
+                                    <div style={{ padding: '16px', borderTop: '1px solid #e2e8f0' }}>
+                                        <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#0f172a', fontSize: '14px' }}>
+                                            Ciudad / Departamento de entrega
+                                        </label>
+                                        <select
+                                            value={ciudadCliente}
+                                            onChange={(e) => { setCiudadCliente(e.target.value); setSelectedZoneId(''); }}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '10px' }}
+                                        >
+                                            <option value="">Selecciona tu ciudad...</option>
+                                            {CIUDADES_BOLIVIA.map(c => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                        </select>
+
+                                        {/* Caso 1: misma ciudad → selector de zonas */}
+                                        {mostrarZonas && (
+                                            <div style={{ marginBottom: '4px' }}>
+                                                <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#0f172a', fontSize: '14px' }}>
+                                                    Zona de Delivery
+                                                </label>
+                                                <select
+                                                    value={selectedZoneId}
+                                                    onChange={(e) => setSelectedZoneId(e.target.value)}
+                                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                                >
+                                                    <option value="">Selecciona una zona...</option>
+                                                    {shippingConfig.zonas.map(z => (
+                                                        <option key={z.id} value={z.id}>
+                                                            {z.zone_name} — Bs. {parseFloat(z.price).toFixed(2)}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        {/* Caso 2: ciudad distinta → encomienda */}
+                                        {ciudadCliente && !mismaCiudad && shippingConfig.enable_national_shipping && (
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: '14px', color: '#0f172a', fontWeight: 600 }}>
+                                                    📦 Envío por Encomienda (Pago en Destino)
+                                                </div>
+                                                <p style={{ marginTop: '8px', padding: '10px', borderRadius: '8px', background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '13px', lineHeight: 1.4 }}>
+                                                    El costo del envío por encomienda varía según la agencia y el peso.
+                                                    Usted pagará el envío al recoger su paquete.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className={styles.drawerFooter}>
                                         <div className={styles.totalRow}>
                                             <span>Subtotal</span>
                                             <strong>Bs. {total.toFixed(2)}</strong>
+                                        </div>
+                                        {envioCosto > 0 && (
+                                            <div className={styles.totalRow}>
+                                                <span>Envío{zonaSeleccionada ? ` (${zonaSeleccionada.zone_name})` : ''}</span>
+                                                <strong>Bs. {envioCosto.toFixed(2)}</strong>
+                                            </div>
+                                        )}
+                                        <div className={styles.totalRow}>
+                                            <span>Total</span>
+                                            <strong>Bs. {totalConEnvio.toFixed(2)}</strong>
                                         </div>
                                         <Button
                                             variant="primary"
@@ -508,6 +713,21 @@ const PublicStorefront = () => {
                                         >
                                             Pagar ahora
                                         </Button>
+                                        {shippingConfig.whatsapp && (
+                                            <button
+                                                type="button"
+                                                onClick={handleWhatsappCheckout}
+                                                style={{
+                                                    marginTop: '10px', width: '100%', display: 'flex', alignItems: 'center',
+                                                    justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '10px',
+                                                    border: 'none', background: '#25D366', color: '#fff', fontWeight: 600,
+                                                    fontSize: '15px', cursor: 'pointer',
+                                                }}
+                                            >
+                                                <MessageCircle size={18} />
+                                                Finalizar por WhatsApp
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -570,12 +790,24 @@ const PublicStorefront = () => {
                         <div className={styles.detailContent}>
                             <div className={styles.detailHeader}>
                                 <span className={styles.detailCategory}>{selectedProduct.categoria_detail?.nombre}</span>
+                                {getPricing(selectedProduct).preorder && (
+                                    <span style={{ display: 'inline-block', marginLeft: '8px', padding: '3px 10px', borderRadius: '999px', background: '#7c3aed', color: '#fff', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px', verticalAlign: 'middle' }}>
+                                        PRE-VENTA
+                                    </span>
+                                )}
                                 <h2 className={styles.detailName}>{selectedProduct.nombre}</h2>
                             </div>
 
-                            <div className={styles.detailPrice}>
-                                <span className={styles.cur}>Bs.</span>
-                                <span className={styles.val}>{parseFloat(selectedProduct.precio).toFixed(2)}</span>
+                            <div className={styles.detailPrice} style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+                                {getPricing(selectedProduct).hasDiscount && (
+                                    <span style={{ fontSize: '18px', color: 'var(--color-text-muted)', textDecoration: 'line-through' }}>
+                                        Bs. {getPricing(selectedProduct).original.toFixed(2)}
+                                    </span>
+                                )}
+                                <span>
+                                    <span className={styles.cur}>Bs.</span>
+                                    <span className={styles.val}>{getPricing(selectedProduct).final.toFixed(2)}</span>
+                                </span>
                             </div>
 
                             <p className={styles.detailDesc}>
@@ -586,9 +818,15 @@ const PublicStorefront = () => {
                                 <div className={styles.metaItem}>
                                     <span className={styles.metaLabel}>Disponibilidad</span>
                                     <span className={`${styles.metaValue} ${selectedProduct.stock > 0 ? styles.stockOk : styles.stockOut}`}>
-                                        {selectedProduct.stock > 0 ? `${selectedProduct.stock} unidades` : 'Agotado'}
+                                        {selectedProduct.stock > 0 ? `${selectedProduct.stock} unidades` : (getPricing(selectedProduct).preorder ? 'En preventa' : 'Agotado')}
                                     </span>
                                 </div>
+                                {getPricing(selectedProduct).preorder && selectedProduct.estimated_arrival_date && (
+                                    <div className={styles.metaItem}>
+                                        <span className={styles.metaLabel}>Llegada estimada</span>
+                                        <span className={styles.metaValue}>{selectedProduct.estimated_arrival_date}</span>
+                                    </div>
+                                )}
                                 <div className={styles.metaItem}>
                                     <span className={styles.metaLabel}>Código de producto</span>
                                     <span className={styles.metaValue}>#PRD-{selectedProduct.id}</span>
@@ -596,22 +834,60 @@ const PublicStorefront = () => {
                             </div>
 
                             <div className={styles.detailActions}>
-                                <Button 
-                                    variant="primary"
-                                    onClick={() => {
-                                        if (selectedProduct.stock > 0) {
+                                {getPricing(selectedProduct).preorder ? (
+                                    <Button
+                                        variant="primary"
+                                        style={{ background: '#7c3aed' }}
+                                        onClick={() => {
                                             addToCart(selectedProduct);
                                             setSelectedProduct(null);
-                                        }
-                                    }}
-                                    disabled={selectedProduct.stock <= 0}
-                                >
-                                    <ShoppingCart size={20} style={{marginRight: '10px'}} />
-                                    {selectedProduct.stock > 0 ? 'Agregar al carrito' : 'Agotado'}
-                                </Button>
+                                        }}
+                                    >
+                                        <ShoppingCart size={20} style={{marginRight: '10px'}} />
+                                        Reservar con Descuento
+                                    </Button>
+                                ) : selectedProduct.stock > 0 ? (
+                                    <Button
+                                        variant="primary"
+                                        onClick={() => {
+                                            addToCart(selectedProduct);
+                                            setSelectedProduct(null);
+                                        }}
+                                    >
+                                        <ShoppingCart size={20} style={{marginRight: '10px'}} />
+                                        Agregar al carrito
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="primary"
+                                        loading={restockLoading}
+                                        onClick={() => handleRestockRequest(selectedProduct)}
+                                    >
+                                        <Bell size={20} style={{marginRight: '10px'}} />
+                                        Avisarme cuando vuelva a haber stock
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* --- TOAST (CU-25) --- */}
+            {toast && (
+                <div
+                    role="status"
+                    style={{
+                        position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+                        zIndex: 2000, display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '14px 20px', borderRadius: '12px', color: '#fff', fontWeight: 600,
+                        fontSize: '14px', boxShadow: '0 10px 30px rgba(0,0,0,0.25)', maxWidth: '90%',
+                        background: toast.type === 'success' ? '#16a34a'
+                            : toast.type === 'error' ? '#dc2626' : '#334155',
+                    }}
+                >
+                    {toast.type === 'success' ? <CheckCircle size={18} /> : <Bell size={18} />}
+                    <span>{toast.msg}</span>
                 </div>
             )}
         </div>

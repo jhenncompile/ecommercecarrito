@@ -1,0 +1,16 @@
+@startuml
+robust "Cliente" as C
+
+@0
+C is "Cargar vista (Checkout)"
+@5
+C is "Solicitar datos (zonas)"
+@15
+C is "Accion: seleccionar envío"
+@30
+C is "Accion: calcular total"
+@60
+C is "Cargar vista (Confirmación)"
+@65
+C is "Cargar vista (Confirmación)"
+@enduml

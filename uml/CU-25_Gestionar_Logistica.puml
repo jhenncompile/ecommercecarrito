@@ -1,0 +1,22 @@
+@startuml
+skinparam rectangle {
+    BackgroundColor white
+    BorderColor black
+    RoundCorner 10
+    padding 10
+}
+rectangle "Pantalla de Checkout (Carrito)" as Checkout
+rectangle "CU-25 Gestionar Logística y Envíos\nSeleccionar método y medio de envío" as CU25
+rectangle "Obtener Zonas y Métodos" as Zonas
+rectangle "Calcular Total con Costo de Envío" as Calcular
+rectangle "Confirmar Pedido (CU-11)" as CU11
+rectangle "Panel de Vendedor (Seguimiento)" as PanelVendedor
+rectangle "Actualizar Estado de Envío" as Tracking
+
+Checkout --> CU25 : procede al pago
+CU25 -left-> Zonas : consulta opciones
+CU25 --> Calcular : selecciona transporte
+Calcular --> CU11 : suma monto
+CU11 -right-> PanelVendedor : pedido creado
+PanelVendedor --> Tracking : actualiza
+@enduml

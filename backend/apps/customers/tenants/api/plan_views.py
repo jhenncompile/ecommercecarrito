@@ -19,8 +19,8 @@ class PlanViewSet(BaseViewSet):
     serializer_class = PlanSerializer
     modulo_auditoria = "Plan"
     pagination_class = None
-    
-    
+
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = PlanService()
@@ -29,3 +29,10 @@ class PlanViewSet(BaseViewSet):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
         return [IsAuthenticated()]
+
+    def list(self, request, *args, **kwargs):
+        """Devuelve el catálogo canónico (sin planes duplicados por nombre)."""
+        from rest_framework.response import Response
+        planes = self.service.obtener_planes_canonicos()
+        serializer = self.get_serializer(planes, many=True)
+        return Response(serializer.data)

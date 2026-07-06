@@ -1,0 +1,16 @@
+@startuml
+robust "Cliente" as C
+
+@0
+C is "Cargar vista (Historial)"
+@5
+C is "Solicitar datos (pedido)"
+@15
+C is "Accion: calificar (1-5)"
+@30
+C is "Accion: escribir reseña"
+@60
+C is "Cargar vista (Historial)"
+@65
+C is "Cargar vista (Historial)"
+@enduml

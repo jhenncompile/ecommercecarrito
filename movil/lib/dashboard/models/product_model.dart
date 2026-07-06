@@ -8,6 +8,11 @@ class ProductModel {
   final int? categoria;
   final String? categoriaNombre;
 
+  // Preventa (Reservas)
+  final bool isPreorder;
+  final String? estimatedArrivalDate;
+  final double preorderDiscountPercentage;
+
   ProductModel({
     required this.id,
     required this.nombre,
@@ -17,6 +22,9 @@ class ProductModel {
     this.sku = '',
     this.categoria,
     this.categoriaNombre,
+    this.isPreorder = false,
+    this.estimatedArrivalDate,
+    this.preorderDiscountPercentage = 0.0,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -29,6 +37,9 @@ class ProductModel {
       sku: json['sku'] ?? '',
       categoria: json['categoria'],
       categoriaNombre: json['categoria_detail']?['nombre'],
+      isPreorder: json['is_preorder'] ?? false,
+      estimatedArrivalDate: json['estimated_arrival_date'],
+      preorderDiscountPercentage: double.tryParse(json['preorder_discount_percentage']?.toString() ?? '0') ?? 0.0,
     );
   }
 
@@ -39,5 +50,8 @@ class ProductModel {
         'stock': stock,
         'sku': sku,
         'categoria': categoria,
+        'is_preorder': isPreorder,
+        'estimated_arrival_date': estimatedArrivalDate,
+        'preorder_discount_percentage': preorderDiscountPercentage,
       };
 }

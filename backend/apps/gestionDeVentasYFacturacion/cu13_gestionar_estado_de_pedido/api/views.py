@@ -134,7 +134,15 @@ class PedidoViewSet(BaseViewSet):
                 if pedido_existente:
                     pedido_existente.carrito.delete()
 
-                pedido = self.get_service().crear_pedido_directo(cliente.id, items)
+                # Datos de logística/envío enviados por el checkout (CU-24)
+                envio = {
+                    'tipo_envio': request.data.get('tipo_envio'),
+                    'costo_envio': request.data.get('costo_envio') or 0,
+                    'ciudad_envio': request.data.get('ciudad_envio'),
+                    'zona_envio': request.data.get('zona_envio'),
+                }
+
+                pedido = self.get_service().crear_pedido_directo(cliente.id, items, envio=envio)
                 serializer = self.get_serializer(pedido)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
 
