@@ -3,7 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 
-from apps.gestionDeUsuarioySeguridad.cu1_iniciar_sesion.api.serializers import MyTokenObtainPairSerializer
+from apps.gestionDeUsuarioySeguridad.cu1_iniciar_sesion.api.serializers import (
+    MyTokenObtainPairSerializer,
+    DualTokenRefreshSerializer,
+)
 from apps.gestionDeUsuarioySeguridad.cu1_iniciar_sesion.services.auth_service import get_auth_extra_data
 from apps.gestionDeUsuarioySeguridad.cu6_gestionar_bitacora.services.bitacora_service import BitacoraService
 
@@ -28,3 +31,19 @@ class MyTokenObtainPairView(APIView):
         BitacoraService.registrar_acceso(request, serializer.user, "LOGIN")
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class DualTokenRefreshView(APIView):
+    """Refresca el access token para tokens de Usuario Y de Cliente.
+
+    Reemplaza al TokenRefreshView estándar de SimpleJWT, que lanzaba un 500
+    (Usuario.DoesNotExist) cuando el refresh venía de un Cliente. Toda la lógica
+    de discriminación vive en DualTokenRefreshSerializer.
+    """
+    permission_classes = [AllowAny]
+    serializer_class = DualTokenRefreshSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = DualTokenRefreshSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)

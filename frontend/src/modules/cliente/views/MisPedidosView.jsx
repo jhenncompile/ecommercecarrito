@@ -19,7 +19,10 @@ const MisPedidosView = () => {
         if (params.get('status') === 'success') {
             const pedidoId = params.get('pedido_id');
             let tenant = params.get('tenant');
-            if (!tenant) {
+            // El param puede llegar como el string "undefined"/"null" cuando el
+            // pedido venía del endpoint por-tienda (que no incluye schema_name).
+            // En ese caso lo derivamos del subdominio actual (que ES la tienda).
+            if (!tenant || tenant === 'undefined' || tenant === 'null') {
                 const host = window.location.hostname;
                 tenant = isBaseDomain(host) ? 'public' : host.split('.')[0];
             }
@@ -136,10 +139,14 @@ const MisPedidosView = () => {
                                                         const tenantHost = isGlobal ? `${pedido.schema_name}.${getBaseDomain(window.location.hostname)}` : window.location.hostname;
                                                         const apiPort = process.env.REACT_APP_DJANGO_PORT || '8001';
                                                         const baseUrl = `${window.location.protocol}//${tenantHost}:${apiPort}/api`;
-                                                        
+
+                                                        // En modo por-tienda el pedido NO trae schema_name; el tenant
+                                                        // correcto es el subdominio actual. Evita mandar "tenant=undefined".
+                                                        const tenantSchema = isGlobal ? pedido.schema_name : window.location.hostname.split('.')[0];
+
                                                         const res = await api.post(`${baseUrl}/pagos/create-checkout-session/`, {
                                                             pedido_id: pedido.id,
-                                                            success_url: window.location.href + (window.location.href.includes('?') ? '&' : '?') + `status=success&pedido_id=${pedido.id}&tenant=${pedido.schema_name}`,
+                                                            success_url: window.location.href + (window.location.href.includes('?') ? '&' : '?') + `status=success&pedido_id=${pedido.id}&tenant=${tenantSchema}`,
                                                             cancel_url: window.location.href
                                                         });
                                                         

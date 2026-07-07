@@ -1,9 +1,8 @@
 from apps.gestionDeUsuarioySeguridad.cu2_cerrar_sesion.api.views import LogoutView
-from apps.gestionDeUsuarioySeguridad.cu1_iniciar_sesion.api.views import MyTokenObtainPairView
+from apps.gestionDeUsuarioySeguridad.cu1_iniciar_sesion.api.views import MyTokenObtainPairView, DualTokenRefreshView
 from django.http import JsonResponse
 from django.db import connection
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.gestionDeVentasYFacturacion.cu11_gestion_carrito_de_compras.api.carrito_views import CarritoViewSet
 from apps.gestionDeVentasYFacturacion.cu13_gestionar_estado_de_pedido.api.views import PedidoViewSet
@@ -44,7 +43,7 @@ urlpatterns = [
 
     # Auth
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/refresh/', DualTokenRefreshView.as_view(), name='token_refresh'),
     path('api/logout/', LogoutView.as_view(), name='logout'),
     
     path('api/device-token/', DeviceTokenRegisterView.as_view(), name='device_token_register'),

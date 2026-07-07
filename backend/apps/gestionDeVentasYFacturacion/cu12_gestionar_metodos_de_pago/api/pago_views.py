@@ -160,18 +160,30 @@ class PagoViewSet(viewsets.ViewSet):
     def confirm_success(self, request):
         pedido_id = request.data.get('pedido_id')
         tenant = request.data.get('tenant')
-        
+
         if not pedido_id:
             return Response({'error': 'pedido_id es requerido'}, status=400)
 
-        print(f"[SYNC] Confirmando éxito para pedido {pedido_id} en tenant {tenant or 'actual'}")
-        
+        # El front puede mandar basura ("undefined"/"null") cuando el pedido no
+        # traía schema_name (flujo por subdominio). En ese caso el tenant correcto
+        # es el del propio request (connection.schema_name), NO un esquema falso.
+        if tenant in (None, '', 'undefined', 'null'):
+            tenant = None
+
+        print(f"[SYNC] Confirmando éxito para pedido {pedido_id} en tenant {tenant or connection.schema_name}")
+
         try:
-            if tenant:
+            # Solo cambiamos de esquema si nos pasan un tenant real y distinto al
+            # actual (caso dominio base/global-list). Si ya estamos en el subdominio
+            # de la tienda, usamos la conexión actual.
+            if tenant and tenant != 'public' and tenant != connection.schema_name:
                 with schema_context(tenant):
-                    self._marcar_pagado(pedido_id)
+                    encontrado = self._marcar_pagado(pedido_id)
             else:
-                self._marcar_pagado(pedido_id)
+                encontrado = self._marcar_pagado(pedido_id)
+
+            if not encontrado:
+                return Response({'error': 'Pedido no encontrado'}, status=404)
             return Response({'status': 'Pedido marcado como pagado'})
         except Exception as e:
             import traceback
@@ -213,12 +225,23 @@ class PagoViewSet(viewsets.ViewSet):
         return Response(status=200)
 
     def _marcar_pagado(self, pedido_id):
+        """Marca el pedido como PAGADO y dispara factura/notificaciones.
+
+        Devuelve True si el pedido existe en el esquema actual (aunque ya
+        estuviera pagado), False si no se encontró — así confirm_success puede
+        responder 404 en vez de un 200 engañoso cuando el tenant era incorrecto.
+        """
         try:
             pedido = Pedido.objects.get(id=pedido_id)
+        except Pedido.DoesNotExist:
+            print(f"[ERROR] _marcar_pagado: pedido {pedido_id} no existe en el esquema '{connection.schema_name}'")
+            return False
+
+        try:
             if pedido.estado == 'PENDIENTE':
                 pedido.estado = 'PAGADO'
                 pedido.save()
-                
+
                 try:
                     from apps.gestionDeVentasYFacturacion.cu14_generar_facturacion.services.factura_service import FacturaService
                     from apps.gestionDeVentasYFacturacion.cu12_gestionar_metodos_de_pago.models.tipo_pago import TipoPago
@@ -260,3 +283,5 @@ class PagoViewSet(viewsets.ViewSet):
                     print(f"[WARN] Error al generar factura: {str(ef)}")
         except Exception as e:
             print(f"[ERROR] ERROR en _marcar_pagado: {str(e)}")
+
+        return True

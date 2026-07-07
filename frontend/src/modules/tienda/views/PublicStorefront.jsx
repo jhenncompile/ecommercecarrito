@@ -297,12 +297,27 @@ const PublicStorefront = () => {
             }
         } catch (err) {
             console.error("❌ ERROR DETALLADO EN CHECKOUT:", err);
-            const errorMsg = err.response?.data?.error || err.message || 'Error desconocido';
+            // El límite de plan puede llegar como clave directa {limite_alcanzado: ...}
+            // o anidado dentro de la cadena {error: "{'limite_alcanzado': ...}"}.
+            const data = err.response?.data || {};
+            const errorMsg = data.error || err.message || 'Error desconocido';
+            const esLimite = Boolean(data.limite_alcanzado) ||
+                (typeof errorMsg === 'string' && errorMsg.includes('limite_alcanzado'));
             console.error("Mensaje del servidor:", errorMsg);
-            
+
             if (pedidoId) {
                 console.log("Limpiando pedido huérfano...", pedidoId);
                 await api.delete(`/pedidos/${pedidoId}/`).catch(e => console.error("No se pudo limpiar pedido huérfano", e));
+            }
+
+            if (esLimite) {
+                // Esta tienda alcanzó el tope de facturación/ventas de su plan.
+                setToast({
+                    type: 'error',
+                    msg: 'No se pudo completar el pago: esta tienda alcanzó el límite de su cuenta. Intenta más tarde.'
+                });
+            } else {
+                setToast({ type: 'error', msg: `No se pudo procesar el pago: ${errorMsg}` });
             }
             setError(`Error al procesar el pago: ${errorMsg}`);
         } finally {

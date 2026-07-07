@@ -1,5 +1,5 @@
 from apps.gestionDeUsuarioySeguridad.cu2_cerrar_sesion.api.views import LogoutView
-from apps.gestionDeUsuarioySeguridad.cu1_iniciar_sesion.api.views import MyTokenObtainPairView
+from apps.gestionDeUsuarioySeguridad.cu1_iniciar_sesion.api.views import MyTokenObtainPairView, DualTokenRefreshView
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
@@ -73,7 +73,7 @@ urlpatterns = [
     
     # 2. Rutas para autenticación JWT
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'), 
-    path('api/token/refresh/', from_jwt := __import__('rest_framework_simplejwt.views', fromlist=['TokenRefreshView']).TokenRefreshView.as_view(), name='token_refresh'), 
+    path('api/token/refresh/', DualTokenRefreshView.as_view(), name='token_refresh'),
     path('api/logout/', LogoutView.as_view(), name='logout'),
     path('api/password-reset/', PasswordResetRequestView.as_view(), name='password_reset'),
     path('api/password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
