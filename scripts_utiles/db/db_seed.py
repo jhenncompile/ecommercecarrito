@@ -173,10 +173,16 @@ class DatabaseSeeder:
         except Exception as e:
             # Antes se silenciaba con 'pass', lo que ocultaba fallos reales de migración
             # (p. ej. una migración a medias) y luego reventaba con "column does not exist".
-            # Ahora avisamos claramente y sugerimos la reparación correcta.
+            # Ahora avisamos claramente y, MUY importante, cerramos la conexión para
+            # limpiar la transacción abortada: si no, la siguiente consulta falla con
+            # "current transaction is aborted" y tumba todo el seeder.
+            try:
+                connection.close()
+            except Exception:
+                pass
             ultima_linea = str(e).strip().splitlines()[-1] if str(e).strip() else repr(e)
             print(f"     [!] No se pudo migrar '{tenant.schema_name}': {ultima_linea}")
-            print(f"         -> Corré la opción 'M - SINCRONIZAR BASE DE DATOS' del launcher antes de sembrar.")
+            print(f"         -> Esquema corrupto/pendiente. Reparalo (ver más abajo) antes de sembrar.")
 
     def get_or_create_tenant(self, schema, defaults):
         tenant = Client.objects.filter(schema_name=schema).first()
