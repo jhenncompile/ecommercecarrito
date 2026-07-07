@@ -227,7 +227,9 @@ class TiendaPrivadaSerializer(serializers.ModelSerializer):
             from apps.gestionDeProductoYCatalogo.cu7_gestionar_productos.models.producto import Producto
             from apps.gestionDeUsuarioySeguridad.cu3_gestion_de_usuario.models.usuario import Usuario
             productos_actuales = Producto.objects.count()
-            usuarios_actuales = Usuario.objects.count()
+            # Usuario es tabla compartida (public); filtrar por tenant para no
+            # reportar el total de la plataforma como uso de esta tienda.
+            usuarios_actuales = Usuario.objects.filter(tenant=obj).count()
             
         return {
             'productos': productos_actuales,

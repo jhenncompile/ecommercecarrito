@@ -24,7 +24,10 @@ def validate_user_limit(sender, instance, **kwargs):
         tenant = connection.tenant
         # Validar solo durante la creación
         if getattr(tenant, 'plan', None) and not instance.pk:
-            count = Usuario.objects.count()
+            # Usuario vive en SHARED_APPS (schema public), así que .count() global
+            # cuenta a TODA la plataforma. Hay que contar solo los de esta tienda
+            # vía el FK tenant; si no, una tienda nueva no puede crear su admin.
+            count = Usuario.objects.filter(tenant=tenant).count()
             if count >= tenant.plan.max_usuarios:
                 raise ValidationError(
                     f"Límite del plan alcanzado. El plan '{tenant.plan.nombre}' permite un máximo de {tenant.plan.max_usuarios} usuarios."
