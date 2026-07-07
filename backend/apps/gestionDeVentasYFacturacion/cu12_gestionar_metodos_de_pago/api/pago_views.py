@@ -12,6 +12,7 @@ import logging
 from apps.gestionDeVentasYFacturacion.cu13_gestionar_estado_de_pedido.models.pedido import Pedido
 from apps.gestionDeVentasYFacturacion.cu11_gestion_carrito_de_compras.models.carrito import Carrito
 from apps.gestionDeVentasYFacturacion.cu11_gestion_carrito_de_compras.models.carrito_item import CarritoItem
+from apps.gestionDeProductoYCatalogo.cu7_gestionar_productos.services.producto_service import ProductoService
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,9 @@ class PagoViewSet(viewsets.ViewSet):
             monto_centavos = 0
             for item in pedido.carrito.items.all():
                 if item.producto.precio:
-                    monto_centavos += int(round(float(item.producto.precio) * 100 * item.cantidad))
+                    # Cobrar el precio con descuento (promoción/preventa) si aplica, no el base.
+                    precio_cobrado = ProductoService.calcular_precio(item.producto)['precio_final']
+                    monto_centavos += int(round(float(precio_cobrado) * 100 * item.cantidad))
 
             if monto_centavos == 0:
                 return Response({'error': 'El monto del pedido es 0'}, status=400)
@@ -96,7 +99,9 @@ class PagoViewSet(viewsets.ViewSet):
                 if not item.producto.precio:
                     print(f"[WARN] ADVERTENCIA: El producto {item.producto.nombre} no tiene precio.")
                     continue
-                monto_centavos = int(round(float(item.producto.precio) * 100))
+                # Cobrar el precio con descuento (promoción/preventa) si aplica, no el base.
+                precio_cobrado = ProductoService.calcular_precio(item.producto)['precio_final']
+                monto_centavos = int(round(float(precio_cobrado) * 100))
                 line_items.append({
                     'price_data': {
                         'currency': 'bob',
