@@ -171,7 +171,12 @@ class DatabaseSeeder:
                 verbosity=0,
             )
         except Exception as e:
-            pass # Ignoramos errores de duplicación de tablas si el esquema ya estaba poblado
+            # Antes se silenciaba con 'pass', lo que ocultaba fallos reales de migración
+            # (p. ej. una migración a medias) y luego reventaba con "column does not exist".
+            # Ahora avisamos claramente y sugerimos la reparación correcta.
+            ultima_linea = str(e).strip().splitlines()[-1] if str(e).strip() else repr(e)
+            print(f"     [!] No se pudo migrar '{tenant.schema_name}': {ultima_linea}")
+            print(f"         -> Corré la opción 'M - SINCRONIZAR BASE DE DATOS' del launcher antes de sembrar.")
 
     def get_or_create_tenant(self, schema, defaults):
         tenant = Client.objects.filter(schema_name=schema).first()
@@ -321,7 +326,12 @@ class DatabaseSeeder:
             with tenant_context(tenant):
                 # Especialización
                 tienda_cats = random.sample(all_cat_names, random.randint(1, 3))
-                cat_objects = [Categoria.objects.get_or_create(nombre=cn)[0] for cn in tienda_cats]
+                # Tolerante a categorías duplicadas: get_or_create(nombre=...) revienta con
+                # MultipleObjectsReturned si ya existen 2 filas con el mismo nombre en la tienda.
+                cat_objects = []
+                for cn in tienda_cats:
+                    cat = Categoria.objects.filter(nombre=cn).first() or Categoria.objects.create(nombre=cn)
+                    cat_objects.append(cat)
                 creados = 0
                 for _ in range(p_por_tienda):
                     try:
@@ -352,7 +362,15 @@ class DatabaseSeeder:
             with tenant_context(t_destino):
                 if o_por_cliente <= 0:
                     continue
-                prods = list(Producto.objects.filter(activo=True))
+                # Si una tienda no está migrada al día (p. ej. falta 'is_preorder'),
+                # la saltamos con aviso en lugar de tumbar todo el seeder.
+                try:
+                    prods = list(Producto.objects.filter(activo=True))
+                except Exception as e:
+                    ultima_linea = str(e).strip().splitlines()[-1] if str(e).strip() else repr(e)
+                    print(f"  [!] Tienda '{t_destino.schema_name}' omitida (migración pendiente): {ultima_linea}")
+                    print(f"      -> Corré 'M - SINCRONIZAR BASE DE DATOS' del launcher y reintentá.")
+                    continue
                 if not prods:
                     continue
                 

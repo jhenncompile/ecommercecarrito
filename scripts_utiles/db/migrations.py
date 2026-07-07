@@ -69,45 +69,49 @@ def run_make_migrations():
     # Luego una detección general
     run_django_command_visible(['makemigrations', '--noinput'])
 
-def run_migrate():
-    """Aplica migraciones al esquema público con recuperación inteligente"""
-    print("\n[+] Iniciando Sincronización Inteligente de esquema SHARED...")
+def _migrate_con_recuperacion(scope_flag, etiqueta):
+    """Aplica migraciones a un ámbito (--shared o --tenant) con auto-reparación.
 
-    success, output = run_django_command_capture(['migrate_schemas', '--shared'])
+    Si una migración choca con algo que "ya existe" (DuplicateTable/DuplicateColumn),
+    la marca como --fake quirúrgicamente y reintenta, para poder avanzar hasta las
+    migraciones nuevas (p. ej. preventa, reseñas, restock). NUNCA hace sys.exit:
+    devuelve True/False para que el flujo superior decida.
+    """
+    import re
+    print(f"\n[+] Sincronizando {etiqueta} (con auto-reparación de conflictos)...")
+    success, output = run_django_command_capture(['migrate_schemas', scope_flag])
 
     retry_count = 0
-    while not success and retry_count < 5:
-        import re
+    while not success and retry_count < 10:
         match = re.search(
-            r"Applying ([\w\.]+)\.\.\.\s*.*?(DuplicateTable|DuplicateColumn|already exists|ya existe)",
+            r"Applying ([\w]+)\.([\w]+).*?(DuplicateTable|DuplicateColumn|already exists|ya existe)",
             output, re.DOTALL
         )
-
         if match:
-            migration_full = match.group(1)
-            app_label, migration_name = migration_full.split('.')
-            print(f"\n[!] CONFLICTO DETECTADO: {migration_full} intenta crear algo que ya existe.")
-            print(f"[i] Aplicando FAKE quirúrgico a {migration_full}...")
-            run_django_command_visible(['migrate_schemas', '--shared', '--fake', app_label, migration_name])
-            print("[i] Reintentando sincronización general...")
-            success, output = run_django_command_capture(['migrate_schemas', '--shared'])
+            app_label, migration_name = match.group(1), match.group(2)
+            print(f"\n[!] {etiqueta}: '{app_label}.{migration_name}' intenta crear algo que ya existe.")
+            print(f"[i] Aplicando FAKE quirúrgico a {app_label}.{migration_name}...")
+            run_django_command_visible(['migrate_schemas', scope_flag, '--fake', app_label, migration_name])
+            print("[i] Reintentando sincronización...")
+            success, output = run_django_command_capture(['migrate_schemas', scope_flag])
             retry_count += 1
         else:
-            print("\n[X] El esquema SHARED (public) reportó un error no auto-recuperable:")
+            print(f"\n[X] {etiqueta}: error no auto-recuperable:")
             sys.stdout.buffer.write(output.encode('utf-8', errors='replace'))
             sys.stdout.buffer.write(b'\n')
-            # IMPORTANTE: NO abortamos aquí. Devolvemos False y dejamos que el flujo
-            # continúe a migrar los TENANTS, para no dejar las tiendas sin sus tablas.
             return False
 
     if success:
-        print("\n[OK] Esquema SHARED sincronizado.")
+        print(f"\n[OK] {etiqueta} sincronizado.")
     return success
 
+def run_migrate():
+    """Aplica migraciones al esquema público (SHARED) con recuperación inteligente."""
+    return _migrate_con_recuperacion('--shared', 'ESQUEMA PÚBLICO (shared)')
+
 def run_migrate_schemas():
-    """Aplica migraciones a todos los esquemas de clientes (Tenants)"""
-    print("\n[+] Aplicando migraciones a todos los TENANTS...")
-    run_django_command_visible(['migrate_schemas', '--tenant'])
+    """Aplica migraciones a TODOS los esquemas de clientes (Tenants) con recuperación."""
+    return _migrate_con_recuperacion('--tenant', 'TODAS LAS TIENDAS (tenants)')
 
 def run_full_sync():
     """Ejecuta el ciclo completo de sincronización de base de datos.
