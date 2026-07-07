@@ -140,9 +140,14 @@ const PublicStorefront = () => {
     useEffect(() => {
         if (lastProductId && isCartOpen) {
             setLoadingRecs(true);
-            api.get(`/productos/${lastProductId}/recomendaciones/`)
+            // La acción 'recomendaciones' vive en el ViewSet de catálogo
+            // (api/catalogo/<id>/recomendaciones/), no en productos.
+            api.get(`/catalogo/${lastProductId}/recomendaciones/`)
                 .then(res => setRecommendations(res.data.recommendations || []))
-                .catch(() => setRecommendations([]))
+                .catch((err) => {
+                    console.error('Error cargando recomendaciones del carrito:', err);
+                    setRecommendations([]);
+                })
                 .finally(() => setLoadingRecs(false));
         } else {
             setRecommendations([]);
