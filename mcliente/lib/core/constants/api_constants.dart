@@ -11,7 +11,7 @@ class ApiConstants {
   // ── IP y Puerto (inyectados via --dart-define o valor por defecto) ──
   static const String vpsIp = String.fromEnvironment(
     'API_IP',
-    defaultValue: '192.168.100.244', // ← Cambiar solo aquí en desarrollo
+    defaultValue: '192.168.0.50', // ← IP LAN de la PC (misma Wi-Fi que el celular). Cambiar aquí en desarrollo
   );
 
   static const String djangoPort = String.fromEnvironment(

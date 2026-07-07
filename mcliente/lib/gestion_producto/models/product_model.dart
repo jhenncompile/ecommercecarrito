@@ -1,3 +1,5 @@
+import '../../core/constants/api_constants.dart';
+
 class ProductModel {
   final int id;
   final String nombre;
@@ -63,7 +65,7 @@ class ProductModel {
   static String? _resolveImageUrl(String? url) {
     if (url == null || url.isEmpty) return null;
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return 'http://157.173.102.129:8001$url'; // Fallback for relative URLs
+    return 'http://${ApiConstants.vpsIp}:${ApiConstants.djangoPort}$url'; // Fallback para URLs relativas
   }
 
   Map<String, dynamic> toJson() => {
