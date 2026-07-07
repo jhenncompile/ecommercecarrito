@@ -24,6 +24,9 @@ from apps.gestionDeVentasYFacturacion.cu12_gestionar_metodos_de_pago.models.tipo
 from apps.gestionDeVentasYFacturacion.cu13_gestionar_estado_de_pedido.models.pedido import Pedido
 from apps.gestionDeVentasYFacturacion.cu14_generar_facturacion.models.detalle_factura import DetalleFactura
 from apps.gestionDeVentasYFacturacion.cu14_generar_facturacion.models.factura import Factura
+from apps.gestionDeVentasYFacturacion.cu24_gestionar_logistica.models.delivery_zone import DeliveryZone
+from apps.gestionDeClientes.cu25_gestionar_solicitud_de_restock.models.restock_request import RestockRequest
+from apps.gestionDeClientes.cu26_gestionar_resenas.models.resena import Resena
 from apps.customers.models import Client, Domain, Usuario, Rol, Plan, Cliente, Permiso
 
 def obtener_ip_dominio():
@@ -214,7 +217,16 @@ def ejecutar():
             domain_url = f"{conf['schema']}.{base_domain}" if base_domain != 'localhost' else f"{conf['schema']}.localhost"
             Domain.objects.get_or_create(domain=domain_url, tenant=tenant, defaults={'is_primary': True})
             ensure_tenant_admin(tenant, rol_admin)
-            print(f"   -> Tienda {conf['nombre']} ({conf['schema']}) en Plan {conf['plan'].nombre}")
+
+            # Configuración de Logística y Envíos (CU-24): ciudad, WhatsApp y flags de entrega.
+            ciudad = random.choice(['La Paz', 'Santa Cruz', 'Cochabamba', 'El Alto', 'Sucre'])
+            tenant.ciudad = ciudad
+            tenant.whatsapp = '72684507'
+            tenant.enable_local_delivery = True
+            tenant.enable_national_shipping = True
+            tenant.save()
+
+            print(f"   -> Tienda {conf['nombre']} ({conf['schema']}) en Plan {conf['plan'].nombre} | Ciudad {ciudad}")
 
     # 5. POBLAR CADA TIENDA CON MASIVOS DATOS (Super Población)
     nombres_base, apellidos_base = generar_datos_prueba()
@@ -224,6 +236,9 @@ def ejecutar():
         with schema_context(conf['schema']):
             # Limpieza para evitar duplicados en pruebas repetidas (con manejo de excepciones por migraciones desincronizadas)
             try:
+                Resena.objects.all().delete()           # CU-27 (antes de Cliente/Producto por FK)
+                RestockRequest.objects.all().delete()   # CU-25 (antes de Cliente/Producto por FK)
+                DeliveryZone.objects.all().delete()      # CU-24
                 DetalleFactura.objects.all().delete()
                 Factura.objects.all().delete()
                 Pedido.objects.all().delete()
@@ -249,6 +264,23 @@ def ejecutar():
                 )
                 prods_creados.append(p)
 
+            # --- CU-24 Logística: Zonas de Delivery de la tienda ---
+            for zname, zprice in [('Centro', 10), ('Zona Sur', 15), ('Zona Norte', 20), ('Encomienda Nacional', 35)]:
+                DeliveryZone.objects.get_or_create(zone_name=zname, defaults={'price': zprice, 'activo': True})
+
+            # --- CU-24 Preventa (Reservas): marcar los primeros productos como preorder ---
+            for prod in prods_creados[:2]:
+                prod.is_preorder = True
+                prod.estimated_arrival_date = (timezone.now() + timedelta(days=random.randint(10, 30))).date()
+                prod.preorder_discount_percentage = random.choice([5, 10, 15])
+                prod.save()
+
+            # --- CU-25 Restock: dejar los últimos productos agotados (stock 0) para probar la intención de compra ---
+            productos_agotados = prods_creados[-2:] if len(prods_creados) >= 2 else []
+            for prod in productos_agotados:
+                prod.stock = 0
+                prod.save()
+
             tipo_pago_efec, _ = TipoPago.objects.get_or_create(nombre='EFECTIVO', defaults={'estado': 'ACTIVO'})
             tipo_pago_tarj, _ = TipoPago.objects.get_or_create(nombre='TARJETA', defaults={'estado': 'ACTIVO'})
             tipo_pago_trans, _ = TipoPago.objects.get_or_create(nombre='TRANSFERENCIA', defaults={'estado': 'ACTIVO'})
@@ -266,6 +298,11 @@ def ejecutar():
                     correo=email_random
                 )
                 clientes_creados.append(cliente)
+
+            # --- CU-25 Intención de Compra: solicitudes de restock sobre los productos agotados ---
+            for prod in productos_agotados:
+                for cliente in random.sample(clientes_creados, min(5, len(clientes_creados))):
+                    RestockRequest.objects.get_or_create(cliente=cliente, producto=prod)
 
             # Crear Pedidos Históricos Masivos (alrededor de 300-500 facturas por tenant)
             num_pedidos_totales = random.randint(300, 500)
@@ -332,7 +369,53 @@ def ejecutar():
                             ))
                         DetalleFactura.objects.bulk_create(detalles_a_crear)
 
-            print(f"   [OK] {len(prods_creados)} Productos, {len(clientes_creados)} Clientes, {num_pedidos_totales} Pedidos generados.")
+            # --- CU-24 Preventa: RESERVAS (pedidos PENDIENTE de productos en preventa, con envío) ---
+            zonas_disp = list(DeliveryZone.objects.all())
+            reservas_creadas = 0
+            for prod_pre in prods_creados[:2]:  # los 2 productos marcados como preventa
+                for cli in random.sample(clientes_creados, min(3, len(clientes_creados))):
+                    carrito_r = Carrito.objects.create(cliente=cli, estado='CERRADO')
+                    CarritoItem.objects.create(carrito=carrito_r, producto=prod_pre, cantidad=1)
+                    z = random.choice(zonas_disp) if zonas_disp else None
+                    Pedido.objects.create(
+                        carrito=carrito_r,
+                        estado='PENDIENTE',
+                        tipo_envio='DELIVERY_LOCAL' if z else None,
+                        costo_envio=(z.price if z else 0),
+                        zona_envio=(z.zone_name if z else None),
+                        observaciones='Reserva de preventa',
+                    )
+                    reservas_creadas += 1
+
+            # --- CU-27 Reseñas: compradores con pedidos ENTREGADOS reseñan lo que compraron ---
+            comentarios = ['Excelente calidad!', 'Llegó rápido y en buen estado.', 'Muy bueno, recomendado.',
+                           'Cumple lo prometido.', 'Buen precio y calidad.', 'Volvería a comprar sin dudarlo.']
+            resenas_creadas = 0
+            vistos = set()
+            pedidos_entregados = (Pedido.objects
+                                  .filter(estado='ENTREGADO')
+                                  .select_related('carrito__cliente')
+                                  .prefetch_related('carrito__items__producto'))
+            for ped in pedidos_entregados:
+                if resenas_creadas >= 80:
+                    break
+                cli = ped.carrito.cliente
+                for it in ped.carrito.items.all():
+                    clave = (cli.id, it.producto_id)
+                    if clave in vistos:
+                        continue
+                    vistos.add(clave)
+                    Resena.objects.get_or_create(
+                        cliente=cli, producto=it.producto,
+                        defaults={'calificacion': random.randint(3, 5), 'comentario': random.choice(comentarios)},
+                    )
+                    resenas_creadas += 1
+                    if resenas_creadas >= 80:
+                        break
+
+            print(f"   [OK] {len(prods_creados)} Productos ({len(productos_agotados)} agotados, 2 en preventa), "
+                  f"{len(clientes_creados)} Clientes, {num_pedidos_totales} Pedidos, 4 Zonas, "
+                  f"{reservas_creadas} Reservas, {resenas_creadas} Reseñas.")
 
     print("\nSEEDER MAESTRO EJECUTADO CON ÉXITO.")
     print("   El sistema está SUPER POBLADO y listo con múltiples tenants, planes, reportes y muchísimos datos de prueba.")

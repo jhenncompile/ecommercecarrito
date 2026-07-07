@@ -33,6 +33,8 @@ from apps.customers.tenants.api.views import TiendaPerfilView, UpgradeSuscripcio
 from apps.gestionDeClientes.cu22_gestionar_prediccion_de_ventas.api.forecast_views import PrediccionVentasAPIView, PrediccionProductosAPIView, PrediccionCategoriasAPIView
 from apps.gestionDeVentasYFacturacion.cu24_gestionar_logistica.api.views import DeliveryZoneViewSet, ConfiguracionEnvioView
 from apps.gestionDeClientes.cu25_gestionar_solicitud_de_restock.api.views import RestockRequestViewSet
+from apps.gestionDeClientes.cu26_gestionar_resenas.api.views import ResenaViewSet
+from apps.customers.clientes.api.views import ClienteViewSet, ClienteLoginView
 
 def debug_schema(request):
     return JsonResponse({'urlconf': 'config.tenant_urls', 'schema': connection.schema_name})
@@ -91,10 +93,21 @@ urlpatterns = [
     path('api/restock/', RestockRequestViewSet.as_view({'post': 'create'}), name='restock-create'),
     path('api/restock/ranking/', RestockRequestViewSet.as_view({'get': 'ranking'}), name='restock-ranking'),
 
+    # Reseñas y Calificaciones (CU-27)
+    path('api/resenas/', ResenaViewSet.as_view({'get': 'list', 'post': 'create'}), name='resena-list'),
+    path('api/resenas/producto/<int:producto_id>/', ResenaViewSet.as_view({'get': 'por_producto'}), name='resena-por-producto'),
+
     # Logística y Envíos (CU-24)
     path('api/envios/config/', ConfiguracionEnvioView.as_view(), name='envios-config'),
     path('api/zonas-delivery/', DeliveryZoneViewSet.as_view({'get': 'list', 'post': 'create'}), name='zonas-delivery-list'),
     path('api/zonas-delivery/<int:pk>/', DeliveryZoneViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='zonas-delivery-detail'),
+
+    # Clientes / Compradores (tabla compartida del esquema público, expuesta también
+    # en el tenant para que el storefront -que corre en el subdominio- pueda
+    # registrar e iniciar sesión sin caer en 404 del urlconf público).
+    path('api/clientes/login/', ClienteLoginView.as_view(), name='cliente_login'),
+    path('api/clientes/perfil/', ClienteViewSet.as_view({'get': 'perfil', 'patch': 'perfil'}), name='cliente-perfil'),
+    path('api/clientes/', ClienteViewSet.as_view({'get': 'list', 'post': 'create'}), name='cliente-list'),
 
     # Categorías
     path('api/categorias/', CategoriaViewSet.as_view({'get': 'list', 'post': 'create'}), name='categoria-list'),

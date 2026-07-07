@@ -10,8 +10,10 @@ import '../../core/widgets/buttons/app_button.dart';
 import '../../core/widgets/feedback/app_toast.dart';
 import '../models/cart_model.dart';
 import '../models/product_model.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../repositories/cart_repository.dart';
 import '../repositories/product_repository.dart';
+import '../repositories/envios_repository.dart';
 import '../../gestion_pago/repositories/payment_repository.dart';
 
 class CartScreen extends StatefulWidget {
@@ -28,6 +30,40 @@ class _CartScreenState extends State<CartScreen> {
   final CartRepository _cartRepository = CartRepository();
   final ProductRepository _productRepository = ProductRepository();
   final PaymentRepository _paymentRepository = PaymentRepository();
+  final EnviosRepository _enviosRepository = EnviosRepository();
+  bool _enviandoWhatsapp = false;
+
+  Future<void> _finalizarPorWhatsapp() async {
+    if (_cart == null || _cart!.items.isEmpty) {
+      AppToast.showInfo(context, 'Tu carrito está vacío');
+      return;
+    }
+    setState(() => _enviandoWhatsapp = true);
+    try {
+      final whatsappRaw = await _enviosRepository.obtenerWhatsapp();
+      final numero = (whatsappRaw ?? '').replaceAll(RegExp(r'\D'), '');
+      if (numero.isEmpty) {
+        if (!mounted) return;
+        AppToast.showInfo(context, 'Esta tienda aún no configuró un número de WhatsApp.');
+        return;
+      }
+      final lineas = _cart!.items.map((it) {
+        final pu = it.producto.enPreventa ? it.producto.precioFinal : it.producto.precio;
+        return '• ${it.producto.nombre} x${it.cantidad} — Bs. ${(pu * it.cantidad).toStringAsFixed(2)}';
+      }).join('\n');
+      final mensaje = '¡Hola! Quiero finalizar mi pedido:\n\n$lineas\n\n*Total: Bs. ${_cart!.total}*';
+      final uri = Uri.parse('https://wa.me/$numero?text=${Uri.encodeComponent(mensaje)}');
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && mounted) {
+        AppToast.showError(context, 'No se pudo abrir WhatsApp.');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.showError(context, 'No se pudo abrir WhatsApp.');
+    } finally {
+      if (mounted) setState(() => _enviandoWhatsapp = false);
+    }
+  }
 
   @override
   void initState() {
@@ -114,6 +150,7 @@ class _CartScreenState extends State<CartScreen> {
         if (mounted) Navigator.pushReplacementNamed(context, '/pedidos');
       }
     } catch (e) {
+      if (!mounted) return;
       AppToast.showError(context, 'Error al procesar el pago: $e');
     }
   }
@@ -237,6 +274,23 @@ class _CartScreenState extends State<CartScreen> {
               AppButton.submit(
                 label: 'Proceder al Pago',
                 onPressed: _processCheckout,
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _enviandoWhatsapp ? null : _finalizarPorWhatsapp,
+                  icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF25D366)),
+                  label: Text(
+                    _enviandoWhatsapp ? 'Abriendo WhatsApp...' : 'Finalizar por WhatsApp',
+                    style: const TextStyle(color: Color(0xFF075E54), fontWeight: FontWeight.bold),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: Color(0xFF25D366)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
               ),
             ],
           ),

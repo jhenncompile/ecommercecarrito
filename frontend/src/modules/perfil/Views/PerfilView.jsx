@@ -47,6 +47,7 @@ export default function PerfilView() {
     } else {
       setMensaje({ tipo: 'error', texto: resultado.error });
     }
+    return resultado;
   };
 
   if (loading || (loadingTienda && !isCliente)) {

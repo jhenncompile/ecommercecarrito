@@ -18,6 +18,7 @@ import { Button, Spinner } from 'shared/components';
 import { useCart } from '../hooks/useCart';
 import { enviosApi } from '../services/enviosApi';
 import { restockApi } from '../services/restockApi';
+import ResenasProducto from '../components/ResenasProducto';
 import api from 'core/services/api';
 import { getBaseDomain, isBaseDomain } from 'core/utils/domain';
 import styles from './PublicStorefront.module.css';
@@ -537,6 +538,8 @@ const PublicStorefront = () => {
                                             )}
                                             {getPricing(prod).preorder ? (
                                                 <span className={styles.lowStockBadge} style={{ background: '#7c3aed' }}>PRE-VENTA</span>
+                                            ) : prod.stock <= 0 ? (
+                                                <span className={styles.lowStockBadge} style={{ background: '#dc2626' }}>AGOTADO</span>
                                             ) : prod.stock < 5 && prod.stock > 0 && (
                                                 <span className={styles.lowStockBadge}>Últimas unidades</span>
                                             )}
@@ -868,6 +871,12 @@ const PublicStorefront = () => {
                                     </Button>
                                 )}
                             </div>
+
+                            {/* --- Reseñas y Calificaciones (CU-27) --- */}
+                            <ResenasProducto
+                                productId={selectedProduct.id}
+                                onToast={(msg, type) => setToast({ type: type || 'info', msg })}
+                            />
                         </div>
                     </div>
                 </div>

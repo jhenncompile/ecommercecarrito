@@ -21,6 +21,10 @@ export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
   const [nuevaZona, setNuevaZona] = useState({ zone_name: '', price: '' });
   const [zonasLoading, setZonasLoading] = useState(false);
 
+  // --- Estado de guardado y validación ---
+  const [guardando, setGuardando] = useState(false);
+  const [feedback, setFeedback] = useState(null); // { tipo: 'success' | 'error', texto }
+
   useEffect(() => {
     if (perfil) {
       setFormData({
@@ -52,6 +56,22 @@ export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    // Limpiar feedback al editar cualquier campo
+    if (feedback) setFeedback(null);
+  };
+
+  // Valida los datos antes de enviar. Devuelve un mensaje de error o null si es válido.
+  const validar = () => {
+    if (!formData.nombre_comercial.trim()) {
+      return 'El nombre comercial es obligatorio.';
+    }
+    if (!formData.enable_local_delivery && !formData.enable_national_shipping) {
+      return 'Debes habilitar al menos un método de entrega (delivery local o envío nacional).';
+    }
+    if (formData.enable_local_delivery && zonas.length === 0) {
+      return 'Para habilitar el delivery local debes agregar al menos una zona de delivery.';
+    }
+    return null;
   };
 
   const handleImageChange = (e) => {
@@ -62,8 +82,15 @@ export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const errorValidacion = validar();
+    if (errorValidacion) {
+      setFeedback({ tipo: 'error', texto: errorValidacion });
+      return;
+    }
+
     const data = new FormData();
     Object.keys(formData).forEach(key => {
       data.append(key, formData[key]);
@@ -71,7 +98,21 @@ export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
     if (icono) {
       data.append('icono', icono);
     }
-    onGuardar(data);
+
+    setGuardando(true);
+    setFeedback(null);
+    try {
+      const resultado = await onGuardar(data);
+      if (!resultado || resultado.success) {
+        setFeedback({ tipo: 'success', texto: 'Datos de la tienda guardados correctamente.' });
+      } else {
+        setFeedback({ tipo: 'error', texto: resultado.error || 'No se pudieron guardar los datos.' });
+      }
+    } catch (err) {
+      setFeedback({ tipo: 'error', texto: 'Ocurrió un error al guardar los datos.' });
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const handleAgregarZona = async () => {
@@ -289,9 +330,28 @@ export default function TiendaPerfilForm({ perfil, onGuardar, loading }) {
         </div>
       </div>
 
-      <div className="form-actions" style={{ marginTop: '15px' }}>
-        <button type="submit" disabled={loading}>
-          {loading ? 'Guardando...' : 'Guardar Datos de Tienda'}
+      {feedback && (
+        <div
+          role="status"
+          style={{
+            marginTop: '18px',
+            padding: '12px 14px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 600,
+            border: '1px solid',
+            backgroundColor: feedback.tipo === 'success' ? '#dcfce7' : '#fee2e2',
+            borderColor: feedback.tipo === 'success' ? '#86efac' : '#fca5a5',
+            color: feedback.tipo === 'success' ? '#166534' : '#991b1b',
+          }}
+        >
+          {feedback.texto}
+        </div>
+      )}
+
+      <div className="form-actions" style={{ marginTop: '15px', alignItems: 'center' }}>
+        <button type="submit" disabled={guardando || loading}>
+          {guardando ? 'Guardando...' : 'Guardar Datos de Tienda'}
         </button>
       </div>
     </form>

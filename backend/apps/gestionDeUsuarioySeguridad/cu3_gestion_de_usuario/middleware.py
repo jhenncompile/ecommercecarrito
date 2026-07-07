@@ -1,6 +1,20 @@
 import logging
+import re
+import django.http.request as _django_http_request
 
 logger = logging.getLogger(__name__)
+
+# ── Permitir guion bajo en el host ────────────────────────────────────────────
+# Django (RFC 3986) rechaza hosts con "_" en request.get_host() lanzando
+# DisallowedHost (HTTP 400). Sin embargo, varios schemas/subdominios de tenants
+# usan guion bajo (ej. "shop_daniel39.10.49.76.200.nip.io"), lo que hacía fallar
+# cualquier request a esos inquilinos (p. ej. marcar un pedido como ENTREGADO).
+# Ampliamos la regex de validación de host para aceptar "_" y así django-tenants
+# puede resolver esos dominios en lugar de responder 400.
+_django_http_request.host_validation_re = re.compile(
+    r"^([a-z0-9._-]+|\[[a-f0-9]*:[a-f0-9.:]+\])(?::([0-9]+))?$"
+)
+
 
 class TenantHostMiddleware:
     """

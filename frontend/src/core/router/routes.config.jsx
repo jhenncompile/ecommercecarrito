@@ -17,6 +17,7 @@ import {
   Database,
   TrendingUp,
   Bell,
+  Star,
 } from 'lucide-react';
 
 // ─── MÓDULOS AUTENTICADOS (con sidebar) ─────────────────────
@@ -128,6 +129,17 @@ export const APP_MODULES = [
     label: 'Ventas',
     icon: ShoppingCart,
     component: lazy(() => import('modules/ventas_facturacion/views/VentasView')),
+    protected: true,
+    inSidebar: true,
+    group: 'negocio',
+    roles: ['vendedor'],
+  },
+  {
+    id: 'resenas',
+    path: '/resenas',
+    label: 'Reseñas',
+    icon: Star,
+    component: lazy(() => import('modules/resenas/views/ResenasVendedorView')),
     protected: true,
     inSidebar: true,
     group: 'negocio',

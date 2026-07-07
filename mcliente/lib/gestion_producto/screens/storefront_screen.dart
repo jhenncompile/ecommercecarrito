@@ -10,6 +10,7 @@ import '../repositories/product_repository.dart';
 import '../../gestion_usuario/repositories/auth_repository.dart';
 import '../../core/widgets/feedback/app_toast.dart';
 import '../repositories/cart_repository.dart';
+import '../repositories/restock_repository.dart';
 import 'product_detail_screen.dart';
 
 class StorefrontScreen extends StatefulWidget {
@@ -35,11 +36,24 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
   double _minPrice = 0;
   double _maxPrice = 10000;
   bool _inStockOnly = false;
+  bool _soloPreventa = false; // Sección dedicada de Preventa (Reservas)
 
   final ProductRepository _productRepository = ProductRepository();
   final AuthRepository _authRepository = AuthRepository();
   final CartRepository _cartRepository = CartRepository();
+  final RestockRepository _restockRepository = RestockRepository();
   int _cartItemCount = 0;
+
+  Future<void> _solicitarRestock(ProductModel product) async {
+    try {
+      final msg = await _restockRepository.solicitar(product.id);
+      if (!mounted) return;
+      AppToast.showSuccess(context, msg);
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.showError(context, e.toString().replaceAll('Exception: ', ''));
+    }
+  }
 
   @override
   void initState() {
@@ -131,10 +145,12 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
   void _aplicarFiltrosLocales() {
     setState(() {
       _filteredProducts = _allProducts.where((p) {
+        // 0. Modo Preventa: solo productos en preventa (o excluirlos en el catálogo normal)
+        if (_soloPreventa && !p.enPreventa) return false;
         // 1. Busqueda (nombre o marca/sku)
         if (_searchQuery.isNotEmpty) {
           final query = _searchQuery.toLowerCase();
-          if (!p.nombre.toLowerCase().contains(query) && 
+          if (!p.nombre.toLowerCase().contains(query) &&
               !(p.sku.toLowerCase().contains(query))) {
             return false;
           }
@@ -349,6 +365,8 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          _buildModeTabs(),
+          const SizedBox(height: 16),
           // Buscador
           TextField(
             onChanged: (v) {
@@ -372,10 +390,23 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
           else if (_error != null)
             Center(child: Text(_error!, style: const TextStyle(color: AppColors.danger)))
           else if (_filteredProducts.isEmpty)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Text('No se encontraron productos con estos filtros.', style: TextStyle(color: Colors.grey)),
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    Icon(_soloPreventa ? Icons.event_available : Icons.search_off,
+                        size: 48, color: Colors.grey[400]),
+                    const SizedBox(height: 12),
+                    Text(
+                      _soloPreventa
+                          ? 'Esta tienda no tiene productos en preventa por ahora.'
+                          : 'No se encontraron productos con estos filtros.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
             )
           else
@@ -396,6 +427,62 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  // Color de acento para Preventa (mismo morado que la web)
+  static const Color _preventaColor = Color(0xFF7C3AED);
+
+  Widget _buildModeTabs() {
+    final int preventaCount = _allProducts.where((p) => p.enPreventa).length;
+
+    Widget tab(String label, bool active, VoidCallback onTap, {Color? accent}) {
+      final Color activeColor = accent ?? AppColors.primaryDark;
+      return Expanded(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: active ? activeColor : AppColors.bgCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: active ? activeColor : AppColors.border),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: active ? Colors.white : AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        tab('Catálogo', !_soloPreventa, () {
+          if (_soloPreventa) {
+            setState(() => _soloPreventa = false);
+            _aplicarFiltrosLocales();
+          }
+        }),
+        const SizedBox(width: 12),
+        tab(
+          preventaCount > 0 ? 'Preventa ($preventaCount)' : 'Preventa',
+          _soloPreventa,
+          () {
+            if (!_soloPreventa) {
+              setState(() => _soloPreventa = true);
+              _aplicarFiltrosLocales();
+            }
+          },
+          accent: _preventaColor,
+        ),
+      ],
     );
   }
 
@@ -442,6 +529,7 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
   }
 
   Widget _buildProductCard(ProductModel product) {
+    final bool agotado = product.stock <= 0 && !product.enPreventa;
     return InkWell(
       onTap: () => Navigator.push(
         context,
@@ -459,21 +547,55 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Hero(
-                tag: 'product-${product.id}',
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: AppColors.bgSearch,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Hero(
+                      tag: 'product-${product.id}',
+                      child: Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          color: AppColors.bgSearch,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+                        ),
+                        child: product.imagenUrl != null && product.imagenUrl!.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                                child: Image.network(product.imagenUrl!, fit: BoxFit.cover),
+                              )
+                            : const Icon(Icons.image_outlined, size: 50, color: AppColors.textMuted),
+                      ),
+                    ),
                   ),
-                  child: product.imagenUrl != null && product.imagenUrl!.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                          child: Image.network(product.imagenUrl!, fit: BoxFit.cover),
-                        )
-                      : const Icon(Icons.image_outlined, size: 50, color: AppColors.textMuted),
-                ),
+                  if (product.enPreventa)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _preventaColor,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text('PRE-VENTA',
+                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      ),
+                    ),
+                  if (agotado)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text('AGOTADO',
+                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      ),
+                    ),
+                ],
               ),
             ),
             Padding(
@@ -487,20 +609,79 @@ class _StorefrontScreenState extends State<StorefrontScreen> {
                   const SizedBox(height: 8),
                     Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: Text(
-                          'BS. ${product.precio}', 
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.primaryDark),
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (product.enPreventa && product.tieneDescuento)
+                              Text(
+                                'BS. ${product.precioOriginal.toStringAsFixed(2)}',
+                                style: const TextStyle(fontSize: 12, color: AppColors.textMuted, decoration: TextDecoration.lineThrough),
+                              ),
+                            Text(
+                              'BS. ${(product.enPreventa ? product.precioFinal : product.precio).toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                                color: product.enPreventa ? _preventaColor : AppColors.primaryDark,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.add_shopping_cart, color: AppColors.accentTeal),
-                        onPressed: () => _addToCart(product),
+                        icon: Icon(
+                          agotado
+                              ? Icons.notifications_active_outlined
+                              : (product.enPreventa ? Icons.bookmark_add_outlined : Icons.add_shopping_cart),
+                          color: agotado
+                              ? AppColors.danger
+                              : (product.enPreventa ? _preventaColor : AppColors.accentTeal),
+                        ),
+                        tooltip: agotado
+                            ? 'Avísame cuando vuelva a haber stock'
+                            : (product.enPreventa ? 'Reservar' : 'Agregar al carrito'),
+                        onPressed: () => agotado ? _solicitarRestock(product) : _addToCart(product),
                       ),
                     ],
                   ),
+                  if (agotado)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Row(
+                        children: [
+                          Icon(Icons.notifications_active_outlined, size: 12, color: AppColors.danger),
+                          SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Toca la campana para que te avisemos',
+                              style: TextStyle(fontSize: 11, color: AppColors.danger),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (product.enPreventa && (product.estimatedArrivalDate?.isNotEmpty ?? false))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.local_shipping_outlined, size: 12, color: _preventaColor),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Llega aprox: ${product.estimatedArrivalDate}',
+                              style: const TextStyle(fontSize: 11, color: _preventaColor),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),

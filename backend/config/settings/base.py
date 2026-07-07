@@ -48,6 +48,7 @@ TENANT_APPS = (
     'apps.gestionDeClientes.cu17_analizar_comportamiento_del_cliente',
     'apps.gestionDeClientes.cu22_gestionar_prediccion_de_ventas',
     'apps.gestionDeClientes.cu25_gestionar_solicitud_de_restock',
+    'apps.gestionDeClientes.cu26_gestionar_resenas',
     'apps.gestionDeReportes.cu18_gestionar_notificaciones.apps.Cu18Config',
     'apps.gestionDeReportes.cu19_generar_reportes_de_ventas.apps.Cu19Config',
     'apps.gestionDeReportes.cu20_gestionar_recordatorios.apps.Cu20Config',
