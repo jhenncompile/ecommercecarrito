@@ -93,10 +93,12 @@ def run_migrate():
             success, output = run_django_command_capture(['migrate_schemas', '--shared'])
             retry_count += 1
         else:
-            print("\n[X] ERROR CRÍTICO NO RECUPERABLE:")
+            print("\n[X] El esquema SHARED (public) reportó un error no auto-recuperable:")
             sys.stdout.buffer.write(output.encode('utf-8', errors='replace'))
             sys.stdout.buffer.write(b'\n')
-            sys.exit(1)
+            # IMPORTANTE: NO abortamos aquí. Devolvemos False y dejamos que el flujo
+            # continúe a migrar los TENANTS, para no dejar las tiendas sin sus tablas.
+            return False
 
     if success:
         print("\n[OK] Esquema SHARED sincronizado.")
@@ -108,44 +110,38 @@ def run_migrate_schemas():
     run_django_command_visible(['migrate_schemas', '--tenant'])
 
 def run_full_sync():
-    """Ejecuta el ciclo completo de sincronización de base de datos con reparación ultra robusta."""
+    """Ejecuta el ciclo completo de sincronización de base de datos.
+
+    Orden robusto: el paso de TENANTS SIEMPRE se ejecuta, incluso si el esquema
+    público reporta problemas, para que las tiendas nunca se queden sin sus tablas.
+    """
     print("\n" + "="*60)
     print("SINCRONIZACIÓN DE BD (VPS READY)")
     print("="*60)
 
-    print("\n[PASO 1] Reparación Profunda (Fake-Reverse preventivo)...")
-    # Retrocedemos la migración a 0006 para limpiar el estado
-    run_django_command_visible(['migrate_schemas', '--shared', '--fake', 'customers', '0006'])
-
-    print("\n[PASO 1.5] Aplicando Migraciones Paso a Paso (Silencioso para evitar asustar con errores esperados)...")
-    # Aplicamos la 0007 silenciosamente. Si falla por DuplicateColumn, lo atrapamos y seguimos.
-    success_7, _ = run_django_command_capture(['migrate_schemas', '--shared', 'customers', '0007'], silent_error=True)
-    if not success_7:
-        print("  [i] La migración 0007 ya existía o tenía conflicto (auto-recuperado).")
-    else:
-        print("  [i] Migración 0007 aplicada limpiamente.")
-    
-    # Fakeamos la 0008 porque sabemos que el constraint ya existe y causa "DuplicateTable"
-    success_8, _ = run_django_command_capture(['migrate_schemas', '--shared', '--fake', 'customers', '0008'], silent_error=True)
-    if not success_8:
-        print("  [i] Fake 0008 auto-recuperado.")
-    else:
-        print("  [i] Migración 0008 fakeada preventivamente.")
-
-    print("\n[PASO 2] Detección de Cambios en Modelos...")
+    print("\n[PASO 1] Detección de Cambios en Modelos (makemigrations)...")
+    # Si las migraciones ya existen (p. ej. tras un git pull), dirá "No changes
+    # detected" — eso es correcto, no hay nada que crear.
     run_make_migrations()
 
-    print("\n[PASO 3] Sincronización Real y Auto-Reparación (Esquema Public)...")
-    run_migrate()
+    print("\n[PASO 2] Sincronización y Auto-Reparación del Esquema Público (SHARED)...")
+    # run_migrate() ya NO aborta el proceso; si el público falla, seguimos igual
+    # con los tenants (que es donde viven productos, pedidos, reseñas, restock...).
+    ok_shared = run_migrate()
+    if not ok_shared:
+        print("  [!] El esquema público quedó con pendientes, pero continúo con los "
+              "TENANTS para no dejar las tiendas sin sus tablas.")
 
-    print("\n[PASO 4] Sincronización de Esquemas de Clientes (Tenants)...")
+    print("\n[PASO 3] Sincronización de TODAS las Tiendas (TENANTS)...")
+    # Este es el paso que crea app_negocio_resena, app_negocio_restock_request,
+    # app_negocio_delivery_zone y las columnas de preventa/envío en cada tenant.
     run_migrate_schemas()
 
-    print("\n[PASO 5] Sembrando Permisos del Sistema (Roles/Características)...")
+    print("\n[PASO 4] Sembrando Permisos del Sistema (Roles/Características)...")
     run_django_command_visible(['seed_permisos'])
 
     print("\n" + "="*60)
-    print("[OK] ESTRUCTURA, MIGRACIONES Y PERMISOS SINCRONIZADOS AL 100%.")
+    print("[OK] ESTRUCTURA, MIGRACIONES Y PERMISOS SINCRONIZADOS (public + tenants).")
     print("="*60)
 
 def run_reset():
